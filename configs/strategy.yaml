@@ -1,0 +1,52 @@
+# Strategy Engine Configuration
+# ==============================
+
+# Monte Carlo simulation settings
+monte_carlo:
+  simulations: 2000
+  horizon_laps: 20
+  random_seed: null  # null = random, set integer for reproducibility
+
+# Pit window analysis
+pit_window:
+  candidate_laps_ahead: 10
+  candidate_laps_behind: 5
+  min_stint_length: 5
+  max_stint_length: 40
+
+# Safety car modeling
+safety_car:
+  sc_multiplier: 1.0
+  vsc_multiplier: 1.0
+  sc_lap_loss: 0.5  # Laps lost due to slow pace under SC
+  vsc_lap_loss: 0.2
+
+# Pace noise modeling
+pace_noise:
+  multiplier: 1.0
+  traffic_delta_seconds: 0.5
+  dirty_air_delta_seconds: 0.3
+
+# Degradation modeling
+degradation:
+  forgetting_factor: 0.95
+  min_observations: 3
+  outlier_threshold_sigma: 3.0
+  warm_start_deg_per_lap:
+    SOFT: 0.08
+    MEDIUM: 0.05
+    HARD: 0.03
+
+# Decision making
+decision:
+  objective: "expected_position"  # or "expected_time"
+  undercut_risk_threshold: 0.7
+  overcut_opportunity_threshold: 0.6
+  confidence_threshold: 0.75
+
+# Thresholds for warnings
+thresholds:
+  cliff_risk_deg_slope: 0.15
+  high_deg_warning: 0.12
+  undercut_window_laps: 3
+  traffic_gap_seconds: 1.5

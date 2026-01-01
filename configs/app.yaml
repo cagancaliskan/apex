@@ -1,0 +1,32 @@
+# Application Configuration
+# =========================
+
+# Server settings
+server:
+  host: "127.0.0.1"
+  port: 8000
+  websocket_port: 8765
+  debug: true
+
+# Polling settings
+polling:
+  interval_seconds: 2
+  cache_ttl_seconds: 3
+
+# UI settings
+ui:
+  refresh_ms: 500
+  theme: "dark"
+
+# Logging
+logging:
+  level: "INFO"
+  snapshot_every_n_updates: 10
+  log_to_file: false
+
+# OpenF1 API settings
+openf1:
+  base_url: "https://api.openf1.org/v1"
+  timeout_seconds: 10
+  max_retries: 3
+  rate_limit_per_minute: 60

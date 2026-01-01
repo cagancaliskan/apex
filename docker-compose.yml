@@ -1,0 +1,162 @@
+# ============================================================================
+# F1 Race Strategy Workbench - Development Docker Compose
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------------------
+  # Backend API
+  # -------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - RSW_ENVIRONMENT=development
+      - RSW_SERVER_HOST=0.0.0.0
+      - RSW_SERVER_PORT=8000
+      - RSW_SERVER_DEBUG=true
+      - RSW_DB_POSTGRES_HOST=db
+      - RSW_DB_POSTGRES_PORT=5432
+      - RSW_DB_POSTGRES_USER=rsw
+      - RSW_DB_POSTGRES_PASSWORD=rsw_dev_password
+      - RSW_DB_POSTGRES_DB=rsw
+      - RSW_DB_REDIS_HOST=redis
+      - RSW_DB_REDIS_PORT=6379
+      - RSW_LOG_LEVEL=DEBUG
+      - RSW_LOG_FORMAT=console
+    volumes:
+      - ./src:/app/src:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - rsw-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # -------------------------------------------------------------------------
+  # Frontend
+  # -------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://backend:8000
+    volumes:
+      - ./frontend/src:/app/src:ro
+    depends_on:
+      - backend
+    networks:
+      - rsw-network
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # PostgreSQL Database
+  # -------------------------------------------------------------------------
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=rsw
+      - POSTGRES_PASSWORD=rsw_dev_password
+      - POSTGRES_DB=rsw
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - rsw-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rsw -d rsw"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # Redis Cache
+  # -------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - rsw-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # Prometheus (Metrics)
+  # -------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - rsw-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # Grafana (Dashboards)
+  # -------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.1.0
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - rsw-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  rsw-network:
+    driver: bridge
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:

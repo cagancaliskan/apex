@@ -1,0 +1,321 @@
+# Track Configuration - 2024 F1 Calendar
+# ========================================
+# pit_loss_seconds: Total time lost for a pit stop (entry + service + exit) vs racing lap
+# pit_loss_sigma: Standard deviation of pit loss (uncertainty)
+# sc_base_rate: Historical safety car probability per race
+# vsc_base_rate: Historical virtual safety car probability per race
+# overtake_difficulty: 1-10 scale (10 = hardest to overtake, e.g., Monaco)
+# drs_zones: Number of DRS zones
+
+tracks:
+  bahrain:
+    track_id: "bahrain"
+    name: "Bahrain International Circuit"
+    location: "Sakhir"
+    country: "Bahrain"
+    laps: 57
+    pit_loss_seconds: 21.5
+    pit_loss_sigma: 1.5
+    sc_base_rate: 0.40
+    vsc_base_rate: 0.30
+    overtake_difficulty: 3
+    drs_zones: 3
+
+  jeddah:
+    track_id: "jeddah"
+    name: "Jeddah Corniche Circuit"
+    location: "Jeddah"
+    country: "Saudi Arabia"
+    laps: 50
+    pit_loss_seconds: 23.0
+    pit_loss_sigma: 1.8
+    sc_base_rate: 0.50
+    vsc_base_rate: 0.40
+    overtake_difficulty: 6
+    drs_zones: 3
+
+  albert_park:
+    track_id: "albert_park"
+    name: "Albert Park Circuit"
+    location: "Melbourne"
+    country: "Australia"
+    laps: 58
+    pit_loss_seconds: 22.0
+    pit_loss_sigma: 1.5
+    sc_base_rate: 0.45
+    vsc_base_rate: 0.35
+    overtake_difficulty: 5
+    drs_zones: 4
+
+  suzuka:
+    track_id: "suzuka"
+    name: "Suzuka International Racing Course"
+    location: "Suzuka"
+    country: "Japan"
+    laps: 53
+    pit_loss_seconds: 22.5
+    pit_loss_sigma: 1.6
+    sc_base_rate: 0.35
+    vsc_base_rate: 0.25
+    overtake_difficulty: 7
+    drs_zones: 2
+
+  shanghai:
+    track_id: "shanghai"
+    name: "Shanghai International Circuit"
+    location: "Shanghai"
+    country: "China"
+    laps: 56
+    pit_loss_seconds: 24.0
+    pit_loss_sigma: 1.7
+    sc_base_rate: 0.40
+    vsc_base_rate: 0.30
+    overtake_difficulty: 4
+    drs_zones: 2
+
+  miami:
+    track_id: "miami"
+    name: "Miami International Autodrome"
+    location: "Miami"
+    country: "USA"
+    laps: 57
+    pit_loss_seconds: 21.0
+    pit_loss_sigma: 1.5
+    sc_base_rate: 0.67
+    vsc_base_rate: 0.50
+    overtake_difficulty: 4
+    drs_zones: 3
+
+  imola:
+    track_id: "imola"
+    name: "Autodromo Enzo e Dino Ferrari"
+    location: "Imola"
+    country: "Italy"
+    laps: 63
+    pit_loss_seconds: 22.5
+    pit_loss_sigma: 1.5
+    sc_base_rate: 0.40
+    vsc_base_rate: 0.35
+    overtake_difficulty: 6
+    drs_zones: 2
+
+  monaco:
+    track_id: "monaco"
+    name: "Circuit de Monaco"
+    location: "Monte Carlo"
+    country: "Monaco"
+    laps: 78
+    pit_loss_seconds: 18.5
+    pit_loss_sigma: 1.2
+    sc_base_rate: 0.43
+    vsc_base_rate: 0.29
+    overtake_difficulty: 10
+    drs_zones: 1
+
+  montreal:
+    track_id: "montreal"
+    name: "Circuit Gilles Villeneuve"
+    location: "Montreal"
+    country: "Canada"
+    laps: 70
+    pit_loss_seconds: 22.0
+    pit_loss_sigma: 1.6
+    sc_base_rate: 0.83
+    vsc_base_rate: 0.50
+    overtake_difficulty: 5
+    drs_zones: 2
+
+  barcelona:
+    track_id: "barcelona"
+    name: "Circuit de Barcelona-Catalunya"
+    location: "Barcelona"
+    country: "Spain"
+    laps: 66
+    pit_loss_seconds: 23.0
+    pit_loss_sigma: 1.6
+    sc_base_rate: 0.35
+    vsc_base_rate: 0.25
+    overtake_difficulty: 6
+    drs_zones: 2
+
+  spielberg:
+    track_id: "spielberg"
+    name: "Red Bull Ring"
+    location: "Spielberg"
+    country: "Austria"
+    laps: 71
+    pit_loss_seconds: 20.5
+    pit_loss_sigma: 1.3
+    sc_base_rate: 0.30
+    vsc_base_rate: 0.25
+    overtake_difficulty: 4
+    drs_zones: 3
+
+  silverstone:
+    track_id: "silverstone"
+    name: "Silverstone Circuit"
+    location: "Silverstone"
+    country: "United Kingdom"
+    laps: 52
+    pit_loss_seconds: 24.5
+    pit_loss_sigma: 1.8
+    sc_base_rate: 0.40
+    vsc_base_rate: 0.30
+    overtake_difficulty: 4
+    drs_zones: 2
+
+  hungaroring:
+    track_id: "hungaroring"
+    name: "Hungaroring"
+    location: "Budapest"
+    country: "Hungary"
+    laps: 70
+    pit_loss_seconds: 21.5
+    pit_loss_sigma: 1.4
+    sc_base_rate: 0.35
+    vsc_base_rate: 0.25
+    overtake_difficulty: 8
+    drs_zones: 2
+
+  spa:
+    track_id: "spa"
+    name: "Circuit de Spa-Francorchamps"
+    location: "Stavelot"
+    country: "Belgium"
+    laps: 44
+    pit_loss_seconds: 24.0
+    pit_loss_sigma: 1.8
+    sc_base_rate: 0.45
+    vsc_base_rate: 0.35
+    overtake_difficulty: 4
+    drs_zones: 2
+
+  zandvoort:
+    track_id: "zandvoort"
+    name: "Circuit Zandvoort"
+    location: "Zandvoort"
+    country: "Netherlands"
+    laps: 72
+    pit_loss_seconds: 20.0
+    pit_loss_sigma: 1.3
+    sc_base_rate: 0.35
+    vsc_base_rate: 0.30
+    overtake_difficulty: 7
+    drs_zones: 2
+
+  monza:
+    track_id: "monza"
+    name: "Autodromo Nazionale Monza"
+    location: "Monza"
+    country: "Italy"
+    laps: 53
+    pit_loss_seconds: 25.0
+    pit_loss_sigma: 1.9
+    sc_base_rate: 0.50
+    vsc_base_rate: 0.38
+    overtake_difficulty: 3
+    drs_zones: 2
+
+  baku:
+    track_id: "baku"
+    name: "Baku City Circuit"
+    location: "Baku"
+    country: "Azerbaijan"
+    laps: 51
+    pit_loss_seconds: 23.5
+    pit_loss_sigma: 1.7
+    sc_base_rate: 0.55
+    vsc_base_rate: 0.45
+    overtake_difficulty: 5
+    drs_zones: 2
+
+  singapore:
+    track_id: "singapore"
+    name: "Marina Bay Street Circuit"
+    location: "Singapore"
+    country: "Singapore"
+    laps: 62
+    pit_loss_seconds: 28.0
+    pit_loss_sigma: 2.0
+    sc_base_rate: 0.83
+    vsc_base_rate: 0.33
+    overtake_difficulty: 8
+    drs_zones: 3
+
+  cota:
+    track_id: "cota"
+    name: "Circuit of the Americas"
+    location: "Austin"
+    country: "USA"
+    laps: 56
+    pit_loss_seconds: 22.0
+    pit_loss_sigma: 1.5
+    sc_base_rate: 0.45
+    vsc_base_rate: 0.35
+    overtake_difficulty: 4
+    drs_zones: 2
+
+  mexico:
+    track_id: "mexico"
+    name: "Autódromo Hermanos Rodríguez"
+    location: "Mexico City"
+    country: "Mexico"
+    laps: 71
+    pit_loss_seconds: 22.5
+    pit_loss_sigma: 1.5
+    sc_base_rate: 0.43
+    vsc_base_rate: 0.71
+    overtake_difficulty: 5
+    drs_zones: 3
+
+  interlagos:
+    track_id: "interlagos"
+    name: "Autódromo José Carlos Pace"
+    location: "São Paulo"
+    country: "Brazil"
+    laps: 71
+    pit_loss_seconds: 23.0
+    pit_loss_sigma: 1.6
+    sc_base_rate: 0.60
+    vsc_base_rate: 0.45
+    overtake_difficulty: 4
+    drs_zones: 2
+
+  las_vegas:
+    track_id: "las_vegas"
+    name: "Las Vegas Strip Circuit"
+    location: "Las Vegas"
+    country: "USA"
+    laps: 50
+    pit_loss_seconds: 23.5
+    pit_loss_sigma: 1.8
+    sc_base_rate: 0.50
+    vsc_base_rate: 0.50
+    overtake_difficulty: 4
+    drs_zones: 2
+
+  lusail:
+    track_id: "lusail"
+    name: "Lusail International Circuit"
+    location: "Lusail"
+    country: "Qatar"
+    laps: 57
+    pit_loss_seconds: 21.0
+    pit_loss_sigma: 1.4
+    sc_base_rate: 0.40
+    vsc_base_rate: 0.35
+    overtake_difficulty: 4
+    drs_zones: 2
+
+  yas_marina:
+    track_id: "yas_marina"
+    name: "Yas Marina Circuit"
+    location: "Abu Dhabi"
+    country: "UAE"
+    laps: 58
+    pit_loss_seconds: 22.5
+    pit_loss_sigma: 1.5
+    sc_base_rate: 0.38
+    vsc_base_rate: 0.38
+    overtake_difficulty: 5
+    drs_zones: 2

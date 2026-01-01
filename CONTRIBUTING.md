@@ -291,8 +291,8 @@ class TestPitWindow:
 ## Need Help?
 
 - 📖 [Development Guide](docs/DEVELOPMENT.md)
-- 💬 [GitHub Discussions](https://github.com/your-org/rsw/discussions)
-- 🐛 [Issue Tracker](https://github.com/your-org/rsw/issues)
+- 💬 [GitHub Discussions](https://github.com/cagancaliskan/apex/discussions)
+- 🐛 [Issue Tracker](https://github.com/cagancaliskan/apex/issues)
 
 ---
 

@@ -68,8 +68,9 @@ class OpenF1Client(DataProvider):
         # Check cache
         if cache_key in self._cache:
             cached_time, cached_data = self._cache[cache_key]
+            from typing import cast
             if (datetime.now(timezone.utc) - cached_time).total_seconds() < self._cache_ttl:
-                return cached_data
+                return cast(list[dict[str, Any]], cached_data)
         
         # Make request
         client = await self._get_client()
@@ -367,7 +368,7 @@ class OpenF1Client(DataProvider):
 
 
 # Convenience function for quick testing
-async def test_client():
+async def test_client() -> None:
     """Test the OpenF1 client with a sample session."""
     client = OpenF1Client()
     

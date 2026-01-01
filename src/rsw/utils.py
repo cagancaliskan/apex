@@ -146,7 +146,7 @@ def group_by(items: list[T], key: str) -> dict[Any, list[T]]:
     return result
 
 
-def safe_get(data: dict, *keys, default: Any = None) -> Any:
+def safe_get(data: dict, *keys: str, default: Any = None) -> Any:
     """Safely get nested dictionary value."""
     for key in keys:
         if isinstance(data, dict):

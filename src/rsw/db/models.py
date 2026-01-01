@@ -18,7 +18,8 @@ from sqlalchemy import (
     Text,
     create_engine,
 )
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from typing import AsyncGenerator
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, AsyncEngine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
 from rsw.runtime_config import get_config
@@ -140,11 +141,12 @@ class RaceControlModel(Base):
 # Database Connection
 # ============================================================================
 
-_engine = None
-_session_factory = None
+_engine: AsyncEngine | None = None
+from typing import Callable
+_session_factory: Callable[[], AsyncSession] | None = None
 
 
-async def get_engine():
+async def get_engine() -> AsyncEngine:
     """Get or create database engine."""
     global _engine
     if _engine is None:
@@ -158,16 +160,18 @@ async def get_engine():
     return _engine
 
 
-async def get_session() -> AsyncSession:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Get database session."""
     global _session_factory
     if _session_factory is None:
         engine = await get_engine()
-        _session_factory = sessionmaker(
+        from typing import cast, Callable
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+        _session_factory = cast(Callable[[], AsyncSession], async_sessionmaker(
             engine,
             class_=AsyncSession,
             expire_on_commit=False,
-        )
+        ))
     
     async with _session_factory() as session:
         yield session

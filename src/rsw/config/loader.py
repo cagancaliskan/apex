@@ -5,7 +5,7 @@ Configuration file loaders.
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml # type: ignore
 
 from .schemas import AppConfig, TrackConfig, StrategyConfig
 

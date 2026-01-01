@@ -5,7 +5,8 @@ Provides consistent error responses and logging for all exceptions.
 """
 
 import traceback
-from fastapi import HTTPException, Request
+from typing import Callable
+from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -21,10 +22,11 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
     Global error handler that converts exceptions to JSON responses.
     """
     
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with error handling."""
         try:
-            response = await call_next(request)
+            from typing import cast
+            response = cast(Response, await call_next(request))
             return response
             
         except RSWError as e:
@@ -125,7 +127,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
         return code_map.get(error_code, 500)
 
 
-async def http_exception_handler(request: Request, exc: HTTPException):
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """Custom handler for HTTP exceptions."""
     return JSONResponse(
         status_code=exc.status_code,

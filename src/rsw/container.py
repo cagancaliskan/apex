@@ -6,7 +6,7 @@ following the Dependency Inversion Principle.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, TypeVar, Generic
+from typing import Any, Callable, TypeVar, Generic, cast
 from functools import lru_cache
 
 from rsw.interfaces import IDataProvider, IStateStore, IStrategyCalculator, ICache
@@ -70,10 +70,10 @@ class Container:
         if interface in self._singleton_types:
             if interface not in self._singletons:
                 self._singletons[interface] = self._factories[interface]()
-            return self._singletons[interface]
+            return cast(T, self._singletons[interface])
         
         # Create new instance
-        return self._factories[interface]()
+        return cast(T, self._factories[interface]())
     
     def reset(self) -> None:
         """Reset all singletons (useful for testing)."""
@@ -120,8 +120,8 @@ def create_dependencies() -> AppDependencies:
     strategy_calculator = StrategyService(config.strategy)
     
     return AppDependencies(
-        data_provider=data_provider,
-        state_store=state_store,
+        data_provider=cast(IDataProvider, data_provider),
+        state_store=cast(IStateStore, state_store),
         strategy_calculator=strategy_calculator,
     )
 
@@ -144,19 +144,20 @@ def get_container() -> Container:
 
 def _register_dependencies(container: Container) -> None:
     """Register all dependencies in the container."""
+    from typing import cast, Callable, Any
     from rsw.ingest import OpenF1Client
     from rsw.state.store import RaceStateStore
     
-    container.register(IDataProvider, OpenF1Client, singleton=True)
-    container.register(IStateStore, RaceStateStore, singleton=True)
+    container.register(IDataProvider, cast(Callable[..., IDataProvider], OpenF1Client), singleton=True) # type: ignore[type-abstract]
+    container.register(IStateStore, cast(Callable[..., IStateStore], RaceStateStore), singleton=True) # type: ignore[type-abstract]
 
 
 # FastAPI dependency functions
 async def get_data_provider() -> IDataProvider:
     """FastAPI dependency for data provider."""
-    return get_container().resolve(IDataProvider)
+    return get_container().resolve(IDataProvider) # type: ignore[type-abstract]
 
 
 async def get_state_store() -> IStateStore:
     """FastAPI dependency for state store."""
-    return get_container().resolve(IStateStore)
+    return get_container().resolve(IStateStore) # type: ignore[type-abstract]

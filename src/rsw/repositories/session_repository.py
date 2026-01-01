@@ -4,7 +4,7 @@ Session Repository - data access for sessions.
 Follows Repository Pattern for Separation of Concerns.
 """
 
-from typing import Any
+from typing import Any, cast
 
 from rsw.interfaces import IRepository
 from rsw.db.models import SessionModel
@@ -44,7 +44,7 @@ class SessionRepository(IRepository[SessionModel]):
         """
         async with self._session_factory() as session:
             result = await session.get(SessionModel, id)
-            return result
+            return cast(SessionModel | None, result)
     
     async def get_by_key(self, session_key: int) -> SessionModel | None:
         """
@@ -60,10 +60,11 @@ class SessionRepository(IRepository[SessionModel]):
         
         async with self._session_factory() as session:
             stmt = select(SessionModel).where(SessionModel.session_key == session_key)
+            from typing import cast
             result = await session.execute(stmt)
-            return result.scalar_one_or_none()
+            return cast(SessionModel | None, result.scalar_one_or_none())
     
-    async def get_all(self, **filters) -> list[SessionModel]:
+    async def get_all(self, **filters: Any) -> list[SessionModel]:
         """
         Get all sessions matching filters.
         

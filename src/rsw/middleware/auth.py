@@ -5,7 +5,8 @@ Provides JWT-based authentication and API key validation.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Callable, Awaitable, Any
+from collections.abc import Awaitable as AbcAwaitable
 
 import jwt
 from fastapi import Depends, HTTPException, Request, Security
@@ -103,12 +104,13 @@ def decode_token(token: str) -> dict:
     config = get_config()
     
     try:
+        from typing import cast
         payload = jwt.decode(
             token,
             config.auth.jwt_secret,
             algorithms=[config.auth.jwt_algorithm],
         )
-        return payload
+        return cast(dict[str, Any], payload)
     except jwt.ExpiredSignatureError:
         raise InvalidTokenError("Token has expired")
     except jwt.InvalidTokenError as e:
@@ -192,7 +194,7 @@ async def require_auth(
     return user
 
 
-def require_permission(permission: str):
+def require_permission(permission: str) -> Callable[[AuthUser], Awaitable[AuthUser]]:
     """
     Factory for permission-checking dependencies.
     
@@ -218,7 +220,7 @@ def require_permission(permission: str):
     return check_permission
 
 
-def require_role(role: str):
+def require_role(role: str) -> Callable[[AuthUser], Awaitable[AuthUser]]:
     """
     Factory for role-checking dependencies.
     

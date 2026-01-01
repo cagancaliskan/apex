@@ -95,6 +95,7 @@ class ReplayService(IService):
             NoActiveReplayError: If no session is loaded
         """
         self._ensure_active_session()
+        assert self._active_session is not None
         self._active_session.set_speed(speed)
         self._active_session.play()
         
@@ -103,12 +104,14 @@ class ReplayService(IService):
     def pause_replay(self) -> None:
         """Pause replay."""
         self._ensure_active_session()
+        assert self._active_session is not None
         self._active_session.pause()
         logger.info("replay_paused")
     
     def stop_replay(self) -> None:
         """Stop replay and reset."""
         self._ensure_active_session()
+        assert self._active_session is not None
         self._active_session.stop()
         logger.info("replay_stopped")
     
@@ -120,6 +123,7 @@ class ReplayService(IService):
             lap: Lap number to seek to
         """
         self._ensure_active_session()
+        assert self._active_session is not None
         self._active_session.seek(lap)
         logger.debug("replay_seek", lap=lap)
     
@@ -131,6 +135,7 @@ class ReplayService(IService):
             speed: Speed multiplier (0.1 to 10.0)
         """
         self._ensure_active_session()
+        assert self._active_session is not None
         self._active_session.set_speed(speed)
     
     def get_state(self) -> dict:
@@ -141,6 +146,7 @@ class ReplayService(IService):
             Current state as dictionary
         """
         self._ensure_active_session()
+        assert self._active_session is not None
         state = self._active_session.get_state()
         
         return {
@@ -168,3 +174,4 @@ class ReplayService(IService):
         """Ensure there's an active session loaded."""
         if not self._active_session:
             raise NoActiveReplayError()
+        assert self._active_session is not None

@@ -107,7 +107,7 @@ class RaceStateStore:
         """
         self._subscribers.append(callback)
         
-        def unsubscribe():
+        def unsubscribe() -> None:
             if callback in self._subscribers:
                 self._subscribers.remove(callback)
         

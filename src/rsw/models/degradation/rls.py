@@ -153,7 +153,7 @@ class RLSEstimator:
         """Get root mean squared error of updates."""
         if self.n_updates == 0:
             return 0.0
-        return np.sqrt(self.residual_sum / self.n_updates)
+        return float(np.sqrt(self.residual_sum / self.n_updates))
     
     def reset(self, initial_covariance: float = 1000.0) -> None:
         """Reset the estimator to initial state."""

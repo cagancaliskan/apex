@@ -6,6 +6,7 @@ All data from different providers is normalized into this format.
 """
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -72,7 +73,7 @@ class DriverState(BaseModel):
         self,
         lap_number: int,
         lap_time: float | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "DriverState":
         """Create a copy with updated lap data."""
         updates = {

@@ -180,7 +180,7 @@ class IRepository(ABC, Generic[T]):
         pass
     
     @abstractmethod
-    async def get_all(self, **filters) -> list[T]:
+    async def get_all(self, **filters: Any) -> list[T]:
         """Get all entities matching filters."""
         pass
     

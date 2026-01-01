@@ -79,7 +79,8 @@ def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     Returns:
         Configured structlog logger
     """
-    return structlog.get_logger(name)
+    from typing import cast
+    return cast(structlog.stdlib.BoundLogger, structlog.get_logger(name))
 
 
 def bind_context(**kwargs: Any) -> None:

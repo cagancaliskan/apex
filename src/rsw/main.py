@@ -31,7 +31,7 @@ from rsw.api.routes.health import router as health_router
 class AppState:
     """Application-wide state container."""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.config = load_app_config()
         self.tracks = load_tracks_config()
         self.store = RaceStateStore()
@@ -41,6 +41,7 @@ class AppState:
         self.polling_task: asyncio.Task | None = None
         self.websocket_clients: list[WebSocket] = []
         self.is_polling = False
+        self.active_replay: Any = None
 
 
 app_state = AppState()
@@ -53,7 +54,7 @@ app_state = AppState()
 class ConnectionManager:
     """Manages WebSocket connections for real-time updates."""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.active_connections: list[WebSocket] = []
     
     async def connect(self, websocket: WebSocket) -> None:
@@ -233,20 +234,20 @@ async def polling_loop(session_key: int, interval: float = 3.0) -> None:
             # ================================================================
             for lap in laps_this_lap:
                 driver_num = lap.driver_number
-                driver = driver_updates.get(driver_num)
-                if driver and lap.lap_duration and lap.lap_duration > 0:
+                current_driver = driver_updates.get(driver_num)
+                if current_driver and lap.lap_duration and lap.lap_duration > 0:
                     # Get stint info for this driver
                     stint = next(
                         (s for s in stints_this_lap if s.driver_number == driver_num),
                         None
                     )
-                    stint_num = stint.stint_number if stint else driver.stint_number
-                    compound = stint.compound if stint else driver.compound or "MEDIUM"
-                    lap_in_stint = driver.lap_in_stint if driver.lap_in_stint > 0 else 1
+                    stint_num = stint.stint_number if stint else current_driver.stint_number
+                    compound = stint.compound if stint else current_driver.compound or "MEDIUM"
+                    lap_in_stint = current_driver.lap_in_stint if current_driver.lap_in_stint > 0 else 1
                     
                     # Check if this is a valid lap for model training
                     is_valid = (
-                        not driver.is_pit_out_lap
+                        not current_driver.is_pit_out_lap
                         and not state.safety_car
                         and not state.virtual_safety_car
                     )
@@ -362,7 +363,7 @@ async def polling_loop(session_key: int, interval: float = 3.0) -> None:
 # ============================================================================
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> Any:
     """Application lifespan manager."""
     # Startup
     print("🏎️  Race Strategy Workbench starting...")
@@ -399,19 +400,29 @@ app.include_router(health_router, tags=["health"])
 # ============================================================================
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, str]:
     """Root endpoint."""
     return {"message": "Race Strategy Workbench API", "version": "0.1.0"}
 
 
 @app.get("/health")
-async def health():
+async def health() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
+@app.get("/api/drivers/{driver_number}")
+async def get_driver(driver_number: int) -> dict[str, Any] | None:
+    """Get a specific driver's current state."""
+    state = app_state.store.get()
+    driver = state.drivers.get(driver_number)
+    if driver:
+        return driver.model_dump()
+    return None
+
+
 @app.get("/api/sessions")
-async def get_sessions(year: int | None = None, country: str | None = None):
+async def get_sessions(year: int | None = None, country: str | None = None) -> list[dict[str, Any]]:
     """Get available sessions."""
     sessions = await app_state.client.get_sessions(year=year, country=country)
     return [
@@ -429,7 +440,7 @@ async def get_sessions(year: int | None = None, country: str | None = None):
 
 
 @app.get("/api/sessions/{session_key}")
-async def get_session(session_key: int):
+async def get_session(session_key: int) -> dict[str, Any]:
     """Get a specific session."""
     session = await app_state.client.get_session(session_key)
     if not session:
@@ -448,7 +459,7 @@ async def get_session(session_key: int):
 
 
 @app.post("/api/sessions/{session_key}/start")
-async def start_session(session_key: int, interval: float = 3.0):
+async def start_session(session_key: int, interval: float = 3.0) -> dict[str, Any]:
     """Start polling for a session."""
     # Stop any existing polling
     if app_state.polling_task and not app_state.polling_task.done():
@@ -468,7 +479,7 @@ async def start_session(session_key: int, interval: float = 3.0):
 
 
 @app.post("/api/sessions/stop")
-async def stop_session():
+async def stop_session() -> dict[str, str]:
     """Stop polling for the current session."""
     app_state.is_polling = False
     if app_state.polling_task:
@@ -483,13 +494,13 @@ async def stop_session():
 
 
 @app.get("/api/state")
-async def get_state():
+async def get_state() -> dict[str, Any]:
     """Get current race state."""
     return app_state.store.to_dict()
 
 
 @app.get("/api/tracks")
-async def get_tracks():
+async def get_tracks() -> dict[str, Any]:
     """Get track configurations."""
     return {
         track_id: {
@@ -508,7 +519,7 @@ async def get_tracks():
 # ============================================================================
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket) -> None:
     """WebSocket endpoint for real-time state updates."""
     await manager.connect(websocket)
     
@@ -570,7 +581,7 @@ async def websocket_endpoint(websocket: WebSocket):
 # ============================================================================
 
 @app.get("/api/replay/sessions")
-async def list_replay_sessions():
+async def list_replay_sessions() -> dict[str, list[dict[str, Any]]]:
     """List cached sessions available for replay."""
     from rsw.backtest.replay import ReplaySession
     from pathlib import Path
@@ -582,7 +593,7 @@ async def list_replay_sessions():
 
 
 @app.post("/api/replay/{session_key}/start")
-async def start_replay(session_key: int, speed: float = 1.0):
+async def start_replay(session_key: int, speed: float = 1.0) -> dict[str, Any]:
     """Start replay from cached session."""
     from rsw.backtest.replay import ReplaySession
     from pathlib import Path
@@ -601,7 +612,7 @@ async def start_replay(session_key: int, speed: float = 1.0):
     app_state.active_replay = replay
     
     # Set up callback to broadcast state
-    async def broadcast_lap(lap: int, state):
+    async def broadcast_lap(lap: int, state: Any) -> None:
         await manager.broadcast({
             "type": "replay_update",
             "lap": lap,
@@ -627,7 +638,7 @@ async def start_replay(session_key: int, speed: float = 1.0):
 
 
 @app.post("/api/replay/control")
-async def control_replay(action: str, value: float = None):
+async def control_replay(action: str, value: float | None = None) -> dict[str, Any]:
     """Control replay playback."""
     replay = getattr(app_state, 'active_replay', None)
     if not replay:
@@ -658,7 +669,7 @@ async def control_replay(action: str, value: float = None):
 # Run Server
 # ============================================================================
 
-def main():
+def main() -> None:
     """Run the server."""
     import uvicorn
     

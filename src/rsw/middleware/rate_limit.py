@@ -7,7 +7,7 @@ Provides request rate limiting using in-memory or Redis storage.
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Callable, Any
 
 from fastapi import HTTPException, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -140,7 +140,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     
     def __init__(
         self,
-        app,
+        app: Any,
         limiter: InMemoryRateLimiter | None = None,
         exclude_paths: list[str] | None = None,
     ) -> None:
@@ -148,11 +148,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.limiter = limiter or InMemoryRateLimiter()
         self.exclude_paths = exclude_paths or ["/health", "/metrics", "/docs", "/openapi.json"]
     
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with rate limiting."""
         # Skip excluded paths
         if request.url.path in self.exclude_paths:
-            return await call_next(request)
+            from typing import cast
+            return cast(Response, await call_next(request))
         
         # Check rate limit
         allowed, headers = self.limiter.check_rate_limit(request)
@@ -165,8 +166,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 headers=headers,
             )
         
+        from typing import cast
         # Process request
-        response = await call_next(request)
+        response = cast(Response, await call_next(request))
         
         # Add rate limit headers
         for key, value in headers.items():
@@ -178,7 +180,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 def rate_limit(
     requests_per_minute: int = 60,
     burst_size: int = 10,
-):
+) -> Callable:
     """
     Decorator for endpoint-specific rate limiting.
     
@@ -197,7 +199,7 @@ def rate_limit(
     )
     
     def decorator(func: Callable) -> Callable:
-        async def wrapper(request: Request, *args, **kwargs):
+        async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:
             allowed, headers = limiter.check_rate_limit(request)
             
             if not allowed:

@@ -6,7 +6,7 @@ Exposes application metrics for observability.
 
 import time
 from functools import wraps
-from typing import Callable
+from typing import Callable, Any
 
 from prometheus_client import Counter, Gauge, Histogram, Info, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Request, Response
@@ -160,10 +160,11 @@ DRIVERS_TRACKED = Gauge(
 class MetricsMiddleware(BaseHTTPMiddleware):
     """Middleware to collect HTTP metrics."""
     
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        from typing import cast
         # Skip metrics endpoint to avoid recursion
         if request.url.path == "/metrics":
-            return await call_next(request)
+            return cast(Response, await call_next(request))
         
         method = request.method
         endpoint = self._normalize_path(request.url.path)
@@ -173,7 +174,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         start_time = time.time()
         
         try:
-            response = await call_next(request)
+            response = cast(Response, await call_next(request))
             status = str(response.status_code)
         except Exception as e:
             status = "500"
@@ -230,11 +231,11 @@ async def metrics_endpoint() -> Response:
 # Decorators
 # ============================================================================
 
-def track_duration(histogram: Histogram, labels: dict | None = None):
+def track_duration(histogram: Histogram, labels: dict[str, str] | None = None) -> Callable:
     """Decorator to track function duration."""
     def decorator(func: Callable) -> Callable:
         @wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             start = time.time()
             try:
                 return await func(*args, **kwargs)
@@ -246,7 +247,7 @@ def track_duration(histogram: Histogram, labels: dict | None = None):
                     histogram.observe(duration)
         
         @wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             start = time.time()
             try:
                 return func(*args, **kwargs)

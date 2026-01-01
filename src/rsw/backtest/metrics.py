@@ -69,7 +69,7 @@ def calculate_metrics(
     )
     
     # Track pit laps by driver
-    actual_pit_laps = {}
+    actual_pit_laps: dict[int, list[int]] = {}
     for pit in actual_pits:
         driver = pit["driver_number"]
         lap = pit["lap_number"]

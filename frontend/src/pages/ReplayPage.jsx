@@ -233,6 +233,7 @@ function ReplayPage() {
                                 alignItems: 'center',
                                 gap: 'var(--space-xs)',
                                 marginLeft: 'var(--space-lg)',
+                                flexWrap: 'wrap',
                             }}>
                                 <FastForward size={16} className="text-muted" />
                                 {[0.05, 0.1, 0.25, 0.5, 1, 2, 5].map(s => (
@@ -241,12 +242,13 @@ function ReplayPage() {
                                         onClick={() => changeSpeed(s)}
                                         style={{
                                             padding: 'var(--space-xs) var(--space-sm)',
-                                            background: speed === s ? 'var(--accent-cyan)' : 'var(--bg-tertiary)',
-                                            color: speed === s ? 'black' : 'var(--text-secondary)',
-                                            border: 'none',
+                                            background: speed === s ? 'var(--accent-cyan)' : 'transparent',
+                                            color: speed === s ? 'black' : 'var(--text-primary)',
+                                            border: speed === s ? 'none' : '1px solid var(--text-muted)',
                                             borderRadius: 'var(--radius-sm)',
                                             cursor: 'pointer',
                                             fontSize: '0.8rem',
+                                            transition: 'all 0.2s',
                                         }}
                                     >
                                         {s}x

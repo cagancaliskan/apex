@@ -226,26 +226,26 @@ def simulate_race(
         )
         positions.append(pos)
     
-    positions = np.array(positions)
+    positions_arr = np.array(positions)
     
     # Calculate statistics
     position_counts = {}
     for p in range(1, 21):
-        count = np.sum(positions == p)
+        count = int(np.sum(positions_arr == p))
         if count > 0:
-            position_counts[p] = count / n_simulations
+            position_counts[p] = float(count / n_simulations)
     
-    expected_pos = np.mean(positions)
-    std_pos = np.std(positions)
+    expected_pos = float(np.mean(positions_arr))
+    std_pos = float(np.std(positions_arr))
     
     # Points calculation
     points = [POINTS.get(p, 0) for p in positions]
-    expected_points = np.mean(points)
-    std_points = np.std(points)
+    expected_points = float(np.mean(points))
+    std_points = float(np.std(points))
     
-    prob_win = np.sum(positions == 1) / n_simulations
-    prob_podium = np.sum(positions <= 3) / n_simulations
-    prob_points = np.sum(positions <= 10) / n_simulations
+    prob_win = float(np.sum(positions_arr == 1) / n_simulations)
+    prob_podium = float(np.sum(positions_arr <= 3) / n_simulations)
+    prob_points = float(np.sum(positions_arr <= 10) / n_simulations)
     
     return OutcomeDistribution(
         driver_number=driver_number,
@@ -258,8 +258,8 @@ def simulate_race(
         prob_win=prob_win,
         prob_podium=prob_podium,
         prob_points=prob_points,
-        worst_case=int(np.max(positions)),
-        best_case=int(np.min(positions)),
+        worst_case=int(np.max(positions_arr)),
+        best_case=int(np.min(positions_arr)),
     )
 
 

@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.6] - 2026-01-01
+
+### Changed
+- **Simulation**: Slowed down live simulation speed from 0.5s/1.0s to **3.0s per lap** to allow users to comfortably read real-time data and strategy updates.
+
+## [1.0.5] - 2026-01-01
+
+### Fixed
+- **Frontend**: Fixed missing speed control buttons in Replay UI and improved their visibility on mobile devices.
+
 ## [1.0.4] - 2026-01-01
 
 ### Changed

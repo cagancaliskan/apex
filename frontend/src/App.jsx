@@ -106,7 +106,7 @@ function App() {
             wsRef.current.send(JSON.stringify({
                 type: 'start_session',
                 session_key: selectedSession.session_key,
-                interval: 0.5 // Faster for demo
+                interval: 3.0 // Slower for readability
             }))
             setIsPolling(true)
         }

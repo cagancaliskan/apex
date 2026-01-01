@@ -94,7 +94,7 @@ manager = ConnectionManager()
 # Polling Loop
 # ============================================================================
 
-async def polling_loop(session_key: int, interval: float = 2.0) -> None:
+async def polling_loop(session_key: int, interval: float = 3.0) -> None:
     """
     Background task that simulates live race updates.
     
@@ -448,7 +448,7 @@ async def get_session(session_key: int):
 
 
 @app.post("/api/sessions/{session_key}/start")
-async def start_session(session_key: int, interval: float = 1.0):
+async def start_session(session_key: int, interval: float = 3.0):
     """Start polling for a session."""
     # Stop any existing polling
     if app_state.polling_task and not app_state.polling_task.done():
@@ -531,7 +531,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 elif message.get("type") == "start_session":
                     session_key = message.get("session_key")
-                    interval = message.get("interval", 1.0)
+                    interval = message.get("interval", 3.0)
                     if session_key:
                         # Start polling (reuse the REST endpoint logic)
                         if app_state.polling_task and not app_state.polling_task.done():

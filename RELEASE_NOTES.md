@@ -1,11 +1,11 @@
-# Release v1.0.4 - Extra Slow Replay Options
+# Release v1.0.6 - Slower Live Simulation
 
 **Release Date:** January 1, 2026
 
-This release adds ultra-slow motion playback options for precise analysis.
+This release slows down the live race simulation for better usability.
 
-## 🚀 Improvements
-- **Replay Controls**: Added **0.05x** (1/20th speed) option for frame-by-frame style analysis.
-- **Default Speed**: Set default playback to **0.25x** for better initial readability.
+## 🐌 Simulation Updates
+- **Slower Pace**: Increased the time between simulated laps to **3.0 seconds** (previously 0.5s - 1.0s). This makes the data stream much easier to follow and analyze in real-time.
+- **Backend Defaults**: Updated server defaults to match the new slower pace.
 
-**Full Changelog**: https://github.com/cagancaliskan/apex/compare/v1.0.3...v1.0.4
+**Full Changelog**: https://github.com/cagancaliskan/apex/compare/v1.0.5...v1.0.6

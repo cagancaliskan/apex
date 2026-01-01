@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "race-strategy-workbench"
-version = "0.1.0"
+version = "1.0.7"
 description = "F1 Race Strategy Workbench - Real-time race analytics and pit strategy optimization"
 readme = "README.md"
 requires-python = ">=3.11"

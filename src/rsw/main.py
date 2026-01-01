@@ -378,7 +378,7 @@ async def lifespan(app: FastAPI) -> Any:
 app = FastAPI(
     title="Race Strategy Workbench",
     description="Real-time F1 race analytics and pit strategy optimization",
-    version="1.0.0",
+    version="1.0.7",
     lifespan=lifespan,
 )
 
@@ -402,7 +402,7 @@ app.include_router(health_router, tags=["health"])
 @app.get("/")
 async def root() -> dict[str, str]:
     """Root endpoint."""
-    return {"message": "Race Strategy Workbench API", "version": "0.1.0"}
+    return {"message": "Race Strategy Workbench API", "version": "1.0.7"}
 
 
 @app.get("/health")

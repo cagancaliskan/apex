@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Simulation**: Slowed down live simulation speed from 0.5s/1.0s to **3.0s per lap** to allow users to comfortably read real-time data and strategy updates.
 
+## [1.0.7] - 2026-01-02
+
+### Fixed
+- **Type Safety**: Resolved all static analysis errors (`mypy`). Codebase now passes strict type checking.
+- **Dependency Models**: Updated `sessionmaker` to `async_sessionmaker` in database layer for correct async typing.
+- **Middleware**: Added strict return type casting for middleware components.
+- **Replay Service**: Added runtime assertions to prevent access to uninitialized sessions.
+
 ## [1.0.5] - 2026-01-01
 
 ### Fixed

@@ -1,10 +1,11 @@
-# Release v1.0.2 - Fix Strategy Panel Updates
+# Release v1.0.3 - Slower Replay Speeds
 
 **Release Date:** January 1, 2026
 
-This patch release fixes a critical issue where the strategy panel would not update when selecting a driver.
+This release improves the replay experience by adding slower playback speeds.
 
-## 🐛 Bug Fixes
-- **Frontend**: Fixed logic error in `StrategyPanel` where it failed to look up the latest driver data from the selected driver object. Now correctly updates strategy recommendations for the selected driver.
+## � Improvements
+- **Replay Controls**: Added **0.1x** and **0.25x** speed options for detailed analysis.
+- **Default Speed**: Changed default playback speed to **0.5x** to ensure users can keep up with the data flow.
 
-**Full Changelog**: https://github.com/cagancaliskan/apex/compare/v1.0.1...v1.0.2
+**Full Changelog**: https://github.com/cagancaliskan/apex/compare/v1.0.2...v1.0.3

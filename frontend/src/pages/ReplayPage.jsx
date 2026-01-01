@@ -11,7 +11,7 @@ function ReplayPage() {
     const [sessions, setSessions] = useState([])
     const [selectedSession, setSelectedSession] = useState(null)
     const [replayState, setReplayState] = useState(null)
-    const [speed, setSpeed] = useState(1.0)
+    const [speed, setSpeed] = useState(0.5)
     const [isPlaying, setIsPlaying] = useState(false)
     const [loading, setLoading] = useState(false)
 
@@ -235,7 +235,7 @@ function ReplayPage() {
                                 marginLeft: 'var(--space-lg)',
                             }}>
                                 <FastForward size={16} className="text-muted" />
-                                {[0.5, 1, 2, 5, 10].map(s => (
+                                {[0.1, 0.25, 0.5, 1, 2, 5].map(s => (
                                     <button
                                         key={s}
                                         onClick={() => changeSpeed(s)}

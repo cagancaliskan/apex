@@ -13,13 +13,6 @@ The following versions receive security updates:
 
 ## Reporting a Vulnerability
 
-**Please do NOT report security vulnerabilities through public GitHub issues.**
-
-Instead, report them via:
-
-1. **Email:** security@racestrategy.dev
-2. **Subject:** [SECURITY] Brief description
-
 ### What to Include
 
 - Type of vulnerability

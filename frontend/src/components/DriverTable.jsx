@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react'
 
-function DriverTable({ drivers, fastestLap }) {
+function DriverTable({ drivers, fastestLap, onDriverSelect, selectedDriver }) {
     // Find fastest lap time
     const fastestLapTime = useMemo(() => {
         if (!drivers || drivers.length === 0) return null
@@ -101,8 +101,19 @@ function DriverTable({ drivers, fastestLap }) {
                                 ? driver.predicted_pace[4]
                                 : null
 
+                            const isSelected = selectedDriver?.driver_number === driver.driver_number
+
                             return (
-                                <tr key={driver.driver_number} style={{ animationDelay: `${index * 30}ms` }}>
+                                <tr
+                                    key={driver.driver_number}
+                                    style={{
+                                        animationDelay: `${index * 30}ms`,
+                                        backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.05)' : undefined,
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => onDriverSelect && onDriverSelect(driver)}
+                                    className={isSelected ? 'selected' : ''}
+                                >
                                     <td className="position-cell">{driver.position}</td>
                                     <td>
                                         <div className="driver-cell">
@@ -178,4 +189,3 @@ function DriverTable({ drivers, fastestLap }) {
 }
 
 export default DriverTable
-

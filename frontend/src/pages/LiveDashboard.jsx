@@ -127,6 +127,8 @@ function LiveDashboard({ raceState, isPolling }) {
                     <DriverTable
                         drivers={raceState.drivers}
                         fastestLap={stats?.fastestLap}
+                        onDriverSelect={setSelectedDriver}
+                        selectedDriver={selectedDriver}
                     />
                 </div>
 

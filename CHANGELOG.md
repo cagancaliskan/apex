@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-01-01
+
+### Changed
+- **Replay**: Further lowered minimum playback speed to **0.05x** and set default to **0.25x** to allow for extremely detailed analysis of race events.
+
 ## [1.0.3] - 2026-01-01
 
 ### Changed

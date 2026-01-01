@@ -182,7 +182,7 @@ class ReplaySession:
     
     def set_speed(self, speed: float) -> None:
         """Set playback speed multiplier."""
-        self._speed = max(0.1, min(10.0, speed))
+        self._speed = max(0.05, min(10.0, speed))
         self._notify_state_change()
     
     async def _playback_loop(self) -> None:

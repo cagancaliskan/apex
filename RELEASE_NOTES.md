@@ -1,11 +1,10 @@
-# Release v1.0.1 - Fix Driver Selection
+# Release v1.0.2 - Fix Strategy Panel Updates
 
 **Release Date:** January 1, 2026
 
-This patch release addresses a user interface issue in the dashboard.
+This patch release fixes a critical issue where the strategy panel would not update when selecting a driver.
 
 ## 🐛 Bug Fixes
-- **Frontend**: Fixed `DriverTable` interaction where clicking a driver row would not trigger the selection.
-- **UI**: Added visual feedback (cursor pointer, highlight) when hovering over driver rows.
+- **Frontend**: Fixed logic error in `StrategyPanel` where it failed to look up the latest driver data from the selected driver object. Now correctly updates strategy recommendations for the selected driver.
 
-**Full Changelog**: https://github.com/cagancaliskan/apex/compare/v1.0.0...v1.0.1
+**Full Changelog**: https://github.com/cagancaliskan/apex/compare/v1.0.1...v1.0.2

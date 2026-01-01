@@ -10,7 +10,8 @@ function StrategyPanel({ drivers, selectedDriver }) {
     const driver = useMemo(() => {
         if (!drivers || drivers.length === 0) return null
         if (selectedDriver) {
-            return drivers.find(d => d.driver_number === selectedDriver)
+            const driverId = selectedDriver.driver_number || selectedDriver
+            return drivers.find(d => d.driver_number === driverId)
         }
         return drivers[0] // Leader
     }, [drivers, selectedDriver])

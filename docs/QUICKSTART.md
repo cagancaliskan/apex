@@ -71,13 +71,13 @@ make install
 ### Using run.py (Recommended)
 
 ```bash
-# Run backend only (default)
+# Run full program (default)
 python run.py
 
-# Run with frontend
+# Run frontend only
 python run.py --frontend
 
-# Run backend on custom port
+# Run on custom port
 python run.py --port 3000
 
 # Run in production mode
@@ -87,10 +87,10 @@ python run.py --prod
 ### Using Make
 
 ```bash
-# Run backend only
+# Run full program
 make run
 
-# Run with frontend
+# Run full program
 make run-all
 
 # Run in development mode with hot reload

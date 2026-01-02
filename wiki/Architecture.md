@@ -50,7 +50,82 @@ The F1 Race Strategy Workbench is a real-time analytics platform that ingests li
 
 ### Component Diagram
 
-![Components](images/components.png)
+```mermaid
+classDiagram
+    direction TB
+
+    %% Application Core
+    class Application {
+        +Backend: FastAPI
+        +Frontend: React
+        +run()
+    }
+
+    class Container {
+        +register(interface, impl)
+        +get(interface)
+    }
+
+    %% Interfaces
+    class IDataProvider {
+        <<interface>>
+        +get_sessions()
+        +get_laps()
+        +get_drivers()
+    }
+    
+    class IStateStore {
+        <<interface>>
+        +get_state()
+        +dispatch(action)
+        +subscribe(callback)
+    }
+
+    %% Implementations
+    class OpenF1Client {
+        -cache: dict
+        -http_client: AsyncClient
+        +get_sessions()
+        +get_laps()
+    }
+
+    class RaceStateStore {
+        -state: RaceState
+        -observers: list
+        +get_state()
+        +dispatch(action)
+    }
+
+    %% Strategy Engine
+    class StrategyEngine {
+        +analyze(state)
+        +recommend(driver)
+    }
+    
+    class RLSModel {
+        -params: dict
+        +update(x, y)
+        +predict(x)
+    }
+
+    class MonteCarloSimulator {
+        +simulate(state, n_simulations)
+    }
+
+    %% Relationships
+    Application --> Container : initializes
+    Container ..> IDataProvider : resolves
+    Container ..> IStateStore : resolves
+    
+    OpenF1Client --|> IDataProvider : implements
+    RaceStateStore --|> IStateStore : implements
+    
+    StrategyEngine --> IStateStore : observes
+    StrategyEngine --> RLSModel : uses
+    StrategyEngine --> MonteCarloSimulator : uses
+    
+    RLSModel --|> IDegradationModel : implements
+```
 
 ---
 

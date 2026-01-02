@@ -122,7 +122,7 @@ classDiagram
     }
     
     %% Implementations
-    class OpenF1Client {
+    class F1Client {
         -cache: dict
         +get_sessions()
         +get_laps()
@@ -153,7 +153,7 @@ classDiagram
     DI_Container ..> IDataProv
     DI_Container ..> IStore
     
-    OpenF1Client --|> IDataProv
+    F1Client --|> IDataProv
     RaceStore --|> IStore
     
     StratEngine --> IStore : observes

@@ -24,7 +24,7 @@ The F1 Race Strategy Workbench is a real-time analytics platform that ingests li
 
 ### High-Level Architecture
 
-![System Architecture](images/architecture.png)
+See [System Architecture](#system-architecture) below for the visual diagram.
 
 ### Key Characteristics
 
@@ -42,89 +42,123 @@ The F1 Race Strategy Workbench is a real-time analytics platform that ingests li
 
 ### System Architecture
 
-![Architecture Overview](images/architecture.png)
+```mermaid
+flowchart TB
+    subgraph External
+        OpenF1[OpenF1 API]
+    end
+
+    subgraph Core[Core Application]
+        direction TB
+        Ingest[Ingest Layer]
+        State[State Store]
+        Strategy[Strategy Engine]
+        API[REST API]
+        Socket[WebSocket]
+    end
+
+    subgraph User[User Interface]
+        Frontend[React Frontend]
+    end
+
+    OpenF1 --> Ingest
+    Ingest --> State
+    State <--> Strategy
+    State --> API
+    State --> Socket
+    API --> Frontend
+    Socket --> Frontend
+```
 
 ### Data Flow
 
-![Data Flow](images/data_flow.png)
-
-### Component Diagram
+```mermaid
+flowchart TD
+    %% Nodes
+    A[OpenF1 API] -->|HTTP/JSON| B(OpenF1Client)
+    B -->|Batch Data| C{UpdateBatch}
+    C -->|Normalize| D[Reducers]
+    D -->|Update| E[(RaceStateStore)]
+    
+    E -->|Notify| F[StrategyEngine]
+    F -->|Analyze| G[RLS Models]
+    F -->|Simulate| H[MonteCarlo]
+    F -->|Recommend| E
+    
+    E -->|Broadcast| I[WebSocket]
+    I -->|Push| J[Frontend]
+    
+    classDef storage fill:#f9f,stroke:#333,stroke-width:2px;
+    class E storage;
+```
 
 ```mermaid
 classDiagram
     direction TB
 
     %% Application Core
-    class Application {
+    class App {
         +Backend: FastAPI
         +Frontend: React
         +run()
     }
 
-    class Container {
-        +register(interface, impl)
-        +get(interface)
+    class DI_Container {
+        +register()
+        +get()
     }
 
     %% Interfaces
-    class IDataProvider {
+    class IDataProv {
         <<interface>>
         +get_sessions()
         +get_laps()
-        +get_drivers()
     }
     
-    class IStateStore {
+    class IStore {
         <<interface>>
         +get_state()
-        +dispatch(action)
-        +subscribe(callback)
+        +dispatch()
     }
-
+    
     %% Implementations
     class OpenF1Client {
         -cache: dict
-        -http_client: AsyncClient
         +get_sessions()
         +get_laps()
     }
 
-    class RaceStateStore {
+    class RaceStore {
         -state: RaceState
-        -observers: list
-        +get_state()
         +dispatch(action)
     }
 
     %% Strategy Engine
-    class StrategyEngine {
+    class StratEngine {
         +analyze(state)
-        +recommend(driver)
+        +recommend()
     }
     
     class RLSModel {
-        -params: dict
         +update(x, y)
         +predict(x)
     }
 
-    class MonteCarloSimulator {
-        +simulate(state, n_simulations)
+    class MonteCarlo {
+        +simulate()
     }
 
     %% Relationships
-    Application --> Container : initializes
-    Container ..> IDataProvider : resolves
-    Container ..> IStateStore : resolves
+    App --> DI_Container : init
+    DI_Container ..> IDataProv
+    DI_Container ..> IStore
     
-    OpenF1Client --|> IDataProvider : implements
-    RaceStateStore --|> IStateStore : implements
+    OpenF1Client --|> IDataProv
+    RaceStore --|> IStore
     
-    StrategyEngine --> IStateStore : observes
-    StrategyEngine --> RLSModel : uses
-    StrategyEngine --> MonteCarloSimulator : uses
-    
-    RLSModel --|> IDegradationModel : implements
+    StratEngine --> IStore : observes
+    StratEngine --> RLSModel : uses
+    StratEngine --> MonteCarlo : uses
 ```
 
 ---

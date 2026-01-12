@@ -5,7 +5,8 @@ Provides consistent error responses and logging for all exceptions.
 """
 
 import traceback
-from typing import Callable
+from collections.abc import Callable
+
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -21,14 +22,15 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
     """
     Global error handler that converts exceptions to JSON responses.
     """
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with error handling."""
         try:
             from typing import cast
+
             response = cast(Response, await call_next(request))
             return response
-            
+
         except RSWError as e:
             # Our custom exceptions
             logger.error(
@@ -38,13 +40,13 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
                 details=e.details,
                 path=request.url.path,
             )
-            
+
             status_code = self._get_status_code(e.code)
             return JSONResponse(
                 status_code=status_code,
                 content=e.to_dict(),
             )
-            
+
         except HTTPException as e:
             # FastAPI HTTP exceptions (pass through)
             logger.warning(
@@ -54,18 +56,18 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
                 path=request.url.path,
             )
             raise
-            
+
         except Exception as e:
             # Unexpected exceptions
             config = get_config()
-            
+
             logger.exception(
                 "unhandled_error",
                 error=str(e),
                 path=request.url.path,
                 method=request.method,
             )
-            
+
             # In development, include stack trace
             if config.is_development:
                 return JSONResponse(
@@ -78,7 +80,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
                         }
                     },
                 )
-            
+
             # In production, hide details
             return JSONResponse(
                 status_code=500,
@@ -89,7 +91,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
                     }
                 },
             )
-    
+
     def _get_status_code(self, error_code: str) -> int:
         """Map error codes to HTTP status codes."""
         code_map = {
@@ -97,25 +99,19 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
             "INVALID_DATA": 400,
             "DATA_ERROR": 400,
             "CONFIG_ERROR": 400,
-            
             # 401 Unauthorized
             "AUTH_ERROR": 401,
             "INVALID_TOKEN": 401,
-            
             # 403 Forbidden
             "INSUFFICIENT_PERMISSIONS": 403,
-            
             # 404 Not Found
             "SESSION_NOT_FOUND": 404,
             "DRIVER_NOT_FOUND": 404,
             "CACHED_SESSION_NOT_FOUND": 404,
-            
             # 422 Unprocessable
             "INSUFFICIENT_DATA": 422,
-            
             # 429 Too Many Requests
             "RATE_LIMIT_EXCEEDED": 429,
-            
             # 500 Internal Server Error
             "API_ERROR": 502,
             "API_TIMEOUT": 504,
@@ -123,7 +119,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
             "MODEL_ERROR": 500,
             "STRATEGY_ERROR": 500,
         }
-        
+
         return code_map.get(error_code, 500)
 
 

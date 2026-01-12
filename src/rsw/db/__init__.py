@@ -4,16 +4,16 @@ Database package for Race Strategy Workbench.
 
 from .models import (
     Base,
-    SessionModel,
     DriverModel,
     LapModel,
-    StintModel,
     PitStopModel,
     RaceControlModel,
+    SessionModel,
+    StintModel,
+    close_db,
     get_engine,
     get_session,
     init_db,
-    close_db,
 )
 
 __all__ = [

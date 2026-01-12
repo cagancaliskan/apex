@@ -5,14 +5,14 @@ Configuration file loaders.
 from pathlib import Path
 from typing import Any
 
-import yaml # type: ignore
+import yaml  # type: ignore
 
-from .schemas import AppConfig, TrackConfig, StrategyConfig
+from .schemas import AppConfig, StrategyConfig, TrackConfig
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     """Load a YAML file and return its contents."""
-    with open(path, "r") as f:
+    with open(path) as f:
         return yaml.safe_load(f) or {}
 
 
@@ -28,10 +28,10 @@ def load_app_config(path: Path | None = None) -> AppConfig:
     """Load application configuration from YAML file."""
     if path is None:
         path = get_config_dir() / "app.yaml"
-    
+
     if not path.exists():
         return AppConfig()
-    
+
     data = _load_yaml(path)
     return AppConfig(**data)
 
@@ -40,26 +40,23 @@ def load_tracks_config(path: Path | None = None) -> dict[str, TrackConfig]:
     """Load tracks configuration from YAML file."""
     if path is None:
         path = get_config_dir() / "tracks.yaml"
-    
+
     if not path.exists():
         return {}
-    
+
     data = _load_yaml(path)
     tracks_data = data.get("tracks", {})
-    
-    return {
-        track_id: TrackConfig(**track_data)
-        for track_id, track_data in tracks_data.items()
-    }
+
+    return {track_id: TrackConfig(**track_data) for track_id, track_data in tracks_data.items()}
 
 
 def load_strategy_config(path: Path | None = None) -> StrategyConfig:
     """Load strategy configuration from YAML file."""
     if path is None:
         path = get_config_dir() / "strategy.yaml"
-    
+
     if not path.exists():
         return StrategyConfig()
-    
+
     data = _load_yaml(path)
     return StrategyConfig(**data)

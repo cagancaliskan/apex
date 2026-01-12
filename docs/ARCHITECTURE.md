@@ -138,15 +138,16 @@ prediction = model.predict_next_k(k=5)
 
 ### 4. Strategy Engine (`src/rsw/strategy/`)
 
-**Purpose:** Calculate optimal pit strategies and recommendations.
+**Purpose:** Calculate optimal pit strategies and recommendations using parallel Monte Carlo simulations.
 
 | Module | Responsibility |
 |--------|----------------|
 | `pit_window.py` | Optimal pit window calculation |
 | `pitloss.py` | Pit stop time loss estimation |
-| `monte_carlo.py` | Race outcome simulation |
+| `monte_carlo.py` | Parallelized race outcome simulation |
 | `decision.py` | Strategy recommendation engine |
 | `explainer.py` | Human-readable explanations |
+| `grid_simulator.py` | Discrete event simulation for race grid |
 
 **Strategy Output:**
 ```python
@@ -155,12 +156,25 @@ StrategyRecommendation:
   ├── confidence: float (0-1)
   ├── pit_window: PitWindow
   ├── expected_position: float
+  ├── pit_rejoin: PitRejoinPrediction
   └── explanation: str
 ```
 
 ---
 
-### 5. API Layer (`src/rsw/api/`)
+### 5. Services Layer (`src/rsw/services/`)
+
+**Purpose:** Orchestrate business logic and state updates.
+
+| Service | Responsibility |
+|---------|----------------|
+| `SimulationService` | Main loop management, state propagation, thread safety |
+| `StrategyService` | Async strategy evaluation, caching, parallel execution management |
+| `ReplayService` | Historical session playback control |
+
+---
+
+### 6. API Layer (`src/rsw/api/`)
 
 **Purpose:** REST and WebSocket endpoints.
 
@@ -179,13 +193,13 @@ StrategyRecommendation:
 
 ---
 
-### 6. Frontend (`frontend/`)
+### 7. Frontend (`frontend/`)
 
 **Purpose:** React-based user interface.
 
 | Directory | Content |
 |-----------|---------|
-| `src/components/` | React components |
+| `src/components/` | React components (`TelemetryPanel`, `StrategyPanel`, `PitRejoinVisualizer`) |
 | `src/hooks/` | Custom hooks (WebSocket, state) |
 | `src/services/` | API client services |
 | `src/stores/` | Zustand state stores |
@@ -211,16 +225,22 @@ StrategyRecommendation:
    ▼
 5. RaceStateStore (immutable state)
    │
-   ├──▶ 6a. Strategy Engine (predictions)
+   ▼
+6. SimulationService (Orchestrator)
+   │
+   ├──▶ 7a. StrategyService (Async)
    │         │
    │         ▼
-   │    6b. Recommendations
+   │    7b. Parallel Strategy Engine
+   │         │
+   │         ▼
+   │    7c. Recommendations
    │
    ▼
-7. WebSocket Broadcast
+8. WebSocket Broadcast
    │
    ▼
-8. Frontend (React)
+9. Frontend (React)
 ```
 
 ### Request Lifecycle

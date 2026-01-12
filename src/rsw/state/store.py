@@ -6,15 +6,13 @@ when it changes, enabling real-time updates to the UI.
 """
 
 import asyncio
-import json
+from collections.abc import Awaitable, Callable
 from datetime import datetime
-from typing import Any, Callable
-from collections.abc import Awaitable
+from typing import Any
 
 from ..ingest.base import UpdateBatch
-from .schemas import RaceState, DriverState, StateSnapshot
 from .reducers import apply_update_batch
-
+from .schemas import RaceState, StateSnapshot
 
 # Type for state change callbacks
 StateCallback = Callable[[RaceState], Awaitable[None]]
@@ -23,14 +21,14 @@ StateCallback = Callable[[RaceState], Awaitable[None]]
 class RaceStateStore:
     """
     In-memory store for race state with reactive updates.
-    
+
     Features:
     - Thread-safe state access
     - Subscription system for real-time updates
     - Snapshot support for persistence
     - History tracking (optional)
     """
-    
+
     def __init__(
         self,
         initial_state: RaceState | None = None,
@@ -39,7 +37,7 @@ class RaceStateStore:
     ):
         """
         Initialize the store.
-        
+
         Args:
             initial_state: Optional initial state (creates empty state if None)
             track_history: Whether to track state history
@@ -52,25 +50,25 @@ class RaceStateStore:
         self._max_history = max_history
         self._history: list[RaceState] = []
         self._update_count = 0
-    
+
     @property
     def state(self) -> RaceState:
         """Get current state (read-only property)."""
         return self._state
-    
+
     def get(self) -> RaceState:
         """Get current state."""
         return self._state
-    
+
     async def apply(self, batch: UpdateBatch) -> RaceState:
         """
         Apply an update batch to the state.
-        
+
         This is the main way to update state. It:
         1. Applies the batch using reducers
         2. Saves to history if enabled
         3. Notifies all subscribers
-        
+
         Returns the new state.
         """
         async with self._lock:
@@ -78,41 +76,41 @@ class RaceStateStore:
             if self._track_history:
                 self._history.append(self._state)
                 if len(self._history) > self._max_history:
-                    self._history = self._history[-self._max_history:]
-            
+                    self._history = self._history[-self._max_history :]
+
             # Apply the update
             self._state = apply_update_batch(self._state, batch)
             self._update_count += 1
-        
+
         # Notify subscribers (outside lock to avoid deadlock)
         await self._notify_subscribers()
-        
+
         return self._state
-    
+
     async def reset(self, new_state: RaceState | None = None) -> RaceState:
         """Reset to a new state or empty state."""
         async with self._lock:
             self._state = new_state or RaceState(session_key=0)
             self._history = []
             self._update_count = 0
-        
+
         await self._notify_subscribers()
         return self._state
-    
+
     def subscribe(self, callback: StateCallback) -> Callable[[], None]:
         """
         Subscribe to state changes.
-        
+
         Returns an unsubscribe function.
         """
         self._subscribers.append(callback)
-        
+
         def unsubscribe() -> None:
             if callback in self._subscribers:
                 self._subscribers.remove(callback)
-        
+
         return unsubscribe
-    
+
     async def _notify_subscribers(self) -> None:
         """Notify all subscribers of state change."""
         for callback in self._subscribers:
@@ -120,7 +118,7 @@ class RaceStateStore:
                 await callback(self._state)
             except Exception as e:
                 print(f"Error notifying subscriber: {e}")
-    
+
     def snapshot(self, snapshot_id: str | None = None) -> StateSnapshot:
         """Create a snapshot of current state."""
         return StateSnapshot(
@@ -128,19 +126,19 @@ class RaceStateStore:
             snapshot_id=snapshot_id or f"snapshot_{self._update_count}",
             created_at=datetime.utcnow(),
         )
-    
+
     def get_history(self) -> list[RaceState]:
         """Get state history (if tracking enabled)."""
         return list(self._history)
-    
+
     def to_json(self) -> str:
         """Serialize current state to JSON."""
         return self._state.model_dump_json()
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert current state to a dictionary for JSON APIs."""
         state = self._state
-        
+
         return {
             "session_key": state.session_key,
             "session_name": state.session_name,
@@ -153,6 +151,13 @@ class RaceStateStore:
             "safety_car": state.safety_car,
             "virtual_safety_car": state.virtual_safety_car,
             "red_flag": state.red_flag,
+            # Added: track status and DRS zones
+            "track_status": getattr(state, "track_status", "GREEN"),
+            "drs_zones": getattr(state, "drs_zones", []),
+            # Added: track geometry for visualization
+            "track_config": getattr(state, "track_config", None),
+            # Added: weather data
+            "weather": getattr(state, "weather", None),
             "drivers": [
                 {
                     "driver_number": d.driver_number,
@@ -172,6 +177,13 @@ class RaceStateStore:
                     "tyre_age": d.tyre_age,
                     "in_pit": d.in_pit,
                     "retired": d.retired,
+                    # ADDED: Telemetry data for live visualization
+                    "speed": d.speed,
+                    "gear": d.gear,
+                    "throttle": d.throttle,
+                    "brake": d.brake,
+                    "drs": d.drs,
+                    "rel_dist": d.rel_dist,  # Position on track (0-1)
                     # Phase 2: ML predictions
                     "deg_slope": d.deg_slope,
                     "cliff_risk": d.cliff_risk,

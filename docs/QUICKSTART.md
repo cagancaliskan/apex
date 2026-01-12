@@ -31,8 +31,8 @@ Complete reference for running the F1 Race Strategy Workbench.
 
 ### Clone Repository
 ```bash
-git clone https://github.com/your-org/f1-strategy-workbench.git
-cd f1-strategy-workbench
+git clone https://github.com/cagancaliskan/apex.git
+cd apex
 ```
 
 ### Python Virtual Environment

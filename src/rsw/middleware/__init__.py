@@ -11,13 +11,13 @@ from .auth import (
     require_permission,
     require_role,
 )
+from .error_handler import ErrorHandlerMiddleware, http_exception_handler
 from .rate_limit import (
     InMemoryRateLimiter,
     RateLimitConfig,
     RateLimitMiddleware,
     rate_limit,
 )
-from .error_handler import ErrorHandlerMiddleware, http_exception_handler
 
 __all__ = [
     # Auth

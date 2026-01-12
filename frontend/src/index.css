@@ -10,7 +10,7 @@
   --bg-tertiary: #131a2b;
   --bg-card: #151d2e;
   --bg-card-hover: #1a2540;
-  
+
   /* Accent colors - neon/cyber */
   --accent-cyan: #06f9f9;
   --accent-magenta: #ff0055;
@@ -19,40 +19,40 @@
   --accent-green: #00ff88;
   --accent-yellow: #ffd000;
   --accent-orange: #ff6b00;
-  
+
   /* Text colors */
   --text-primary: #ffffff;
   --text-secondary: #a0aec0;
   --text-tertiary: #6b7280;
   --text-muted: #4a5568;
-  
+
   /* Tyre compound colors */
   --tyre-soft: #ff0000;
   --tyre-medium: #ffd700;
   --tyre-hard: #ffffff;
   --tyre-inter: #00ff00;
   --tyre-wet: #0066ff;
-  
+
   /* Status colors */
   --status-green: #00ff88;
   --status-yellow: #ffd000;
   --status-red: #ff0055;
   --status-blue: #3b82f6;
-  
+
   /* Gradients */
   --gradient-cyan-magenta: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
   --gradient-purple-blue: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
   --gradient-glow: radial-gradient(ellipse at center, rgba(6, 249, 249, 0.15) 0%, transparent 70%);
-  
+
   /* Shadows & Glows */
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
   --shadow-glow-cyan: 0 0 20px rgba(6, 249, 249, 0.3);
   --shadow-glow-magenta: 0 0 20px rgba(255, 0, 85, 0.3);
-  
+
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-display: 'Orbitron', var(--font-sans);
-  
+
   /* Spacing */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
@@ -60,14 +60,14 @@
   --space-lg: 1.5rem;
   --space-xl: 2rem;
   --space-2xl: 3rem;
-  
+
   /* Border radius */
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-full: 9999px;
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-base: 250ms ease;
@@ -75,7 +75,9 @@
 }
 
 /* Reset & Base */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -105,7 +107,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(ellipse at top right, rgba(157, 78, 221, 0.08) 0%, transparent 50%),
     radial-gradient(ellipse at bottom left, rgba(6, 249, 249, 0.05) 0%, transparent 50%);
   pointer-events: none;
@@ -191,17 +193,33 @@ body::before {
    Typography
    ============================================================================ */
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-display);
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: 0.025em;
 }
 
-h1 { font-size: 2rem; }
-h2 { font-size: 1.5rem; }
-h3 { font-size: 1.25rem; }
-h4 { font-size: 1rem; }
+h1 {
+  font-size: 2rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+}
+
+h4 {
+  font-size: 1rem;
+}
 
 .text-gradient {
   background: var(--gradient-cyan-magenta);
@@ -262,17 +280,30 @@ h4 { font-size: 1rem; }
   line-height: 1;
 }
 
-.metric-card .value.cyan { color: var(--accent-cyan); }
-.metric-card .value.magenta { color: var(--accent-magenta); }
-.metric-card .value.green { color: var(--accent-green); }
+.metric-card .value.cyan {
+  color: var(--accent-cyan);
+}
+
+.metric-card .value.magenta {
+  color: var(--accent-magenta);
+}
+
+.metric-card .value.green {
+  color: var(--accent-green);
+}
 
 .metric-card .delta {
   font-size: 0.875rem;
   font-weight: 500;
 }
 
-.metric-card .delta.positive { color: var(--status-green); }
-.metric-card .delta.negative { color: var(--status-red); }
+.metric-card .delta.positive {
+  color: var(--status-green);
+}
+
+.metric-card .delta.negative {
+  color: var(--status-red);
+}
 
 /* ============================================================================
    Driver Table
@@ -371,24 +402,28 @@ h4 { font-size: 1rem; }
   text-transform: uppercase;
 }
 
-.tyre-badge.soft { 
-  background: var(--tyre-soft); 
+.tyre-badge.soft {
+  background: var(--tyre-soft);
   color: white;
 }
-.tyre-badge.medium { 
-  background: var(--tyre-medium); 
+
+.tyre-badge.medium {
+  background: var(--tyre-medium);
   color: black;
 }
-.tyre-badge.hard { 
-  background: var(--tyre-hard); 
+
+.tyre-badge.hard {
+  background: var(--tyre-hard);
   color: black;
 }
-.tyre-badge.intermediate { 
-  background: var(--tyre-inter); 
+
+.tyre-badge.intermediate {
+  background: var(--tyre-inter);
   color: black;
 }
-.tyre-badge.wet { 
-  background: var(--tyre-wet); 
+
+.tyre-badge.wet {
+  background: var(--tyre-wet);
   color: white;
 }
 
@@ -432,7 +467,8 @@ h4 { font-size: 1rem; }
   border: 1px solid rgba(255, 0, 85, 0.3);
 }
 
-.status-badge.sc, .status-badge.vsc {
+.status-badge.sc,
+.status-badge.vsc {
   background: rgba(255, 208, 0, 0.2);
   color: var(--status-yellow);
   border: 1px solid rgba(255, 208, 0, 0.4);
@@ -440,8 +476,15 @@ h4 { font-size: 1rem; }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* Connection status dot */
@@ -644,18 +687,39 @@ h4 { font-size: 1rem; }
    ============================================================================ */
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideIn {
-  from { opacity: 0; transform: translateX(-20px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(6, 249, 249, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(6, 249, 249, 0.5); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(6, 249, 249, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(6, 249, 249, 0.5);
+  }
 }
 
 .animate-fade-in {
@@ -701,18 +765,453 @@ h4 { font-size: 1rem; }
    Utility Classes
    ============================================================================ */
 
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.gap-sm { gap: var(--space-sm); }
-.gap-md { gap: var(--space-md); }
-.gap-lg { gap: var(--space-lg); }
+.flex {
+  display: flex;
+}
 
-.text-sm { font-size: 0.875rem; }
-.text-xs { font-size: 0.75rem; }
-.text-muted { color: var(--text-tertiary); }
+.flex-col {
+  flex-direction: column;
+}
 
-.mb-md { margin-bottom: var(--space-md); }
-.mb-lg { margin-bottom: var(--space-lg); }
-.mb-xl { margin-bottom: var(--space-xl); }
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-sm {
+  gap: var(--space-sm);
+}
+
+.gap-md {
+  gap: var(--space-md);
+}
+
+.gap-lg {
+  gap: var(--space-lg);
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.text-muted {
+  color: var(--text-tertiary);
+}
+
+.mb-md {
+  margin-bottom: var(--space-md);
+}
+
+.mb-lg {
+  margin-bottom: var(--space-lg);
+}
+
+.mb-xl {
+  margin-bottom: var(--space-xl);
+}
+
+/* ============================================================================
+   Telemetry Panel
+   ============================================================================ */
+
+.telemetry-panel {
+  min-width: 320px;
+}
+
+.telemetry-panel .speed-gauge {
+  flex-shrink: 0;
+}
+
+.telemetry-panel .gear-indicator {
+  min-width: 60px;
+}
+
+.telemetry-panel .vertical-bar {
+  flex-shrink: 0;
+}
+
+/* DRS Indicator States */
+.drs-indicator.active {
+  animation: drs-glow 1s ease-in-out infinite;
+}
+
+@keyframes drs-glow {
+
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.3);
+  }
+}
+
+/* ============================================================================
+   Mini Telemetry (for DriverTable rows)
+   ============================================================================ */
+
+.mini-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mini-speed {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  min-width: 48px;
+}
+
+.mini-gear {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  min-width: 20px;
+  text-align: center;
+}
+
+.mini-drs {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mini-drs.off {
+  background: var(--text-muted);
+}
+
+.mini-drs.available {
+  background: var(--accent-yellow);
+  box-shadow: 0 0 4px var(--accent-yellow);
+}
+
+.mini-drs.active {
+  background: var(--accent-green);
+  box-shadow: 0 0 6px var(--accent-green);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* Mini throttle/brake bars */
+.mini-bars {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+}
+
+.mini-bar {
+  width: 5px;
+  height: 100%;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.mini-bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  transition: height 0.1s ease;
+  border-radius: 2px;
+}
+
+.mini-bar-fill.throttle {
+  background: var(--accent-green);
+}
+
+.mini-bar-fill.brake {
+  background: var(--status-red);
+}
+
+/* ============================================================================
+   New DriverTable Columns
+   ============================================================================ */
+
+.driver-table .telemetry-cell {
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.driver-table .speed-cell {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.driver-table .gear-cell {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--accent-cyan);
+  font-size: 0.8rem;
+}
+
+/* Braking intensity indicator */
+.braking-indicator {
+  width: 6px;
+  height: 16px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.braking-indicator-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--status-red);
+  transition: height 0.1s ease;
+  border-radius: 2px;
+}
+
+.braking-indicator-fill.intensity-high {
+  background: #ff0000;
+  box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
+}
+
+.braking-indicator-fill.intensity-medium {
+  background: #ff6600;
+}
+
+.braking-indicator-fill.intensity-low {
+  background: #ff9933;
+}
+
+/* ============================================================================
+   Race Progress Bar
+   ============================================================================ */
+
+.race-progress-bar-container {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.race-progress-bar {
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.race-progress-bar:hover .progress-head {
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+.event-marker {
+  opacity: 0.9;
+  transition: all 0.15s ease;
+}
+
+.event-marker:hover {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.3);
+  z-index: 20 !important;
+}
+
+.flag-period {
+  pointer-events: none;
+}
+
+/* ============================================================================
+   Weather Widget
+   ============================================================================ */
+
+.weather-widget {
+  min-width: 200px;
+}
+
+.weather-widget-compact {
+  font-size: 0.85rem;
+}
+
+.weather-widget .temperature-display {
+  transition: color 0.3s ease;
+}
+
+/* Rain animation */
+@keyframes rain-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+}
+
+.rain-active {
+  animation: rain-drop 1s ease-in-out infinite;
+}
+
+/* Wind arrow rotation */
+.wind-arrow {
+  transition: transform 0.5s ease;
+}
+
+/* Weather condition colors */
+.weather-sunny {
+  color: var(--accent-yellow);
+}
+
+.weather-cloudy {
+  color: var(--text-secondary);
+}
+
+.weather-rain {
+  color: var(--accent-cyan);
+}
+
+.weather-heavy-rain {
+  color: var(--accent-blue);
+}
+
+/* ============================================================================
+   Track Map
+   ============================================================================ */
+
+.track-map {
+  min-width: 280px;
+  overflow: hidden;
+}
+
+.track-map svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.track-map .car-marker {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.track-map .car-marker:hover {
+  transform: scale(1.2);
+}
+
+/* ============================================================================
+   Telemetry Charts
+   ============================================================================ */
+
+.telemetry-chart-panel {
+  min-width: 320px;
+}
+
+.telemetry-chart svg {
+  display: block;
+  width: 100%;
+}
+
+.telemetry-chart path {
+  vector-effect: non-scaling-stroke;
+}
+
+.comparison-chart path:nth-child(2) {
+  opacity: 0.7;
+}
+
+.throttle-brake-chart path {
+  transition: d 0.1s ease;
+}
+
+/* ============================================================================
+   DRS Zone Overlay
+   ============================================================================ */
+
+.drs-zone-overlay path {
+  filter: drop-shadow(0 0 4px var(--accent-green));
+}
+
+.drs-status-indicator.active {
+  animation: drs-pulse 1s ease-in-out infinite;
+}
+
+@keyframes drs-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 4px rgba(0, 255, 136, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.6);
+  }
+}
+
+.drs-zone-bar {
+  transition: all 0.2s ease;
+}
+
+/* ============================================================================
+   Braking Zone Indicators
+   ============================================================================ */
+
+.braking-intensity-bar {
+  transition: all 0.15s ease;
+}
+
+.braking-zone-marker {
+  filter: drop-shadow(0 0 4px rgba(255, 0, 85, 0.5));
+}
+
+.throttle-brake-indicator {
+  transition: all 0.1s ease;
+}
+
+/* High intensity braking glow effect */
+@keyframes brake-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 4px rgba(255, 0, 0, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 12px rgba(255, 0, 0, 0.7);
+  }
+}
+
+.braking-indicator-fill.intensity-high {
+  animation: brake-glow 0.5s ease-in-out infinite;
+}
+
+/* ============================================================================
+   Responsive Adjustments
+   ============================================================================ */
+
+@media (max-width: 1200px) {
+  .track-map {
+    min-width: 240px;
+  }
+
+  .telemetry-chart-panel {
+    min-width: 280px;
+  }
+}
+
+@media (max-width: 900px) {
+  .track-map svg {
+    max-height: 200px;
+  }
+
+  .telemetry-chart svg {
+    max-height: 60px;
+  }
+}

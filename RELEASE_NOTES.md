@@ -1,25 +1,45 @@
-# Release Notes - v1.0.7
+# Release Notes - v2.0.1
 
 ## Overview
-This release focuses significantly on code quality and reliability through strict type safety enhancements. We've eliminated all static analysis errors, ensuring a more robust and maintainable foundation for future features.
+This patch release addresses critical stability issues in the strategy engine and data serialization layers, along with significant UI polish fixes. It ensures reliable real-time updates and a stable frontend experience.
 
-## Key Improvements
+---
 
-### 🛡️ Type Safety Features
-* **Zero Mypy Errors**: The entire codebase (54 source files) now passes strict static type checking with `mypy`.
-* **Async Database Typing**: Upgraded to `async_sessionmaker` and fixed typing in SQLAlchemy models to correctly handle asynchronous database sessions.
-* **Middleware Hardening**: Added explicit return type casting in rate limiting, authentication, and error handling middleware to preventing runtime type confusion.
-* **Replay Service Guardrails**: Introduced runtime assertions in the replay service to safely handle session states.
+## 🚀 Key Improvements
 
-### 🐛 Bug Fixes
-* Fixed variable shadowing in `main.py` that potentially affected driver state updates.
-* Resolved abstract class registration issues in the dependency injection container.
-* Addressed `yaml` library stub warnings by configuring proper type ignores.
+### 🔧 Engine Stability
+- **Fixed Strategy Initialization**: Resolved a backend crash that prevented the strategy engine from starting, which caused the UI to be stuck on "Evaluating strategy...".
+- **Data Serialization**: Fixed a bug where `numpy` data types (from analysis libraries) caused WebSocket crashes, stopping live updates.
 
-## Updating
-No database migrations are required for this update.
+### 🎨 UI Polish
+- **Telemetry Layout**: 
+    - The **Gear Indicator** no longer jumps around when values change; it now has a solid, static width.
+    - **Speed Gauge** text is now perfectly positioned to avoid overlapping the visual arc.
+- **Strategy Panel**: Removed visual artifacts (like a random "0") and improved error handling for missing data.
+
+### 🛠️ Developer Experience
+- **Repository Health**: Added MIT License, standardized documentation, and cleaned up dead code.
+- **Type Safety**: Fixed TypeScript errors in visualization components.
+
+---
+
+## 🐛 Bug Fixes Summary
+
+| Component | Issue | Fix |
+|-----------|-------|-----|
+| **Backend** | `NameError: name 'Any' is not defined` | Added missing import in `monte_carlo.py` |
+| **Backend** | WebSocket silent failure | Added `numpy` type conversion in `simulation_service.py` |
+| **Frontend** | UI stuck on "Evaluating..." | Restored strategy engine data flow |
+| **Frontend** | Gear indicator shifting layout | Enforced static CSS width |
+| **Frontend** | Speed text overlap | Adjusted CSS positioning |
+| **Frontend** | TypeScript errors | Added null checks for driver position |
+
+---
+
+## 📋 Updating
+
 ```bash
 git pull origin main
 pip install -r requirements.txt
-python run.py --server
+python run.py
 ```

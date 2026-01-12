@@ -11,6 +11,8 @@ websockets>=12.0
 
 # Data & ML
 numpy>=1.26.0
+pandas>=2.0.0
+fastf1>=3.0.0
 
 # Config
 pyyaml>=6.0.0

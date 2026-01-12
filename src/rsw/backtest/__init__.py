@@ -2,8 +2,8 @@
 Backtest and replay system for race strategy analysis.
 """
 
-from .replay import ReplaySession, ReplayState
 from .metrics import BacktestReport, calculate_metrics
+from .replay import ReplaySession, ReplayState
 
 __all__ = [
     "ReplaySession",

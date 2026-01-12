@@ -16,6 +16,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.1] - 2026-01-12
+
+### Fixed
+- **Strategy Engine**: Fixed critical initialization failure caused by missing `Any` import in `monte_carlo.py`, which caused strategy recommendations to fail silently.
+- **UI Updates**: Solved issue where UI got stuck on "Evaluating strategy..." due to the backend failure.
+- **Serialization**: Fixed `numpy` type serialization error in `simulation_service.py` that caused WebSocket updates to fail.
+- **Telemetry Panel**: 
+    - Fixed "Gear" indicator layout shift by enforcing static width.
+    - Adjusted speed gauge text position to prevent overlap with the graph.
+- **Strategy Panel**: Fixed phantom "0" rendering when confidence was zero.
+- **Pit Rejoin Visualizer**: Fixed TypeScript error regarding nullable driver positions.
+- **Documentation**: Added LICENSE, updated repository URLs in README and CONTRIBUTING.
+
+## [2.0.0] - 2026-01-10
+
+### Added
+- **Major Architecture Overhaul**: Complete refactor to service-oriented architecture.
+- **New UI Components**: Added TelemetryPanel, StrategyPanel, and PitRejoinVisualizer.
+
+---
+
 ## [1.0.6] - 2026-01-01
 
 ### Changed
@@ -129,6 +150,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 2.0.1 | 2026-01-12 | V2 patch: Strategy fixes & UI polish |
+| 2.0.0 | 2026-01-10 | Major V2 release: New Architecture |
 | 1.0.0 | 2026-01-01 | Production release, full documentation |
 | 0.2.0 | 2025-12-15 | Monte Carlo, replay features |
 | 0.1.0 | 2025-11-01 | Initial release |

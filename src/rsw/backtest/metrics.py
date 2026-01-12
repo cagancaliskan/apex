@@ -6,12 +6,12 @@ compared to actual race outcomes.
 """
 
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass
 class PitDecisionResult:
     """Result of a single pit decision."""
+
     driver_number: int
     lap: int
     recommended_action: str  # PIT_NOW, STAY_OUT, etc.
@@ -25,23 +25,24 @@ class PitDecisionResult:
 @dataclass
 class BacktestReport:
     """Complete backtest report for a session."""
+
     session_key: int
     session_name: str
     total_laps: int
-    
+
     # Decision accuracy
     total_decisions: int = 0
     correct_decisions: int = 0
     accuracy: float = 0.0
-    
+
     # Pit timing
     pit_decisions: list[PitDecisionResult] = field(default_factory=list)
     avg_pit_timing_error: float = 0.0  # Laps early/late vs optimal
-    
+
     # Position gains
     total_position_gain: int = 0
     avg_position_gain: float = 0.0
-    
+
     # Per-driver summaries
     driver_summaries: dict[int, dict] = field(default_factory=dict)
 
@@ -53,12 +54,12 @@ def calculate_metrics(
 ) -> BacktestReport:
     """
     Calculate backtest metrics comparing recommendations to actual race.
-    
+
     Args:
         recommendations: List of {lap, driver_number, action, optimal_pit_lap}
         actual_pits: List of {driver_number, lap_number}
         position_history: {driver_number: [position at each lap]}
-    
+
     Returns:
         BacktestReport with metrics
     """
@@ -67,7 +68,7 @@ def calculate_metrics(
         session_name="Unknown",
         total_laps=0,
     )
-    
+
     # Track pit laps by driver
     actual_pit_laps: dict[int, list[int]] = {}
     for pit in actual_pits:
@@ -76,31 +77,29 @@ def calculate_metrics(
         if driver not in actual_pit_laps:
             actual_pit_laps[driver] = []
         actual_pit_laps[driver].append(lap)
-    
+
     # Analyze each recommendation
     for rec in recommendations:
         lap = rec.get("lap", 0)
         driver = rec.get("driver_number", 0)
         action = rec.get("action", "")
-        optimal_lap = rec.get("optimal_pit_lap", 0)
-        
+        # optimal_lap = rec.get("optimal_pit_lap", 0)
+
         # Check if driver actually pitted within window
         driver_pits = actual_pit_laps.get(driver, [])
         pitted_this_window = any(abs(p - lap) <= 2 for p in driver_pits)
-        
+
         # Determine if recommendation was correct
         was_correct = False
-        if action == "PIT_NOW" and pitted_this_window:
+        if action == "PIT_NOW" and pitted_this_window or action == "STAY_OUT" and not pitted_this_window:
             was_correct = True
-        elif action == "STAY_OUT" and not pitted_this_window:
-            was_correct = True
-        
+
         # Get position change
         positions = position_history.get(driver, [])
         pos_before = positions[lap - 1] if lap > 0 and lap <= len(positions) else 0
         pos_after = positions[lap] if lap < len(positions) else pos_before
         pos_delta = pos_before - pos_after  # Positive = gained positions
-        
+
         result = PitDecisionResult(
             driver_number=driver,
             lap=lap,
@@ -111,18 +110,18 @@ def calculate_metrics(
             position_after=pos_after,
             position_delta=pos_delta,
         )
-        
+
         report.pit_decisions.append(result)
         report.total_decisions += 1
         if was_correct:
             report.correct_decisions += 1
         report.total_position_gain += pos_delta
-    
+
     # Calculate summary stats
     if report.total_decisions > 0:
         report.accuracy = report.correct_decisions / report.total_decisions
         report.avg_position_gain = report.total_position_gain / report.total_decisions
-    
+
     # Calculate pit timing error
     timing_errors = []
     for rec in recommendations:
@@ -132,10 +131,10 @@ def calculate_metrics(
             if actual:
                 error = min(abs(a - rec["optimal_pit_lap"]) for a in actual)
                 timing_errors.append(error)
-    
+
     if timing_errors:
         report.avg_pit_timing_error = sum(timing_errors) / len(timing_errors)
-    
+
     return report
 
 
@@ -155,7 +154,7 @@ def format_report(report: BacktestReport) -> str:
         f"Avg Position Gain: {report.avg_position_gain:+.2f}",
         "",
     ]
-    
+
     if report.pit_decisions:
         lines.append("Recent Decisions:")
         for dec in report.pit_decisions[-5:]:
@@ -165,6 +164,6 @@ def format_report(report: BacktestReport) -> str:
                 f"recommended {dec.recommended_action}, "
                 f"driver {dec.actual_action} (Δ{dec.position_delta:+d})"
             )
-    
+
     lines.append("=" * 60)
     return "\n".join(lines)

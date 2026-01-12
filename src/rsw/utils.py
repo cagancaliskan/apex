@@ -4,8 +4,8 @@ Shared utilities and helpers.
 DRY: Common functionality extracted to single location.
 """
 
-from typing import Any, TypeVar
 from datetime import datetime
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
@@ -13,6 +13,7 @@ T = TypeVar("T")
 # ============================================================================
 # Response Formatting (DRY: Single place for API responses)
 # ============================================================================
+
 
 def format_success(data: Any, message: str | None = None) -> dict:
     """Format successful API response."""
@@ -30,7 +31,7 @@ def format_error(code: str, message: str, details: dict | None = None) -> dict:
             "code": code,
             "message": message,
             "details": details or {},
-        }
+        },
     }
 
 
@@ -57,11 +58,12 @@ def format_paginated(
 # Time Formatting (DRY: Consistent time formatting)
 # ============================================================================
 
+
 def format_lap_time(seconds: float | None) -> str:
     """Format lap time as M:SS.sss"""
     if seconds is None:
         return "--:--.---"
-    
+
     minutes = int(seconds // 60)
     secs = seconds % 60
     return f"{minutes}:{secs:06.3f}"
@@ -88,6 +90,7 @@ def format_iso_datetime(dt: datetime | None) -> str | None:
 # Validation Helpers (DRY: Reusable validation)
 # ============================================================================
 
+
 def validate_range(
     value: float,
     min_val: float,
@@ -96,7 +99,7 @@ def validate_range(
 ) -> None:
     """
     Validate that value is within range.
-    
+
     Raises:
         ValueError: If value is out of range
     """
@@ -107,7 +110,7 @@ def validate_range(
 def validate_positive(value: float, name: str) -> None:
     """
     Validate that value is positive.
-    
+
     Raises:
         ValueError: If value is not positive
     """
@@ -118,7 +121,7 @@ def validate_positive(value: float, name: str) -> None:
 def validate_not_empty(value: str | list | dict, name: str) -> None:
     """
     Validate that value is not empty.
-    
+
     Raises:
         ValueError: If value is empty
     """
@@ -129,6 +132,7 @@ def validate_not_empty(value: str | list | dict, name: str) -> None:
 # ============================================================================
 # Collection Helpers (DRY: Common collection operations)
 # ============================================================================
+
 
 def find_by_key(items: list[T], key: str, value: Any) -> T | None:
     """Find first item in list where item[key] == value."""
@@ -160,6 +164,7 @@ def safe_get(data: dict, *keys: str, default: Any = None) -> Any:
 # Math Helpers (DRY: Common calculations)
 # ============================================================================
 
+
 def clamp(value: float, min_val: float, max_val: float) -> float:
     """Clamp value between min and max."""
     return max(min_val, min(max_val, value))
@@ -169,9 +174,9 @@ def moving_average(values: list[float], window: int) -> list[float]:
     """Calculate moving average."""
     if len(values) < window:
         return values
-    
+
     result = []
     for i in range(len(values) - window + 1):
-        avg = sum(values[i:i + window]) / window
+        avg = sum(values[i : i + window]) / window
         result.append(avg)
     return result

@@ -1,678 +1,357 @@
 """
-Main FastAPI server for the Race Strategy Workbench.
+Race Strategy Workbench - Main FastAPI Application.
 
-This server provides:
-- REST API for session selection and data retrieval
+This module provides the FastAPI application entry point with:
+- REST API endpoints for session and simulation control
 - WebSocket endpoint for real-time state updates
-- Background polling loop for fetching updates from OpenF1
+- Middleware configuration for CORS and rate limiting
+
+Architecture:
+    - Modular route organization (api/routes/)
+    - Dependency injection via AppState
+    - Structured logging throughout
+
+Example:
+    uvicorn rsw.main:app --reload
 """
 
-import asyncio
+from __future__ import annotations
+
 import json
+import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
+from rsw.api.routes.health import router as health_router
+from rsw.api.routes.sessions import init_session_routes
+from rsw.api.routes.sessions import router as sessions_router
+from rsw.api.routes.simulation import init_simulation_routes
+from rsw.api.routes.simulation import router as simulation_router
+from rsw.api.websocket_manager import ConnectionManager
 from rsw.config import load_app_config, load_tracks_config
 from rsw.ingest import OpenF1Client
-from rsw.state import RaceStateStore, RaceState
+from rsw.logging_config import get_logger
+from rsw.middleware.rate_limit import RateLimitMiddleware
 from rsw.models.degradation import ModelManager
-from rsw.api.routes.health import router as health_router
+from rsw.services.simulation_service import SimulationService, sanitize_for_json
+from rsw.state import RaceStateStore
+
+logger = get_logger(__name__)
 
 
-# ============================================================================
+# =============================================================================
 # Application State
-# ============================================================================
+# =============================================================================
+
 
 class AppState:
-    """Application-wide state container."""
-    
+    """
+    Application-wide state container.
+
+    Holds shared resources including configuration, data clients,
+    and the simulation service.
+
+    Attributes:
+        store: Race state store for current session
+        client: OpenF1 API client
+        simulation_service: Race simulation engine
+        speed_multiplier: Current playback speed
+    """
+
     def __init__(self) -> None:
         self.config = load_app_config()
         self.tracks = load_tracks_config()
         self.store = RaceStateStore()
         self.client = OpenF1Client()
-        self.model_manager = ModelManager(forgetting_factor=0.95)  # Phase 2: ML models
+        self.model_manager = ModelManager(forgetting_factor=0.95)
         self.active_session_key: int | None = None
-        self.polling_task: asyncio.Task | None = None
-        self.websocket_clients: list[WebSocket] = []
-        self.is_polling = False
         self.active_replay: Any = None
+        self.speed_multiplier: float = 1.0
+        self.simulation_service: SimulationService | None = None
+        self.all_driver_telemetry: dict[str, Any] = {}
 
 
+# Global instances
 app_state = AppState()
+connection_manager = ConnectionManager()
 
 
-# ============================================================================
-# WebSocket Connection Manager
-# ============================================================================
+# =============================================================================
+# Application Lifecycle
+# =============================================================================
 
-class ConnectionManager:
-    """Manages WebSocket connections for real-time updates."""
-    
-    def __init__(self) -> None:
-        self.active_connections: list[WebSocket] = []
-    
-    async def connect(self, websocket: WebSocket) -> None:
-        """Accept a new WebSocket connection."""
-        await websocket.accept()
-        self.active_connections.append(websocket)
-        print(f"WebSocket connected. Total connections: {len(self.active_connections)}")
-    
-    def disconnect(self, websocket: WebSocket) -> None:
-        """Remove a disconnected WebSocket."""
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-        print(f"WebSocket disconnected. Total connections: {len(self.active_connections)}")
-    
-    async def broadcast(self, message: dict[str, Any]) -> None:
-        """Broadcast a message to all connected clients."""
-        if not self.active_connections:
-            return
-        
-        message_json = json.dumps(message, default=str)
-        disconnected = []
-        
-        for connection in self.active_connections:
-            try:
-                await connection.send_text(message_json)
-            except Exception:
-                disconnected.append(connection)
-        
-        # Remove disconnected clients
-        for conn in disconnected:
-            self.disconnect(conn)
-
-
-manager = ConnectionManager()
-
-
-# ============================================================================
-# Polling Loop
-# ============================================================================
-
-async def polling_loop(session_key: int, interval: float = 3.0) -> None:
-    """
-    Background task that simulates live race updates.
-    
-    For historical data, this pre-fetches ALL data once, then
-    replays it lap-by-lap to simulate a live race experience.
-    """
-    print(f"Starting polling loop for session {session_key}")
-    app_state.is_polling = True
-    
-    try:
-        # First, fetch session info
-        session = await app_state.client.get_session(session_key)
-        if not session:
-            print(f"Session {session_key} not found")
-            return
-        
-        # Get track config
-        track_id = session.circuit_short_name.lower().replace("-", "_").replace(" ", "_")
-        track_config = app_state.tracks.get(track_id)
-        
-        # Initialize state with session info
-        initial_state = RaceState(
-            session_key=session_key,
-            meeting_key=session.meeting_key,
-            session_name=session.session_name,
-            session_type=session.session_type,
-            track_id=track_id,
-            track_name=session.circuit_short_name,
-            country=session.country_name,
-            total_laps=track_config.laps if track_config else 0,
-        )
-        await app_state.store.reset(initial_state)
-        
-        # ================================================================
-        # PRE-FETCH ALL DATA FOR THE SESSION (one-time load)
-        # ================================================================
-        print("Pre-fetching all session data...")
-        
-        drivers = await app_state.client.get_drivers(session_key)
-        all_laps = await app_state.client.get_laps(session_key)
-        all_positions = await app_state.client.get_positions(session_key)
-        all_intervals = await app_state.client.get_intervals(session_key)
-        all_stints = await app_state.client.get_stints(session_key)
-        all_pits = await app_state.client.get_pits(session_key)
-        all_race_control = await app_state.client.get_race_control(session_key)
-        
-        print(f"Loaded: {len(all_laps)} laps, {len(drivers)} drivers, {len(all_stints)} stints")
-        
-        if not all_laps:
-            print("No lap data found")
-            return
-        
-        max_lap = max(lap.lap_number for lap in all_laps)
-        print(f"Race has {max_lap} laps - starting simulation...")
-        
-        # Apply driver info first (static data)
-        from rsw.ingest.base import UpdateBatch
-        driver_batch = UpdateBatch(
-            session_key=session_key,
-            timestamp=datetime.now(timezone.utc),
-            drivers=drivers,
-        )
-        await app_state.store.apply(driver_batch)
-        
-        # Broadcast initial state with drivers
-        await manager.broadcast({
-            "type": "state_update",
-            "data": app_state.store.to_dict(),
-        })
-        
-        # ================================================================
-        # REPLAY LAP BY LAP
-        # ================================================================
-        for current_lap in range(1, max_lap + 1):
-            if not app_state.is_polling:
-                break
-            
-            # Filter data for laps UP TO and including current_lap
-            laps_up_to_now = [l for l in all_laps if l.lap_number <= current_lap]
-            
-            # For positions/intervals, we simulate by taking latest available
-            # but we'll update state progressively
-            
-            # Get laps specifically for this lap (for the update)
-            laps_this_lap = [l for l in all_laps if l.lap_number == current_lap]
-            
-            # Get stints active at this lap
-            stints_this_lap = [
-                s for s in all_stints 
-                if s.lap_start <= current_lap and (s.lap_end is None or s.lap_end >= current_lap)
-            ]
-            
-            # Get pits that happened on this lap
-            pits_this_lap = [p for p in all_pits if p.lap_number == current_lap]
-            
-            # Get race control messages up to this lap
-            rc_this_lap = [r for r in all_race_control if r.lap_number and r.lap_number <= current_lap]
-            
-            # Build update batch for this lap
-            lap_batch = UpdateBatch(
-                session_key=session_key,
-                timestamp=datetime.now(timezone.utc),
-                current_lap=current_lap,
-                laps=laps_this_lap,
-                stints=stints_this_lap,
-                pits=pits_this_lap,
-                race_control=rc_this_lap[-5:] if rc_this_lap else None,  # Last 5 messages
-            )
-            
-            # Apply update
-            await app_state.store.apply(lap_batch)
-            
-            # Calculate positions based on lap times (simple simulation)
-            # In reality, positions come from the API, but for replay we derive them
-            state = app_state.store.get()
-            sorted_drivers = sorted(
-                state.drivers.values(),
-                key=lambda d: (
-                    -d.current_lap,  # More laps = better
-                    d.best_lap_time if d.best_lap_time else float('inf')  # Faster = better
-                )
-            )
-            
-            # Update positions
-            driver_updates = {}
-            for pos, driver in enumerate(sorted_drivers, 1):
-                updated = driver.model_copy(update={
-                    "position": pos,
-                    "gap_to_leader": (pos - 1) * 1.5 if pos > 1 else 0,  # Simulated gap
-                    "gap_to_ahead": 1.5 if pos > 1 else None,
-                })
-                driver_updates[driver.driver_number] = updated
-            
-            # ================================================================
-            # UPDATE DEGRADATION MODELS (Phase 2)
-            # ================================================================
-            for lap in laps_this_lap:
-                driver_num = lap.driver_number
-                current_driver = driver_updates.get(driver_num)
-                if current_driver and lap.lap_duration and lap.lap_duration > 0:
-                    # Get stint info for this driver
-                    stint = next(
-                        (s for s in stints_this_lap if s.driver_number == driver_num),
-                        None
-                    )
-                    stint_num = stint.stint_number if stint else current_driver.stint_number
-                    compound = stint.compound if stint else current_driver.compound or "MEDIUM"
-                    lap_in_stint = current_driver.lap_in_stint if current_driver.lap_in_stint > 0 else 1
-                    
-                    # Check if this is a valid lap for model training
-                    is_valid = (
-                        not current_driver.is_pit_out_lap
-                        and not state.safety_car
-                        and not state.virtual_safety_car
-                    )
-                    
-                    # Update model
-                    app_state.model_manager.update_driver(
-                        driver_number=driver_num,
-                        lap_in_stint=lap_in_stint,
-                        lap_time=lap.lap_duration,
-                        stint_number=stint_num,
-                        compound=compound,
-                        is_valid=is_valid,
-                    )
-            
-            # Apply model predictions to driver state
-            predictions = app_state.model_manager.get_all_predictions(k=5)
-            for driver_num, pred in predictions.items():
-                if driver_num in driver_updates:
-                    driver_updates[driver_num] = driver_updates[driver_num].model_copy(
-                        update={
-                            "deg_slope": round(pred.deg_slope, 4),
-                            "cliff_risk": round(pred.cliff_risk, 2),
-                            "predicted_pace": [round(p, 3) for p in pred.predicted_next_k],
-                            "model_confidence": round(pred.model_confidence, 2),
-                        }
-                    )
-            
-            # ================================================================
-            # STRATEGY CALCULATIONS (Phase 3)
-            # ================================================================
-            from rsw.strategy.decision import evaluate_strategy
-            
-            # Get pit loss from track config
-            pit_loss = track_config.pit_loss_seconds if track_config else 22.0
-            
-            for driver_num, driver in driver_updates.items():
-                if driver.current_lap > 0:
-                    # Get competitor info for undercut/overcut detection
-                    ahead_deg = 0.05
-                    behind_deg = 0.05
-                    
-                    # Find drivers ahead and behind
-                    for other in driver_updates.values():
-                        if other.position == driver.position - 1:
-                            ahead_deg = other.deg_slope
-                        elif other.position == driver.position + 1:
-                            behind_deg = other.deg_slope
-                    
-                    rec = evaluate_strategy(
-                        driver_number=driver_num,
-                        current_lap=current_lap,
-                        total_laps=max_lap,
-                        current_position=driver.position,
-                        deg_slope=driver.deg_slope,
-                        cliff_risk=driver.cliff_risk,
-                        current_pace=driver.last_lap_time or 90.0,
-                        tyre_age=driver.tyre_age,
-                        compound=driver.compound or "MEDIUM",
-                        pit_loss=pit_loss,
-                        gap_to_ahead=driver.gap_to_ahead,
-                        gap_to_behind=None,
-                        ahead_deg=ahead_deg,
-                        behind_deg=behind_deg,
-                        safety_car=state.safety_car,
-                    )
-                    
-                    # Update driver with strategy info
-                    driver_updates[driver_num] = driver_updates[driver_num].model_copy(
-                        update={
-                            "pit_window_min": rec.pit_window.min_lap if rec.pit_window else 0,
-                            "pit_window_max": rec.pit_window.max_lap if rec.pit_window else 0,
-                            "pit_window_ideal": rec.pit_window.ideal_lap if rec.pit_window else 0,
-                            "pit_recommendation": rec.recommendation.value,
-                            "pit_confidence": round(rec.confidence, 2),
-                            "pit_reason": rec.reason,
-                            "undercut_threat": rec.undercut_threat,
-                            "overcut_opportunity": rec.overcut_opportunity,
-                        }
-                    )
-            
-            new_state = state.model_copy(update={
-                "drivers": driver_updates,
-                "current_lap": current_lap,
-            })
-            await app_state.store.reset(new_state)
-            
-            # Broadcast update
-            await manager.broadcast({
-                "type": "state_update",
-                "data": app_state.store.to_dict(),
-            })
-            
-            print(f"Lap {current_lap}/{max_lap} - {len(laps_this_lap)} driver laps")
-            
-            # Wait before next lap
-            await asyncio.sleep(interval)
-        
-        print("Race simulation complete!")
-    
-    except asyncio.CancelledError:
-        print("Polling loop cancelled")
-    except Exception as e:
-        print(f"Polling loop error: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        app_state.is_polling = False
-        print("Polling loop stopped")
-
-
-# ============================================================================
-# FastAPI App
-# ============================================================================
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> Any:
-    """Application lifespan manager."""
-    # Startup
-    print("🏎️  Race Strategy Workbench starting...")
-    yield
-    # Shutdown
-    print("🏁 Race Strategy Workbench shutting down...")
-    if app_state.polling_task:
-        app_state.polling_task.cancel()
-    await app_state.client.close()
+async def lifespan(app: FastAPI):
+    """
+    Application lifecycle manager.
 
+    Handles startup initialization and graceful shutdown.
+    """
+    logger.info("application_starting", version="1.1.0")
+
+    # Initialize simulation service
+    app_state.simulation_service = SimulationService(app_state, connection_manager)
+
+    # Initialize route modules with app state
+    init_simulation_routes(app_state)
+    init_session_routes(app_state)
+
+    logger.info("application_ready")
+
+    yield
+
+    # Shutdown
+    logger.info("application_stopping")
+    if app_state.simulation_service:
+        await app_state.simulation_service.stop()
+    logger.info("application_stopped")
+
+
+# =============================================================================
+# FastAPI Application
+# =============================================================================
 
 app = FastAPI(
-    title="Race Strategy Workbench",
-    description="Real-time F1 race analytics and pit strategy optimization",
-    version="1.0.7",
+    title="Race Strategy Workbench API",
+    version="1.1.0",
+    description="Real-time F1 race simulation and strategy analysis",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
-# CORS middleware for frontend
+# CORS Configuration
+CORS_ORIGINS = os.getenv("RSW_CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(
+    ","
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict this
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
-# Register health check routes
-app.include_router(health_router, tags=["health"])
+# Rate Limiting (disabled in development by default)
+if os.getenv("RSW_RATE_LIMIT_ENABLED", "false").lower() == "true":
+    app.add_middleware(RateLimitMiddleware)
 
 
-# ============================================================================
-# REST Endpoints
-# ============================================================================
+# =============================================================================
+# Include Routers
+# =============================================================================
 
-@app.get("/")
+app.include_router(health_router, prefix="/api", tags=["health"])
+app.include_router(simulation_router, prefix="/api", tags=["simulation"])
+app.include_router(sessions_router, prefix="/api", tags=["sessions"])
+
+
+# =============================================================================
+# Core Endpoints
+# =============================================================================
+
+
+@app.get("/", tags=["info"])
 async def root() -> dict[str, str]:
-    """Root endpoint."""
-    return {"message": "Race Strategy Workbench API", "version": "1.0.7"}
-
-
-@app.get("/health")
-async def health() -> dict[str, str]:
-    """Health check endpoint."""
-    return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
-
-
-@app.get("/api/drivers/{driver_number}")
-async def get_driver(driver_number: int) -> dict[str, Any] | None:
-    """Get a specific driver's current state."""
-    state = app_state.store.get()
-    driver = state.drivers.get(driver_number)
-    if driver:
-        return driver.model_dump()
-    return None
-
-
-@app.get("/api/sessions")
-async def get_sessions(year: int | None = None, country: str | None = None) -> list[dict[str, Any]]:
-    """Get available sessions."""
-    sessions = await app_state.client.get_sessions(year=year, country=country)
-    return [
-        {
-            "session_key": s.session_key,
-            "session_name": s.session_name,
-            "session_type": s.session_type,
-            "circuit": s.circuit_short_name,
-            "country": s.country_name,
-            "date": s.date_start.isoformat(),
-            "year": s.year,
-        }
-        for s in sessions
-    ]
-
-
-@app.get("/api/sessions/{session_key}")
-async def get_session(session_key: int) -> dict[str, Any]:
-    """Get a specific session."""
-    session = await app_state.client.get_session(session_key)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
+    """Root endpoint with API information."""
     return {
-        "session_key": session.session_key,
-        "session_name": session.session_name,
-        "session_type": session.session_type,
-        "circuit": session.circuit_short_name,
-        "country": session.country_name,
-        "date_start": session.date_start.isoformat(),
-        "date_end": session.date_end.isoformat() if session.date_end else None,
-        "year": session.year,
+        "service": "Race Strategy Workbench API",
+        "version": "1.1.0",
+        "docs": "/docs",
     }
 
 
-@app.post("/api/sessions/{session_key}/start")
-async def start_session(session_key: int, interval: float = 3.0) -> dict[str, Any]:
-    """Start polling for a session."""
-    # Stop any existing polling
-    if app_state.polling_task and not app_state.polling_task.done():
-        app_state.polling_task.cancel()
-        try:
-            await app_state.polling_task
-        except asyncio.CancelledError:
-            pass
-    
-    # Start new polling task
-    app_state.active_session_key = session_key
-    app_state.polling_task = asyncio.create_task(
-        polling_loop(session_key, interval=interval)
-    )
-    
-    return {"status": "started", "session_key": session_key}
+@app.get("/health", tags=["health"])
+async def health() -> dict[str, str]:
+    """Health check endpoint for monitoring."""
+    return {
+        "status": "ok",
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
 
 
-@app.post("/api/sessions/stop")
-async def stop_session() -> dict[str, str]:
-    """Stop polling for the current session."""
-    app_state.is_polling = False
-    if app_state.polling_task:
-        app_state.polling_task.cancel()
-        try:
-            await app_state.polling_task
-        except asyncio.CancelledError:
-            pass
-        app_state.polling_task = None
-    
-    return {"status": "stopped"}
+@app.get("/health/live", tags=["health"])
+async def health_live() -> dict[str, str]:
+    """Liveness probe for container orchestration."""
+    return {"status": "alive"}
 
 
-@app.get("/api/state")
-async def get_state() -> dict[str, Any]:
-    """Get current race state."""
+@app.get("/version", tags=["info"])
+async def version() -> dict[str, Any]:
+    """Version and environment information."""
+    return {
+        "version": "1.1.0",
+        "environment": os.getenv("RSW_ENVIRONMENT", "development"),
+        "python": "3.11+",
+    }
+
+
+# =============================================================================
+# State Endpoints
+# =============================================================================
+
+
+@app.get("/api/state", tags=["state"])
+async def get_current_state() -> dict[str, Any]:
+    """Get current race state snapshot."""
     return app_state.store.to_dict()
 
 
-@app.get("/api/tracks")
-async def get_tracks() -> dict[str, Any]:
-    """Get track configurations."""
-    return {
-        track_id: {
-            "name": track.name,
-            "country": track.country,
-            "pit_loss": track.pit_loss_seconds,
-            "sc_probability": track.sc_base_rate,
-            "laps": track.laps,
-        }
-        for track_id, track in app_state.tracks.items()
-    }
+# =============================================================================
+# Replay Endpoints
+# =============================================================================
 
 
-# ============================================================================
+@app.post("/api/replay/control", tags=["replay"])
+async def replay_control(action: str) -> dict[str, Any]:
+    """
+    Control replay playback.
+
+    Args:
+        action: One of 'play', 'pause', 'stop'
+    """
+    if app_state.active_replay is None:
+        raise HTTPException(status_code=400, detail="No active replay session")
+
+    actions = {"play", "pause", "stop"}
+    if action not in actions:
+        raise HTTPException(status_code=400, detail=f"Invalid action. Must be one of: {actions}")
+
+    getattr(app_state.active_replay, action)()
+    return {"status": "ok", "action": action}
+
+
+@app.get("/api/replay/sessions", tags=["replay"])
+async def list_replay_sessions() -> dict[str, list[dict[str, Any]]]:
+    """List cached sessions available for replay."""
+    from pathlib import Path
+
+    from rsw.backtest.replay import ReplaySession
+
+    data_dir = Path(__file__).parent.parent.parent / "data" / "sessions"
+    sessions = ReplaySession.list_cached_sessions(data_dir)
+    return {"sessions": sessions}
+
+
+@app.post("/api/replay/{session_key}/start", tags=["replay"])
+async def start_replay(session_key: int, speed: float = 1.0) -> dict[str, Any]:
+    """Start replay from cached session."""
+    from pathlib import Path
+
+    from rsw.backtest.replay import ReplaySession
+
+    data_dir = Path(__file__).parent.parent.parent / "data" / "sessions"
+    session_file = data_dir / f"{session_key}.json"
+
+    if not session_file.exists():
+        raise HTTPException(404, f"Session {session_key} not found in cache")
+
+    replay = ReplaySession.load(session_file)
+    replay.set_speed(speed)
+    app_state.active_replay = replay
+    replay.play()
+
+    return {"status": "started", "session_key": session_key}
+
+
+# =============================================================================
 # WebSocket Endpoint
-# ============================================================================
+# =============================================================================
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
-    """WebSocket endpoint for real-time state updates."""
-    await manager.connect(websocket)
-    
+    """
+    WebSocket endpoint for real-time state updates.
+
+    Protocol:
+        - Server sends 'state_update' messages with race state
+        - Client can send 'ping' for keepalive
+        - Client can send 'start_session' to begin simulation
+    """
+    await connection_manager.connect(websocket)
+
     try:
-        # Send current state immediately
-        await websocket.send_text(json.dumps({
-            "type": "state_update",
-            "data": app_state.store.to_dict(),
-        }, default=str))
-        
-        # Keep connection alive and handle incoming messages
+        # Send initial state
+        safe_data = sanitize_for_json(app_state.store.to_dict())
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "state_update",
+                    "data": safe_data,
+                },
+                default=str,
+            )
+        )
+
+        # Register for broadcasts
+        connection_manager.register(websocket)
+
+        # Handle incoming messages
         while True:
             try:
                 data = await websocket.receive_text()
                 message = json.loads(data)
-                
-                # Handle client messages
-                if message.get("type") == "ping":
-                    await websocket.send_text(json.dumps({"type": "pong"}))
-                
-                elif message.get("type") == "start_session":
-                    session_key = message.get("session_key")
-                    interval = message.get("interval", 3.0)
-                    if session_key:
-                        # Start polling (reuse the REST endpoint logic)
-                        if app_state.polling_task and not app_state.polling_task.done():
-                            app_state.polling_task.cancel()
-                            try:
-                                await app_state.polling_task
-                            except asyncio.CancelledError:
-                                pass
-                        
-                        app_state.active_session_key = session_key
-                        app_state.polling_task = asyncio.create_task(
-                            polling_loop(session_key, interval=interval)
-                        )
-                        await websocket.send_text(json.dumps({
-                            "type": "session_started",
-                            "session_key": session_key,
-                        }))
-                
-                elif message.get("type") == "stop_session":
-                    app_state.is_polling = False
-                    if app_state.polling_task:
-                        app_state.polling_task.cancel()
-                    await websocket.send_text(json.dumps({"type": "session_stopped"}))
-            
+                await _handle_ws_message(websocket, message)
             except WebSocketDisconnect:
                 break
             except json.JSONDecodeError:
-                pass
-    
+                logger.warning("ws_invalid_json")
+            except Exception as e:
+                logger.exception("ws_error", error=str(e))
     finally:
-        manager.disconnect(websocket)
+        connection_manager.disconnect(websocket)
 
 
-# ============================================================================
-# Replay Endpoints (Phase 4)
-# ============================================================================
+async def _handle_ws_message(websocket: WebSocket, message: dict[str, Any]) -> None:
+    """Handle incoming WebSocket messages."""
+    msg_type = message.get("type")
 
-@app.get("/api/replay/sessions")
-async def list_replay_sessions() -> dict[str, list[dict[str, Any]]]:
-    """List cached sessions available for replay."""
-    from rsw.backtest.replay import ReplaySession
-    from pathlib import Path
-    
-    data_dir = Path(__file__).parent.parent.parent / "data" / "sessions"
-    sessions = ReplaySession.list_cached_sessions(data_dir)
-    
-    return {"sessions": sessions}
+    if msg_type == "ping":
+        await websocket.send_text(json.dumps({"type": "pong"}))
 
+    elif msg_type == "start_session":
+        year = message.get("year", 2023)
+        round_num = message.get("round_num", 1)
 
-@app.post("/api/replay/{session_key}/start")
-async def start_replay(session_key: int, speed: float = 1.0) -> dict[str, Any]:
-    """Start replay from cached session."""
-    from rsw.backtest.replay import ReplaySession
-    from pathlib import Path
-    
-    data_dir = Path(__file__).parent.parent.parent / "data" / "sessions"
-    session_file = data_dir / f"{session_key}.json"
-    
-    if not session_file.exists():
-        raise HTTPException(404, f"Session {session_key} not found in cache")
-    
-    # Load session and start replay
-    replay = ReplaySession.load(session_file)
-    replay.set_speed(speed)
-    
-    # Store replay in app state
-    app_state.active_replay = replay
-    
-    # Set up callback to broadcast state
-    async def broadcast_lap(lap: int, state: Any) -> None:
-        await manager.broadcast({
-            "type": "replay_update",
-            "lap": lap,
-            "data": {
-                "session_key": state.session_key,
-                "session_name": state.session_name,
-                "track_name": state.track_name,
-                "country": state.country,
-                "current_lap": state.current_lap,
-                "total_laps": state.total_laps,
-                "playback_state": state.playback_state.value,
-                "speed": state.playback_speed,
-            }
-        })
-    
-    replay.play()
-    
-    return {
-        "status": "started",
-        "session_key": session_key,
-        "total_laps": replay.total_laps,
-    }
+        if app_state.simulation_service:
+            await app_state.simulation_service.start(year, round_num)
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "session_started",
+                        "year": year,
+                        "round": round_num,
+                    }
+                )
+            )
+
+    elif msg_type == "stop_session":
+        if app_state.simulation_service:
+            await app_state.simulation_service.stop()
+        await websocket.send_text(json.dumps({"type": "session_stopped"}))
+
+    elif msg_type == "set_speed":
+        speed = message.get("speed", 1.0)
+        app_state.speed_multiplier = speed
+        await websocket.send_text(json.dumps({"type": "speed_set", "speed": speed}))
 
 
-@app.post("/api/replay/control")
-async def control_replay(action: str, value: float | None = None) -> dict[str, Any]:
-    """Control replay playback."""
-    replay = getattr(app_state, 'active_replay', None)
-    if not replay:
-        raise HTTPException(400, "No active replay")
-    
-    if action == "play":
-        replay.play()
-    elif action == "pause":
-        replay.pause()
-    elif action == "stop":
-        replay.stop()
-    elif action == "seek" and value is not None:
-        replay.seek(int(value))
-    elif action == "speed" and value is not None:
-        replay.set_speed(value)
-    else:
-        raise HTTPException(400, f"Unknown action: {action}")
-    
-    state = replay.get_state()
-    return {
-        "status": state.playback_state.value,
-        "current_lap": state.current_lap,
-        "speed": state.playback_speed,
-    }
+# =============================================================================
+# Entry Point
+# =============================================================================
 
-
-# ============================================================================
-# Run Server
-# ============================================================================
 
 def main() -> None:
-    """Run the server."""
+    """Run the development server."""
     import uvicorn
-    
+
     config = load_app_config()
     uvicorn.run(
         "rsw.main:app",

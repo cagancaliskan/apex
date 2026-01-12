@@ -130,9 +130,26 @@ Click any driver to see detailed timing:
 | 🚗 | Safety car deployed |
 | 🔵 | Virtual safety car |
 
+### Telemetry Analysis
+
+The **Telemetry Panel** provides real-time car data visualization:
+
+- **Speed/Throttle/Brake**: Live gauges showing driver inputs.
+- **Gear**: Current gear indicator.
+- **DRS**: DRS activation status (Green = Active).
+- **History Trace**: Rolling graph of speed/thottle over the last minute.
+
 ---
 
 ## Pit Strategy
+
+### Pit Rejoin Visualization
+
+The **Ghost Car** visualization helps you understand where a driver will emerge after a pit stop:
+
+- **Ghost Car**: Represents the predicted track position after completing a pit stop (approx. 20-25s loss).
+- **Traffic Analysis**: Shows if the driver will rejoin in clean air (Green) or traffic (Red).
+- **Battles**: Highlights cars that will immediately be fighting for position upon rejoin.
 
 ### Pit Window
 

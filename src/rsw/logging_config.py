@@ -21,7 +21,7 @@ def setup_logging(
 ) -> None:
     """
     Configure structured logging for the application.
-    
+
     Args:
         log_level: Minimum log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         log_file: Optional path to log file
@@ -33,7 +33,7 @@ def setup_logging(
         stream=sys.stdout,
         level=getattr(logging, log_level.upper()),
     )
-    
+
     # Add file handler if specified
     if log_file:
         log_path = Path(log_file)
@@ -41,7 +41,7 @@ def setup_logging(
         file_handler = logging.FileHandler(log_path)
         file_handler.setLevel(getattr(logging, log_level.upper()))
         logging.getLogger().addHandler(file_handler)
-    
+
     # Configure structlog processors
     shared_processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
@@ -50,19 +50,17 @@ def setup_logging(
         structlog.dev.set_exc_info,
         structlog.processors.TimeStamper(fmt="iso"),
     ]
-    
+
     if json_format:
         # Production: JSON output
         shared_processors.append(structlog.processors.JSONRenderer())
     else:
         # Development: Pretty console output
         shared_processors.append(structlog.dev.ConsoleRenderer(colors=True))
-    
+
     structlog.configure(
         processors=shared_processors,
-        wrapper_class=structlog.make_filtering_bound_logger(
-            getattr(logging, log_level.upper())
-        ),
+        wrapper_class=structlog.make_filtering_bound_logger(getattr(logging, log_level.upper())),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,
@@ -72,21 +70,22 @@ def setup_logging(
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     """
     Get a structured logger instance.
-    
+
     Args:
         name: Logger name (typically __name__)
-    
+
     Returns:
         Configured structlog logger
     """
     from typing import cast
+
     return cast(structlog.stdlib.BoundLogger, structlog.get_logger(name))
 
 
 def bind_context(**kwargs: Any) -> None:
     """
     Bind context variables to all subsequent log calls.
-    
+
     Args:
         **kwargs: Context key-value pairs
     """
@@ -101,27 +100,27 @@ def clear_context() -> None:
 # Pre-configured loggers for common modules
 class Loggers:
     """Pre-configured logger instances."""
-    
+
     @staticmethod
     def api() -> structlog.stdlib.BoundLogger:
         """Logger for API operations."""
         return get_logger("rsw.api")
-    
+
     @staticmethod
     def ingest() -> structlog.stdlib.BoundLogger:
         """Logger for data ingestion."""
         return get_logger("rsw.ingest")
-    
+
     @staticmethod
     def strategy() -> structlog.stdlib.BoundLogger:
         """Logger for strategy calculations."""
         return get_logger("rsw.strategy")
-    
+
     @staticmethod
     def models() -> structlog.stdlib.BoundLogger:
         """Logger for ML models."""
         return get_logger("rsw.models")
-    
+
     @staticmethod
     def replay() -> structlog.stdlib.BoundLogger:
         """Logger for replay system."""

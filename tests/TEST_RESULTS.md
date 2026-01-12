@@ -1,7 +1,7 @@
 # F1 Race Strategy Workbench - Test Results
 
 **Date**: January 1, 2026  
-**Test Suite Version**: 1.0
+**Test Suite Version**: 2.0
 
 ---
 

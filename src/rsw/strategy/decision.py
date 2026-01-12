@@ -7,14 +7,13 @@ with confidence scores and reasoning.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
-from .pit_window import PitWindow, should_pit_now, find_optimal_window
-from .pitloss import get_pit_loss_estimate
+from .pit_window import PitWindow, find_optimal_window, should_pit_now
 
 
 class RecommendationType(Enum):
     """Types of strategy recommendations."""
+
     PIT_NOW = "PIT_NOW"
     STAY_OUT = "STAY_OUT"
     CONSIDER_PIT = "CONSIDER_PIT"
@@ -24,6 +23,7 @@ class RecommendationType(Enum):
 @dataclass
 class PitDecision:
     """A specific pit stop decision."""
+
     lap: int
     compound_to: str  # Compound to switch to
     expected_positions_lost: int
@@ -34,21 +34,22 @@ class PitDecision:
 @dataclass
 class StrategyRecommendation:
     """Complete strategy recommendation."""
+
     driver_number: int
     recommendation: RecommendationType
     confidence: float  # 0-1
     reason: str
-    
+
     # Window info
     pit_window: PitWindow | None = None
-    
+
     # Pit decision if pit is recommended
     pit_decision: PitDecision | None = None
-    
+
     # Threat assessment
     undercut_threat: bool = False
     overcut_opportunity: bool = False
-    
+
     # Alternative strategies
     alternatives: list[str] | None = None
 
@@ -72,7 +73,7 @@ def evaluate_strategy(
 ) -> StrategyRecommendation:
     """
     Evaluate strategy and generate recommendation.
-    
+
     Args:
         driver_number: Driver being evaluated
         current_lap: Current race lap
@@ -89,12 +90,12 @@ def evaluate_strategy(
         ahead_deg: Car ahead's degradation
         behind_deg: Car behind's degradation
         safety_car: Is safety car out
-    
+
     Returns:
         StrategyRecommendation
     """
     remaining_laps = total_laps - current_lap
-    
+
     # Find optimal pit window
     window = find_optimal_window(
         current_lap=current_lap,
@@ -106,7 +107,7 @@ def evaluate_strategy(
         compound=compound,
         cliff_risk=cliff_risk,
     )
-    
+
     # Check if we should pit now
     should_pit, pit_confidence, pit_reason = should_pit_now(
         current_lap=current_lap,
@@ -117,19 +118,19 @@ def evaluate_strategy(
         gap_to_behind=gap_to_behind,
         pit_loss=pit_loss,
     )
-    
+
     # Assess threats
     undercut_threat = False
     overcut_opportunity = False
-    
+
     if gap_to_ahead and gap_to_ahead < pit_loss + 3.0:
         if ahead_deg > deg_slope + 0.02:
             undercut_threat = True
-    
+
     if gap_to_behind and gap_to_behind < pit_loss:
         if deg_slope < behind_deg - 0.02:
             overcut_opportunity = True
-    
+
     # Re-evaluate with threat info
     if undercut_threat and not should_pit:
         should_pit, pit_confidence, pit_reason = should_pit_now(
@@ -141,7 +142,7 @@ def evaluate_strategy(
             gap_to_behind=gap_to_behind,
             pit_loss=pit_loss,
         )
-    
+
     # Determine recommendation type
     if safety_car and window.min_lap <= current_lap <= window.max_lap:
         rec_type = RecommendationType.PIT_NOW
@@ -162,7 +163,7 @@ def evaluate_strategy(
         rec_type = RecommendationType.STAY_OUT
         confidence = 1.0 - cliff_risk * 0.5
         reason = window.reason
-    
+
     # Build pit decision if pitting
     pit_decision = None
     if rec_type in (RecommendationType.PIT_NOW, RecommendationType.CONSIDER_PIT):
@@ -173,7 +174,7 @@ def evaluate_strategy(
             new_compound = "MEDIUM"
         else:
             new_compound = "SOFT"
-        
+
         pit_decision = PitDecision(
             lap=current_lap,
             compound_to=new_compound,
@@ -181,14 +182,14 @@ def evaluate_strategy(
             expected_time_gain=deg_slope * 10,  # Rough estimate
             confidence=confidence,
         )
-    
+
     # Build alternatives
     alternatives = []
     if rec_type == RecommendationType.STAY_OUT:
         alternatives.append(f"Pit on lap {window.ideal_lap} for optimal timing")
     elif rec_type == RecommendationType.PIT_NOW:
         alternatives.append(f"Extend stint to lap {window.max_lap} if needed")
-    
+
     return StrategyRecommendation(
         driver_number=driver_number,
         recommendation=rec_type,
@@ -210,19 +211,19 @@ def get_quick_recommendation(
 ) -> tuple[str, str]:
     """
     Get a quick recommendation for display.
-    
+
     Returns:
         Tuple of (recommendation, color)
     """
     if cliff_risk > 0.8:
         return "PIT NOW", "red"
-    
+
     if remaining_laps <= 8:
         return "STAY OUT", "green"
-    
+
     if in_window:
         if cliff_risk > 0.5:
             return "CONSIDER PIT", "yellow"
         return "IN WINDOW", "cyan"
-    
+
     return "STAY OUT", "green"

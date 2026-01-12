@@ -50,8 +50,8 @@ The **F1 Race Strategy Workbench** is a professional-grade application for real-
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/f1-strategy-workbench.git
-cd f1-strategy-workbench
+git clone https://github.com/cagancaliskan/apex.git
+cd apex
 
 # 2. Install dependencies
 python -m venv .venv

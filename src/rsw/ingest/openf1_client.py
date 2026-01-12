@@ -8,7 +8,7 @@ API Documentation: https://openf1.org
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -30,11 +30,11 @@ from .base import (
 class OpenF1Client(DataProvider):
     """
     HTTP client for the OpenF1 API.
-    
+
     This implements the DataProvider interface, translating OpenF1 responses
     into the canonical data format used by the rest of the application.
     """
-    
+
     def __init__(self, base_url: str | None = None, timeout: float | None = None):
         """Initialize the client with optional custom settings."""
         config = load_app_config()
@@ -43,7 +43,7 @@ class OpenF1Client(DataProvider):
         self._client: httpx.AsyncClient | None = None
         self._cache: dict[str, tuple[datetime, Any]] = {}
         self._cache_ttl = config.polling.cache_ttl_seconds
-    
+
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create the HTTP client."""
         if self._client is None or self._client.is_closed:
@@ -53,43 +53,67 @@ class OpenF1Client(DataProvider):
                 headers={"Accept": "application/json"},
             )
         return self._client
-    
+
     async def close(self) -> None:
         """Close the HTTP client."""
         if self._client is not None:
             await self._client.aclose()
             self._client = None
-    
-    async def _get(self, endpoint: str, params: dict[str, Any] | None = None) -> list[dict]:
-        """Make a GET request to the API with caching."""
-        # Build cache key
-        cache_key = f"{endpoint}:{params}"
-        
+
+    async def _fetch(self, endpoint: str, params: dict | None = None) -> list[dict[str, Any]]:
+        """Fetch data from OpenF1 API with caching and retries."""
         # Check cache
+        cache_key = f"{endpoint}:{str(sorted(params.items())) if params else ''}"
         if cache_key in self._cache:
             cached_time, cached_data = self._cache[cache_key]
             from typing import cast
-            if (datetime.now(timezone.utc) - cached_time).total_seconds() < self._cache_ttl:
+
+            if (datetime.now(UTC) - cached_time).total_seconds() < self._cache_ttl:
                 return cast(list[dict[str, Any]], cached_data)
-        
-        # Make request
+
+        # Make request with retries
         client = await self._get_client()
-        try:
-            response = await client.get(endpoint, params=params)
-            response.raise_for_status()
-            data = response.json()
-            
-            # Update cache
-            self._cache[cache_key] = (datetime.now(timezone.utc), data)
-            
-            return data if isinstance(data, list) else []
-        except httpx.HTTPStatusError as e:
-            print(f"HTTP error fetching {endpoint}: {e}")
-            return []
-        except httpx.RequestError as e:
-            print(f"Request error fetching {endpoint}: {e}")
-            return []
-    
+        max_retries = 3
+        base_delay = 1.0
+
+        for attempt in range(max_retries):
+            try:
+                response = await client.get(endpoint, params=params, timeout=10.0)
+
+                # Handle 429 Rate Limit explicitly
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get("Retry-After", 5))
+                    print(f"Rate limited on {endpoint}. Retrying after {retry_after}s...")
+                    await asyncio.sleep(retry_after)
+                    continue
+
+                response.raise_for_status()
+                data = response.json()
+
+                # Update cache
+                self._cache[cache_key] = (datetime.now(UTC), data)
+
+                return data if isinstance(data, list) else []
+
+            except httpx.HTTPStatusError as e:
+                print(f"HTTP error fetching {endpoint} (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt == max_retries - 1:
+                    return []
+            except httpx.RequestError as e:
+                print(
+                    f"Request error fetching {endpoint} (attempt {attempt + 1}/{max_retries}): {e}"
+                )
+                if attempt == max_retries - 1:
+                    return []
+            except Exception as e:
+                print(f"Unexpected error fetching {endpoint}: {e}")
+                return []
+
+            # Exponential backoff for retries
+            await asyncio.sleep(base_delay * (2**attempt))
+
+        return []
+
     def _parse_datetime(self, dt_str: str | None) -> datetime | None:
         """Parse ISO datetime string from API."""
         if not dt_str:
@@ -100,11 +124,11 @@ class OpenF1Client(DataProvider):
             return datetime.fromisoformat(dt_str)
         except ValueError:
             return None
-    
+
     # ========================================================================
     # DataProvider interface implementation
     # ========================================================================
-    
+
     async def get_sessions(
         self,
         year: int | None = None,
@@ -119,9 +143,9 @@ class OpenF1Client(DataProvider):
             params["country_name"] = country
         if session_name:
             params["session_name"] = session_name
-        
-        data = await self._get("/sessions", params)
-        
+
+        data = await self._fetch("/sessions", params)
+
         sessions = []
         for item in data:
             try:
@@ -132,7 +156,8 @@ class OpenF1Client(DataProvider):
                     session_type=item.get("session_type", item["session_name"]),
                     circuit_short_name=item["circuit_short_name"],
                     country_name=item["country_name"],
-                    date_start=self._parse_datetime(item["date_start"]) or datetime.now(timezone.utc),
+                    date_start=self._parse_datetime(item["date_start"])
+                    or datetime.now(UTC),
                     date_end=self._parse_datetime(item.get("date_end")),
                     year=item["year"],
                 )
@@ -140,17 +165,17 @@ class OpenF1Client(DataProvider):
             except (KeyError, ValueError) as e:
                 print(f"Error parsing session: {e}")
                 continue
-        
+
         return sessions
-    
+
     async def get_session(self, session_key: int) -> SessionInfo | None:
         """Fetch a specific session by key."""
         params = {"session_key": session_key}
-        data = await self._get("/sessions", params)
-        
+        data = await self._fetch("/sessions", params)
+
         if not data:
             return None
-        
+
         item = data[0]
         try:
             return SessionInfo(
@@ -160,18 +185,18 @@ class OpenF1Client(DataProvider):
                 session_type=item.get("session_type", item["session_name"]),
                 circuit_short_name=item["circuit_short_name"],
                 country_name=item["country_name"],
-                date_start=self._parse_datetime(item["date_start"]) or datetime.now(timezone.utc),
+                date_start=self._parse_datetime(item["date_start"]) or datetime.now(UTC),
                 date_end=self._parse_datetime(item.get("date_end")),
                 year=item["year"],
             )
         except (KeyError, ValueError):
             return None
-    
+
     async def get_drivers(self, session_key: int) -> list[DriverInfo]:
         """Fetch all drivers for a session."""
         params = {"session_key": session_key}
-        data = await self._get("/drivers", params)
-        
+        data = await self._fetch("/drivers", params)
+
         drivers = []
         for item in data:
             try:
@@ -188,9 +213,9 @@ class OpenF1Client(DataProvider):
             except (KeyError, ValueError) as e:
                 print(f"Error parsing driver: {e}")
                 continue
-        
+
         return drivers
-    
+
     async def get_laps(
         self,
         session_key: int,
@@ -203,9 +228,9 @@ class OpenF1Client(DataProvider):
             params["driver_number"] = driver_number
         if since_lap:
             params["lap_number>"] = since_lap
-        
-        data = await self._get("/laps", params)
-        
+
+        data = await self._fetch("/laps", params)
+
         laps = []
         for item in data:
             try:
@@ -224,74 +249,80 @@ class OpenF1Client(DataProvider):
             except (KeyError, ValueError) as e:
                 print(f"Error parsing lap: {e}")
                 continue
-        
+
         return laps
-    
+
     async def get_positions(self, session_key: int) -> list[PositionData]:
         """Fetch position data."""
         params = {"session_key": session_key}
-        data = await self._get("/position", params)
-        
+        data = await self._fetch("/position", params)
+
         # OpenF1 returns multiple position entries per driver (one per change)
         # We want the most recent position for each driver
         latest_positions: dict[int, PositionData] = {}
-        
+
         for item in data:
             try:
                 driver_num = item["driver_number"]
                 timestamp = self._parse_datetime(item["date"])
-                
+
                 if timestamp is None:
                     continue
-                
+
                 position = PositionData(
                     driver_number=driver_num,
                     position=item["position"],
                     timestamp=timestamp,
                 )
-                
+
                 # Keep only the latest position for each driver
-                if driver_num not in latest_positions or timestamp > latest_positions[driver_num].timestamp:
+                if (
+                    driver_num not in latest_positions
+                    or timestamp > latest_positions[driver_num].timestamp
+                ):
                     latest_positions[driver_num] = position
-                    
+
             except (KeyError, ValueError) as e:
                 print(f"Error parsing position: {e}")
                 continue
-        
+
         return list(latest_positions.values())
-    
+
     async def get_intervals(self, session_key: int) -> list[IntervalData]:
         """Fetch interval/gap data."""
         params = {"session_key": session_key}
-        data = await self._get("/intervals", params)
-        
+        data = await self._fetch("/intervals", params)
+
         # Get most recent interval for each driver
         latest_intervals: dict[int, IntervalData] = {}
-        
+
         for item in data:
             try:
                 driver_num = item["driver_number"]
                 timestamp = self._parse_datetime(item["date"])
-                
+
                 if timestamp is None:
                     continue
-                
+
                 interval = IntervalData(
                     driver_number=driver_num,
                     gap_to_leader=item.get("gap_to_leader"),
                     interval=item.get("interval"),
                     timestamp=timestamp,
                 )
-                
-                if driver_num not in latest_intervals or timestamp > latest_intervals[driver_num].timestamp:
+
+                if (
+                    driver_num not in latest_intervals
+                    or timestamp > latest_intervals[driver_num].timestamp
+                ):
                     latest_intervals[driver_num] = interval
-                    
+
             except (KeyError, ValueError) as e:
                 print(f"Error parsing interval: {e}")
                 continue
-        
+
         return list(latest_intervals.values())
-    
+
     async def get_stints(
         self,
         session_key: int,
@@ -301,9 +332,9 @@ class OpenF1Client(DataProvider):
         params: dict[str, Any] = {"session_key": session_key}
         if driver_number:
             params["driver_number"] = driver_number
-        
-        data = await self._get("/stints", params)
-        
+
+        data = await self._fetch("/stints", params)
+
         stints = []
         for item in data:
             try:
@@ -319,14 +350,14 @@ class OpenF1Client(DataProvider):
             except (KeyError, ValueError) as e:
                 print(f"Error parsing stint: {e}")
                 continue
-        
+
         return stints
-    
+
     async def get_pits(self, session_key: int) -> list[PitData]:
         """Fetch pit stop data."""
         params = {"session_key": session_key}
-        data = await self._get("/pit", params)
-        
+        data = await self._fetch("/pit", params)
+
         pits = []
         for item in data:
             try:
@@ -334,20 +365,20 @@ class OpenF1Client(DataProvider):
                     driver_number=item["driver_number"],
                     lap_number=item["lap_number"],
                     pit_duration=item["pit_duration"],
-                    timestamp=self._parse_datetime(item["date"]) or datetime.now(timezone.utc),
+                    timestamp=self._parse_datetime(item["date"]) or datetime.now(UTC),
                 )
                 pits.append(pit)
             except (KeyError, ValueError) as e:
                 print(f"Error parsing pit: {e}")
                 continue
-        
+
         return pits
-    
+
     async def get_race_control(self, session_key: int) -> list[RaceControlMessage]:
         """Fetch race control messages."""
         params = {"session_key": session_key}
-        data = await self._get("/race_control", params)
-        
+        data = await self._fetch("/race_control", params)
+
         messages = []
         for item in data:
             try:
@@ -357,13 +388,13 @@ class OpenF1Client(DataProvider):
                     message=item["message"],
                     lap_number=item.get("lap_number"),
                     driver_number=item.get("driver_number"),
-                    timestamp=self._parse_datetime(item["date"]) or datetime.now(timezone.utc),
+                    timestamp=self._parse_datetime(item["date"]) or datetime.now(UTC),
                 )
                 messages.append(msg)
             except (KeyError, ValueError) as e:
                 print(f"Error parsing race control: {e}")
                 continue
-        
+
         return messages
 
 
@@ -371,28 +402,28 @@ class OpenF1Client(DataProvider):
 async def test_client() -> None:
     """Test the OpenF1 client with a sample session."""
     client = OpenF1Client()
-    
+
     try:
         # Get 2023 sessions
         print("Fetching 2023 sessions...")
         sessions = await client.get_sessions(year=2023)
         print(f"Found {len(sessions)} sessions")
-        
+
         if sessions:
             # Get details for the first race session
             race_sessions = [s for s in sessions if s.session_name == "Race"]
             if race_sessions:
                 session = race_sessions[0]
                 print(f"\nSession: {session.country_name} {session.session_name}")
-                
+
                 # Get drivers
                 drivers = await client.get_drivers(session.session_key)
                 print(f"Drivers: {len(drivers)}")
-                
+
                 # Get some laps
                 laps = await client.get_laps(session.session_key)
                 print(f"Laps: {len(laps)}")
-                
+
                 # Get stints
                 stints = await client.get_stints(session.session_key)
                 print(f"Stints: {len(stints)}")

@@ -486,4 +486,4 @@ if __name__ == "__main__":
 
 - [API Reference](API.md) — Full REST API documentation
 - [WebSocket Guide](API.md#websocket-api) — Real-time integration
-- [Examples Repository](https://github.com/your-org/rsw-examples) — More examples
+- [Examples Repository](https://github.com/cagancaliskan/rsw-examples) — More examples

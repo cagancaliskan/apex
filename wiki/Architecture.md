@@ -45,27 +45,29 @@ See [System Architecture](#system-architecture) below for the visual diagram.
 ```mermaid
 flowchart TB
     subgraph External
-        OpenF1[OpenF1 API]
+        OpenF1[OpenF1\nAPI]
     end
 
     subgraph Core[Core Application]
         direction TB
-        Ingest[Ingest Layer]
-        State[State Store]
-        Strategy[Strategy Engine]
-        API[REST API]
-        Socket[WebSocket]
+        Ingest[Ingest\nLayer]
+        State[State\nStore]
+        Services[Services\nLayer]
+        Strategy[Parallel\nStrategy Engine]
+        API[REST\nAPI]
+        Socket[Web\nSocket]
     end
 
     subgraph User[User Interface]
-        Frontend[React Frontend]
+        Frontend[React\nFrontend]
     end
 
     OpenF1 --> Ingest
     Ingest --> State
-    State <--> Strategy
-    State --> API
-    State --> Socket
+    State --> Services
+    Services <--> Strategy
+    Services --> API
+    Services --> Socket
     API --> Frontend
     Socket --> Frontend
 ```
@@ -75,90 +77,84 @@ flowchart TB
 ```mermaid
 flowchart TD
     %% Nodes
-    A[OpenF1 API] -->|HTTP/JSON| B(OpenF1Client)
-    B -->|Batch Data| C{UpdateBatch}
+    A[OpenF1\nAPI] -->|HTTP/JSON| B(F1Client)
+    B -->|Batch Data| C{Update\nBatch}
     C -->|Normalize| D[Reducers]
-    D -->|Update| E[(RaceStateStore)]
+    D -->|Update| E[(RaceStore)]
     
-    E -->|Notify| F[StrategyEngine]
-    F -->|Analyze| G[RLS Models]
-    F -->|Simulate| H[MonteCarlo]
-    F -->|Recommend| E
+    E -->|Notify| S[Sim\nService]
+    S -->|Async| F[Strat\nService]
+    F -->|Parallel| G[Monte\nCarlo]
+    G -->|Result| F
+    F -->|Update| E
     
-    E -->|Broadcast| I[WebSocket]
+    S -->|Broadcast| I[Web\nSocket]
     I -->|Push| J[Frontend]
     
     classDef storage fill:#f9f,stroke:#333,stroke-width:2px;
     class E storage;
 ```
 
+### Component Diagram
+
 ```mermaid
 classDiagram
     direction TB
 
-    %% Application Core
+    %% Apps
     class App {
-        +Backend: FastAPI
-        +Frontend: React
-        +run()
+        +FastAPI
+        +React
     }
 
-    class DI_Container {
-        +register()
+    class DI {
+        +reg()
         +get()
     }
 
     %% Interfaces
-    class IDataProv {
+    class IData {
         <<interface>>
-        +get_sessions()
-        +get_laps()
     }
     
-    class IStore {
+    class IState {
         <<interface>>
-        +get_state()
+    }
+    
+    %% Impl
+    class F1 {
+        +get_sess()
+    }
+
+    class Store {
         +dispatch()
     }
-    
-    %% Implementations
-    class F1Client {
-        -cache: dict
-        +get_sessions()
-        +get_laps()
+
+    %% Services
+    class SimSvc {
+        +run_loop()
     }
 
-    class RaceStore {
-        -state: RaceState
-        +dispatch(action)
+    class StratSvc {
+        +eval_async()
     }
 
-    %% Strategy Engine
-    class StratEngine {
-        +analyze(state)
-        +recommend()
-    }
-    
-    class RLSModel {
-        +update(x, y)
-        +predict(x)
+    %% Strat
+    class MC {
+        +sim_parallel()
     }
 
-    class MonteCarlo {
-        +simulate()
-    }
-
-    %% Relationships
-    App --> DI_Container : init
-    DI_Container ..> IDataProv
-    DI_Container ..> IStore
+    %% Links
+    App --> DI : init
+    DI ..> IData
+    DI ..> IState
     
-    F1Client --|> IDataProv
-    RaceStore --|> IStore
+    F1 --|> IData
+    Store --|> IState
     
-    StratEngine --> IStore : observes
-    StratEngine --> RLSModel : uses
-    StratEngine --> MonteCarlo : uses
+    SimSvc --> Store : observes
+    SimSvc --> StratSvc : delegates
+    StratSvc --> MC : executes
 ```
 
 ---

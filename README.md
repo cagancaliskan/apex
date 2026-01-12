@@ -12,6 +12,7 @@
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
   <img src="https://img.shields.io/badge/fastapi-0.104+-green.svg" alt="FastAPI">
   <img src="https://img.shields.io/badge/tests-68%20passed-success.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/version-2.0.1-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
 </p>
 
@@ -50,7 +51,7 @@ The **F1 Race Strategy Workbench** is a professional-grade application for real-
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/f1-strategy-workbench.git
+git clone https://github.com/cagancaliskan/apex.git
 cd f1-strategy-workbench
 
 # 2. Install dependencies

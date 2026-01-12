@@ -11,6 +11,7 @@ from dataclasses import dataclass
 @dataclass
 class CompoundPrior:
     """Prior parameters for a tyre compound."""
+
     compound: str
     deg_per_lap: float  # Expected degradation in seconds per lap
     deg_std: float  # Standard deviation of degradation
@@ -65,43 +66,37 @@ def get_warm_start_params(
 ) -> tuple[float, float]:
     """
     Get warm start parameters for a compound.
-    
+
     Args:
         compound: Tyre compound name
         base_pace: Optional base lap time (if known from practice)
         track_multiplier: Track-specific degradation multiplier
-    
+
     Returns:
         Tuple of (base_pace, deg_slope)
     """
     prior = COMPOUND_PRIORS.get(
         compound.upper(),
-        COMPOUND_PRIORS["MEDIUM"]  # Default to medium if unknown
+        COMPOUND_PRIORS["MEDIUM"],  # Default to medium if unknown
     )
-    
+
     # If base pace not provided, we'll rely on first observations
     # Use 90s as a placeholder (will be updated by first laps)
     if base_pace is None:
         base_pace = 90.0
-    
+
     deg_slope = prior.deg_per_lap * track_multiplier
-    
+
     return base_pace, deg_slope
 
 
 def get_cliff_risk_threshold(compound: str) -> float:
     """Get the degradation slope threshold for cliff risk."""
-    prior = COMPOUND_PRIORS.get(
-        compound.upper(),
-        COMPOUND_PRIORS["MEDIUM"]
-    )
+    prior = COMPOUND_PRIORS.get(compound.upper(), COMPOUND_PRIORS["MEDIUM"])
     return prior.cliff_risk_threshold
 
 
 def get_expected_cliff_lap(compound: str) -> int:
     """Get expected lap where cliff might occur."""
-    prior = COMPOUND_PRIORS.get(
-        compound.upper(),
-        COMPOUND_PRIORS["MEDIUM"]
-    )
+    prior = COMPOUND_PRIORS.get(compound.upper(), COMPOUND_PRIORS["MEDIUM"])
     return prior.cliff_lap

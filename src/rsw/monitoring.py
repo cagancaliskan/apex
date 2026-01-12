@@ -5,11 +5,12 @@ Exposes application metrics for observability.
 """
 
 import time
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, Any
+from typing import Any
 
-from prometheus_client import Counter, Gauge, Histogram, Info, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Request, Response
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, Info, generate_latest
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from rsw.runtime_config import get_config
@@ -19,10 +20,12 @@ from rsw.runtime_config import get_config
 # ============================================================================
 
 APP_INFO = Info("rsw", "Race Strategy Workbench application info")
-APP_INFO.info({
-    "version": "1.0.0",
-    "environment": get_config().environment,
-})
+APP_INFO.info(
+    {
+        "version": "1.0.0",
+        "environment": get_config().environment,
+    }
+)
 
 # ============================================================================
 # HTTP Metrics
@@ -157,67 +160,70 @@ DRIVERS_TRACKED = Gauge(
 # Middleware
 # ============================================================================
 
+
 class MetricsMiddleware(BaseHTTPMiddleware):
     """Middleware to collect HTTP metrics."""
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         from typing import cast
+
         # Skip metrics endpoint to avoid recursion
         if request.url.path == "/metrics":
             return cast(Response, await call_next(request))
-        
+
         method = request.method
         endpoint = self._normalize_path(request.url.path)
-        
+
         HTTP_REQUESTS_IN_PROGRESS.labels(method=method, endpoint=endpoint).inc()
-        
+
         start_time = time.time()
-        
+
         try:
             response = cast(Response, await call_next(request))
             status = str(response.status_code)
-        except Exception as e:
+        except Exception:
             status = "500"
             raise
         finally:
             duration = time.time() - start_time
-            
+
             HTTP_REQUESTS_TOTAL.labels(
                 method=method,
                 endpoint=endpoint,
                 status=status,
             ).inc()
-            
+
             HTTP_REQUEST_DURATION.labels(
                 method=method,
                 endpoint=endpoint,
             ).observe(duration)
-            
+
             HTTP_REQUESTS_IN_PROGRESS.labels(
                 method=method,
                 endpoint=endpoint,
             ).dec()
-        
+
         return response
-    
+
     def _normalize_path(self, path: str) -> str:
         """Normalize path to avoid high cardinality."""
         # Replace IDs with placeholders
         parts = path.split("/")
         normalized = []
-        
+
         for part in parts:
             if part.isdigit():
                 normalized.append("{id}")
             else:
                 normalized.append(part)
-        
+
         return "/".join(normalized)
 
 
 # ============================================================================
 # Metrics Endpoint
 # ============================================================================
+
 
 async def metrics_endpoint() -> Response:
     """Prometheus metrics endpoint."""
@@ -231,8 +237,10 @@ async def metrics_endpoint() -> Response:
 # Decorators
 # ============================================================================
 
+
 def track_duration(histogram: Histogram, labels: dict[str, str] | None = None) -> Callable:
     """Decorator to track function duration."""
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -245,7 +253,7 @@ def track_duration(histogram: Histogram, labels: dict[str, str] | None = None) -
                     histogram.labels(**labels).observe(duration)
                 else:
                     histogram.observe(duration)
-        
+
         @wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             start = time.time()
@@ -257,10 +265,11 @@ def track_duration(histogram: Histogram, labels: dict[str, str] | None = None) -
                     histogram.labels(**labels).observe(duration)
                 else:
                     histogram.observe(duration)
-        
+
         import asyncio
+
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
-    
+
     return decorator

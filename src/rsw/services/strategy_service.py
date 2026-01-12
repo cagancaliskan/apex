@@ -18,6 +18,7 @@ logger = get_logger(__name__)
 @dataclass
 class PitWindow:
     """Pit window result - immutable data transfer object."""
+
     min_lap: int
     max_lap: int
     ideal_lap: int
@@ -27,6 +28,7 @@ class PitWindow:
 @dataclass
 class Recommendation:
     """Strategy recommendation - immutable DTO."""
+
     action: str
     confidence: float
     reason: str
@@ -37,23 +39,23 @@ class Recommendation:
 class StrategyService(IStrategyCalculator):
     """
     Service for strategy calculations.
-    
+
     Follows:
     - SRP: Only handles strategy calculations
     - OCP: Can be extended with new strategies
     - DIP: Uses StrategyConfig abstraction
     """
-    
+
     def __init__(self, config: Any) -> None:
         """
         Initialize with configuration.
-        
+
         Args:
             config: Strategy configuration (StrategyConfig)
         """
         self.config = config
         self._pit_loss_cache: dict[str, float] = {}
-    
+
     def calculate_pit_window(
         self,
         driver: DriverState,
@@ -62,11 +64,11 @@ class StrategyService(IStrategyCalculator):
     ) -> dict:
         """
         Calculate optimal pit window.
-        
+
         Encapsulation: Hides complex calculation details.
         """
         from rsw.strategy.pit_window import find_optimal_window
-        
+
         window = find_optimal_window(
             current_lap=driver.current_lap,
             total_laps=total_laps,
@@ -77,14 +79,14 @@ class StrategyService(IStrategyCalculator):
             compound=driver.compound or "MEDIUM",
             cliff_risk=driver.cliff_risk,
         )
-        
+
         return {
             "min_lap": window.min_lap,
             "max_lap": window.max_lap,
             "ideal_lap": window.ideal_lap,
             "reason": window.reason,
         }
-    
+
     def get_recommendation(
         self,
         driver: DriverState,
@@ -92,11 +94,11 @@ class StrategyService(IStrategyCalculator):
     ) -> dict:
         """
         Get pit recommendation for a driver.
-        
+
         Encapsulation: Complex decision logic hidden.
         """
         from rsw.strategy.decision import evaluate_strategy
-        
+
         rec = evaluate_strategy(
             driver_number=driver.driver_number,
             current_lap=race_state.current_lap,
@@ -110,7 +112,7 @@ class StrategyService(IStrategyCalculator):
             pit_loss=22.0,  # TODO: get from track config
             safety_car=race_state.safety_car,
         )
-        
+
         return {
             "recommendation": rec.recommendation.value,
             "confidence": rec.confidence,
@@ -121,9 +123,11 @@ class StrategyService(IStrategyCalculator):
                 "min": rec.pit_window.min_lap if rec.pit_window else 0,
                 "max": rec.pit_window.max_lap if rec.pit_window else 0,
                 "ideal": rec.pit_window.ideal_lap if rec.pit_window else 0,
-            } if rec.pit_window else None,
+            }
+            if rec.pit_window
+            else None,
         }
-    
+
     def run_monte_carlo(
         self,
         driver: DriverState,
@@ -134,22 +138,23 @@ class StrategyService(IStrategyCalculator):
     ) -> dict:
         """
         Run Monte Carlo simulation.
-        
+
         Follows KISS: Simple interface, complex logic hidden.
         """
-        from rsw.strategy.monte_carlo import simulate_race
-        
-        outcome = simulate_race(
+        from rsw.strategy.monte_carlo import simulate_grid_outcome
+
+        # Prepare full grid state
+        # Merge 'driver' and 'competitors' into a dict
+        grid_state = {c.driver_number: c for c in competitors}
+        grid_state[driver.driver_number] = driver
+
+        outcome = simulate_grid_outcome(
             driver_number=driver.driver_number,
-            current_pace=driver.last_lap_time or 90.0,
-            deg_slope=driver.deg_slope,
-            current_position=driver.position,
-            competitors=[(c.last_lap_time or 90.0, c.deg_slope) for c in competitors],
+            initial_state=grid_state,
             remaining_laps=remaining_laps,
-            pit_loss=pit_loss,
             n_simulations=n_simulations or self.config.monte_carlo_simulations,
         )
-        
+
         return {
             "expected_position": outcome.expected_position,
             "position_std": outcome.position_std,

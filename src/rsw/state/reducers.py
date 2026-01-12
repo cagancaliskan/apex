@@ -6,7 +6,7 @@ plus an update payload, returning a new state. This makes testing
 and debugging much easier.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..ingest.base import (
     DriverInfo,
@@ -24,14 +24,14 @@ from .schemas import DriverState, RaceState
 def apply_drivers(state: RaceState, drivers: list[DriverInfo]) -> RaceState:
     """
     Apply driver information to state.
-    
+
     This initializes or updates driver identity information (name, team, etc.).
     """
     new_drivers = {**state.drivers}
-    
+
     for driver_info in drivers:
         existing = new_drivers.get(driver_info.driver_number)
-        
+
         if existing:
             # Update existing driver's identity info
             new_drivers[driver_info.driver_number] = existing.model_copy(
@@ -40,7 +40,7 @@ def apply_drivers(state: RaceState, drivers: list[DriverInfo]) -> RaceState:
                     "full_name": driver_info.full_name,
                     "team_name": driver_info.team_name,
                     "team_colour": driver_info.team_colour,
-                    "last_update": datetime.now(timezone.utc),
+                    "last_update": datetime.now(UTC),
                 }
             )
         else:
@@ -51,29 +51,49 @@ def apply_drivers(state: RaceState, drivers: list[DriverInfo]) -> RaceState:
                 full_name=driver_info.full_name,
                 team_name=driver_info.team_name,
                 team_colour=driver_info.team_colour,
-                last_update=datetime.now(timezone.utc),
+                last_update=datetime.now(UTC),
             )
-    
+
     return state.model_copy(update={"drivers": new_drivers})
 
 
 def apply_laps(state: RaceState, laps: list[LapData]) -> RaceState:
     """
     Apply lap data to state.
-    
+
     Updates driver lap times, sectors, and current lap information.
     """
     new_drivers = {**state.drivers}
     max_lap = state.current_lap
-    
+
     for lap in laps:
         driver = new_drivers.get(lap.driver_number)
         if not driver:
             # Create new driver if not exists
             driver = DriverState(driver_number=lap.driver_number)
-        
+
         # Only update if this is a newer lap
         if lap.lap_number >= driver.current_lap:
+            # Strategy / Degradation Model Logic (Basic Simulation)
+            # Calculate degradation based on tyre age and compound
+            tyre_age = lap.tyre_age if lap.tyre_age > 0 else (driver.tyre_age + 1)
+            compound = lap.compound or driver.compound or "MEDIUM"
+
+            # Simple degradation slopes (seconds lost per lap)
+            deg_map = {"SOFT": 0.12, "MEDIUM": 0.08, "HARD": 0.05, "INTERMEDIATE": 0.1, "WET": 0.1}
+            deg_slope = deg_map.get(compound, 0.08)
+
+            # Cliff risk increases exponentially after critical age
+            critical_age_map = {"SOFT": 15, "MEDIUM": 25, "HARD": 35, "INTERMEDIATE": 20, "WET": 20}
+            critical_age = critical_age_map.get(compound, 25)
+            cliff_risk = min(1.0, max(0.0, (tyre_age - critical_age + 5) / 10.0))
+
+            # Pit window logic (start looking 3 laps before critical age)
+            window_open = max(1, critical_age - 3)
+            window_close = critical_age + 5  # Can push 5 laps past critical but risky
+            ideal_pit = critical_age  # Most optimal pit lap = critical age
+            window_msg = f"L{window_open}-L{window_close}"
+
             new_drivers[lap.driver_number] = driver.model_copy(
                 update={
                     "current_lap": lap.lap_number,
@@ -88,17 +108,25 @@ def apply_laps(state: RaceState, laps: list[LapData]) -> RaceState:
                     "sector_3": lap.sector_3,
                     "is_pit_out_lap": lap.is_pit_out_lap,
                     "lap_in_stint": lap.lap_number - driver.stint_start_lap + 1,
-                    "tyre_age": driver.tyre_age + (1 if lap.lap_number > driver.current_lap else 0),
-                    "last_update": lap.timestamp or datetime.now(timezone.utc),
+                    "tyre_age": tyre_age,
+                    "compound": compound,
+                    # Strategy Metrics
+                    "deg_slope": deg_slope,
+                    "cliff_risk": round(cliff_risk, 2),
+                    "pit_window_min": window_open,
+                    "pit_window_max": window_close,
+                    "pit_window_ideal": ideal_pit,
+                    "pit_recommendation": f"Window: {window_msg}",
+                    "last_update": lap.timestamp or datetime.now(UTC),
                 }
             )
             max_lap = max(max_lap, lap.lap_number)
-    
+
     return state.model_copy(
         update={
             "drivers": new_drivers,
             "current_lap": max_lap,
-            "timestamp": datetime.now(timezone.utc),
+            "timestamp": datetime.now(UTC),
         }
     )
 
@@ -106,11 +134,11 @@ def apply_laps(state: RaceState, laps: list[LapData]) -> RaceState:
 def apply_positions(state: RaceState, positions: list[PositionData]) -> RaceState:
     """
     Apply position data to state.
-    
+
     Updates driver positions in the race.
     """
     new_drivers = {**state.drivers}
-    
+
     for pos in positions:
         driver = new_drivers.get(pos.driver_number)
         if driver:
@@ -126,18 +154,18 @@ def apply_positions(state: RaceState, positions: list[PositionData]) -> RaceStat
                 position=pos.position,
                 last_update=pos.timestamp,
             )
-    
+
     return state.model_copy(update={"drivers": new_drivers})
 
 
 def apply_intervals(state: RaceState, intervals: list[IntervalData]) -> RaceState:
     """
     Apply interval/gap data to state.
-    
+
     Updates gap to leader and gap to car ahead.
     """
     new_drivers = {**state.drivers}
-    
+
     for interval in intervals:
         driver = new_drivers.get(interval.driver_number)
         if driver:
@@ -148,25 +176,25 @@ def apply_intervals(state: RaceState, intervals: list[IntervalData]) -> RaceStat
                     "last_update": interval.timestamp,
                 }
             )
-    
+
     return state.model_copy(update={"drivers": new_drivers})
 
 
 def apply_stints(state: RaceState, stints: list[StintData]) -> RaceState:
     """
     Apply stint (tyre) data to state.
-    
+
     Updates tyre compound and stint information for each driver.
     """
     new_drivers = {**state.drivers}
-    
+
     # Group stints by driver and get the latest stint for each
     driver_stints: dict[int, StintData] = {}
     for stint in stints:
         existing = driver_stints.get(stint.driver_number)
         if not existing or stint.stint_number > existing.stint_number:
             driver_stints[stint.driver_number] = stint
-    
+
     for driver_num, stint in driver_stints.items():
         driver = new_drivers.get(driver_num)
         if driver:
@@ -175,23 +203,24 @@ def apply_stints(state: RaceState, stints: list[StintData]) -> RaceState:
                     "stint_number": stint.stint_number,
                     "compound": stint.compound,
                     "stint_start_lap": stint.lap_start,
-                    "tyre_age": stint.tyre_age_at_start + max(0, driver.current_lap - stint.lap_start),
+                    "tyre_age": stint.tyre_age_at_start
+                    + max(0, driver.current_lap - stint.lap_start),
                     "lap_in_stint": max(1, driver.current_lap - stint.lap_start + 1),
                 }
             )
-    
+
     return state.model_copy(update={"drivers": new_drivers})
 
 
 def apply_pits(state: RaceState, pits: list[PitData]) -> RaceState:
     """
     Apply pit stop data to state.
-    
+
     Records recent pit stops for display.
     """
     # Add new pits to recent list (keep last 10)
     recent_pits = list(state.recent_pits)
-    
+
     for pit in pits:
         pit_record = {
             "driver_number": pit.driver_number,
@@ -205,26 +234,26 @@ def apply_pits(state: RaceState, pits: list[PitData]) -> RaceState:
             for p in recent_pits
         ):
             recent_pits.append(pit_record)
-    
+
     # Keep only the 10 most recent
     recent_pits = sorted(recent_pits, key=lambda p: p["timestamp"], reverse=True)[:10]
-    
+
     return state.model_copy(update={"recent_pits": recent_pits})
 
 
 def apply_race_control(state: RaceState, messages: list[RaceControlMessage]) -> RaceState:
     """
     Apply race control messages to state.
-    
+
     Updates flags, safety car status, and recent messages.
     """
     new_flags = list(state.flags)
     safety_car = state.safety_car
     virtual_safety_car = state.virtual_safety_car
     red_flag = state.red_flag
-    
+
     recent_messages = list(state.recent_messages)
-    
+
     for msg in messages:
         # Update flags based on message
         if msg.flag:
@@ -239,7 +268,7 @@ def apply_race_control(state: RaceState, messages: list[RaceControlMessage]) -> 
             elif msg.flag in ["YELLOW", "DOUBLE YELLOW"]:
                 if "YELLOW" not in new_flags:
                     new_flags.append("YELLOW")
-        
+
         if msg.category == "SafetyCar":
             if "DEPLOYED" in msg.message.upper():
                 safety_car = True
@@ -248,7 +277,7 @@ def apply_race_control(state: RaceState, messages: list[RaceControlMessage]) -> 
             elif "ENDING" in msg.message.upper() or "IN" in msg.message.upper():
                 safety_car = False
                 new_flags = [f for f in new_flags if f != "SAFETY CAR"]
-        
+
         if "VSC" in msg.message.upper() or "VIRTUAL SAFETY CAR" in msg.message.upper():
             if "DEPLOYED" in msg.message.upper():
                 virtual_safety_car = True
@@ -257,7 +286,7 @@ def apply_race_control(state: RaceState, messages: list[RaceControlMessage]) -> 
             elif "ENDING" in msg.message.upper():
                 virtual_safety_car = False
                 new_flags = [f for f in new_flags if f != "VSC"]
-        
+
         # Add to recent messages
         msg_record = {
             "category": msg.category,
@@ -267,10 +296,10 @@ def apply_race_control(state: RaceState, messages: list[RaceControlMessage]) -> 
             "timestamp": msg.timestamp.isoformat(),
         }
         recent_messages.append(msg_record)
-    
+
     # Keep only the 20 most recent messages
     recent_messages = sorted(recent_messages, key=lambda m: m["timestamp"], reverse=True)[:20]
-    
+
     return state.model_copy(
         update={
             "flags": new_flags,
@@ -285,34 +314,34 @@ def apply_race_control(state: RaceState, messages: list[RaceControlMessage]) -> 
 def apply_update_batch(state: RaceState, batch: UpdateBatch) -> RaceState:
     """
     Apply a complete update batch to state.
-    
+
     This is the main entry point for updating state. It applies all
     non-None fields from the batch in the correct order.
     """
     new_state = state
-    
+
     # Apply updates in order of dependency
     if batch.drivers:
         new_state = apply_drivers(new_state, batch.drivers)
-    
+
     if batch.positions:
         new_state = apply_positions(new_state, batch.positions)
-    
+
     if batch.intervals:
         new_state = apply_intervals(new_state, batch.intervals)
-    
+
     if batch.stints:
         new_state = apply_stints(new_state, batch.stints)
-    
+
     if batch.laps:
         new_state = apply_laps(new_state, batch.laps)
-    
+
     if batch.pits:
         new_state = apply_pits(new_state, batch.pits)
-    
+
     if batch.race_control:
         new_state = apply_race_control(new_state, batch.race_control)
-    
+
     # Update current lap if provided
     if batch.current_lap:
         new_state = new_state.model_copy(
@@ -321,5 +350,5 @@ def apply_update_batch(state: RaceState, batch: UpdateBatch) -> RaceState:
                 "timestamp": batch.timestamp,
             }
         )
-    
+
     return new_state

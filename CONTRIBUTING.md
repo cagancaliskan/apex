@@ -42,7 +42,7 @@ This project follows the [Contributor Covenant Code of Conduct](https://www.cont
 
 ```bash
 # Fork and clone
-git clone https://github.com/YOUR_USERNAME/f1-strategy-workbench.git
+git clone https://github.com/cagancaliskan/apex.git
 cd f1-strategy-workbench
 
 # Create virtual environment

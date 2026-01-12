@@ -42,8 +42,8 @@ This project follows the [Contributor Covenant Code of Conduct](https://www.cont
 
 ```bash
 # Fork and clone
-git clone https://github.com/YOUR_USERNAME/f1-strategy-workbench.git
-cd f1-strategy-workbench
+git clone https://github.com/cagancaliskan/apex.git
+cd apex
 
 # Create virtual environment
 python -m venv .venv

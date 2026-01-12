@@ -32,8 +32,8 @@ Complete guide for contributing to the F1 Race Strategy Workbench.
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/f1-strategy-workbench.git
-cd f1-strategy-workbench
+git clone https://github.com/cagancaliskan/apex.git
+cd apex
 
 # 2. Create virtual environment
 python -m venv .venv

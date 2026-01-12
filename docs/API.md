@@ -117,7 +117,7 @@ Comprehensive health check with dependency status.
 ```json
 {
   "status": "healthy",
-  "version": "1.0.0",
+  "version": "2.0.1",
   "environment": "production",
   "timestamp": "2024-01-15T14:30:00Z",
   "checks": {
@@ -166,7 +166,7 @@ Application version information.
 **Response:** `200 OK`
 ```json
 {
-  "version": "1.0.0",
+  "version": "2.0.1",
   "environment": "production",
   "python": "3.11"
 }
@@ -369,6 +369,13 @@ Get strategy recommendation for a driver.
   },
   "predictions": {
     "next_5_laps": [92.5, 92.6, 92.65, 92.7, 92.8]
+  },
+  "pit_rejoin": {
+    "rejoin_lap": 36,
+    "rejoin_position": 4,
+    "traffic_density": "LOW",
+    "gap_to_ahead": 2.5,
+    "gap_to_behind": 1.2
   },
   "threats": {
     "undercut_viable": false,

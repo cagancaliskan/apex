@@ -5,23 +5,23 @@ Provides structured exception hierarchy for proper error handling
 and meaningful error messages throughout the application.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 
 class RSWError(Exception):
     """Base exception for all RSW errors."""
-    
+
     def __init__(
         self,
         message: str,
         code: str = "RSW_ERROR",
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.message = message
         self.code = code
         self.details = details or {}
         super().__init__(self.message)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert exception to dictionary for API responses."""
         return {
@@ -37,14 +37,15 @@ class RSWError(Exception):
 # API Errors
 # ============================================================================
 
+
 class APIError(RSWError):
     """Error communicating with external APIs."""
-    
+
     def __init__(
         self,
         message: str,
-        status_code: Optional[int] = None,
-        endpoint: Optional[str] = None,
+        status_code: int | None = None,
+        endpoint: str | None = None,
     ) -> None:
         super().__init__(
             message=message,
@@ -57,11 +58,11 @@ class APIError(RSWError):
 
 class RateLimitError(APIError):
     """Rate limit exceeded on external API."""
-    
+
     def __init__(
         self,
-        retry_after: Optional[int] = None,
-        endpoint: Optional[str] = None,
+        retry_after: int | None = None,
+        endpoint: str | None = None,
     ) -> None:
         super().__init__(
             message=f"Rate limit exceeded. Retry after {retry_after}s",
@@ -74,8 +75,8 @@ class RateLimitError(APIError):
 
 class APITimeoutError(APIError):
     """Request to external API timed out."""
-    
-    def __init__(self, endpoint: Optional[str] = None, timeout: float = 30.0) -> None:
+
+    def __init__(self, endpoint: str | None = None, timeout: float = 30.0) -> None:
         super().__init__(
             message=f"Request timed out after {timeout}s",
             status_code=None,
@@ -87,8 +88,8 @@ class APITimeoutError(APIError):
 
 class APIConnectionError(APIError):
     """Failed to connect to external API."""
-    
-    def __init__(self, endpoint: Optional[str] = None) -> None:
+
+    def __init__(self, endpoint: str | None = None) -> None:
         super().__init__(
             message="Failed to connect to API",
             status_code=None,
@@ -101,10 +102,11 @@ class APIConnectionError(APIError):
 # Data Errors
 # ============================================================================
 
+
 class DataError(RSWError):
     """Error with data processing or validation."""
-    
-    def __init__(self, message: str, field: Optional[str] = None) -> None:
+
+    def __init__(self, message: str, field: str | None = None) -> None:
         super().__init__(
             message=message,
             code="DATA_ERROR",
@@ -114,7 +116,7 @@ class DataError(RSWError):
 
 class SessionNotFoundError(DataError):
     """Requested session was not found."""
-    
+
     def __init__(self, session_key: int) -> None:
         super().__init__(
             message=f"Session {session_key} not found",
@@ -126,8 +128,8 @@ class SessionNotFoundError(DataError):
 
 class DriverNotFoundError(DataError):
     """Requested driver was not found."""
-    
-    def __init__(self, driver_number: int, session_key: Optional[int] = None) -> None:
+
+    def __init__(self, driver_number: int, session_key: int | None = None) -> None:
         super().__init__(
             message=f"Driver {driver_number} not found",
             field="driver_number",
@@ -139,7 +141,7 @@ class DriverNotFoundError(DataError):
 
 class InvalidDataError(DataError):
     """Data failed validation."""
-    
+
     def __init__(self, message: str, field: str, value: Any = None) -> None:
         super().__init__(message=message, field=field)
         self.value = value
@@ -151,10 +153,11 @@ class InvalidDataError(DataError):
 # Strategy Errors
 # ============================================================================
 
+
 class StrategyError(RSWError):
     """Error in strategy calculation."""
-    
-    def __init__(self, message: str, driver_number: Optional[int] = None) -> None:
+
+    def __init__(self, message: str, driver_number: int | None = None) -> None:
         super().__init__(
             message=message,
             code="STRATEGY_ERROR",
@@ -164,7 +167,7 @@ class StrategyError(RSWError):
 
 class InsufficientDataError(StrategyError):
     """Not enough data for strategy calculation."""
-    
+
     def __init__(
         self,
         message: str = "Insufficient data for calculation",
@@ -180,8 +183,8 @@ class InsufficientDataError(StrategyError):
 
 class ModelError(StrategyError):
     """Error in ML model prediction."""
-    
-    def __init__(self, message: str, model_name: Optional[str] = None) -> None:
+
+    def __init__(self, message: str, model_name: str | None = None) -> None:
         super().__init__(message=message)
         self.model_name = model_name
         self.code = "MODEL_ERROR"
@@ -193,16 +196,17 @@ class ModelError(StrategyError):
 # Authentication Errors
 # ============================================================================
 
+
 class AuthError(RSWError):
     """Authentication/authorization error."""
-    
+
     def __init__(self, message: str = "Authentication required") -> None:
         super().__init__(message=message, code="AUTH_ERROR")
 
 
 class InvalidTokenError(AuthError):
     """Invalid or expired authentication token."""
-    
+
     def __init__(self, reason: str = "Token is invalid or expired") -> None:
         super().__init__(message=reason)
         self.code = "INVALID_TOKEN"
@@ -210,7 +214,7 @@ class InvalidTokenError(AuthError):
 
 class InsufficientPermissionsError(AuthError):
     """User lacks required permissions."""
-    
+
     def __init__(self, required_permission: str) -> None:
         super().__init__(message=f"Missing required permission: {required_permission}")
         self.required_permission = required_permission
@@ -221,10 +225,11 @@ class InsufficientPermissionsError(AuthError):
 # Replay Errors
 # ============================================================================
 
+
 class ReplayError(RSWError):
     """Error during replay playback."""
-    
-    def __init__(self, message: str, session_key: Optional[int] = None) -> None:
+
+    def __init__(self, message: str, session_key: int | None = None) -> None:
         super().__init__(
             message=message,
             code="REPLAY_ERROR",
@@ -234,8 +239,8 @@ class ReplayError(RSWError):
 
 class CachedSessionNotFoundError(ReplayError):
     """Cached session file not found."""
-    
-    def __init__(self, session_key: int, path: Optional[str] = None) -> None:
+
+    def __init__(self, session_key: int, path: str | None = None) -> None:
         super().__init__(
             message=f"Cached session {session_key} not found",
             session_key=session_key,
@@ -246,7 +251,7 @@ class CachedSessionNotFoundError(ReplayError):
 
 class NoActiveReplayError(ReplayError):
     """No replay is currently active."""
-    
+
     def __init__(self) -> None:
         super().__init__(message="No active replay session")
         self.code = "NO_ACTIVE_REPLAY"
@@ -256,10 +261,11 @@ class NoActiveReplayError(ReplayError):
 # Configuration Errors
 # ============================================================================
 
+
 class ConfigError(RSWError):
     """Configuration error."""
-    
-    def __init__(self, message: str, config_key: Optional[str] = None) -> None:
+
+    def __init__(self, message: str, config_key: str | None = None) -> None:
         super().__init__(
             message=message,
             code="CONFIG_ERROR",
@@ -269,7 +275,7 @@ class ConfigError(RSWError):
 
 class MissingConfigError(ConfigError):
     """Required configuration is missing."""
-    
+
     def __init__(self, config_key: str) -> None:
         super().__init__(
             message=f"Missing required configuration: {config_key}",

@@ -19,7 +19,7 @@ This directory contains comprehensive tests for the F1 Race Strategy Workbench.
 
 ### Run All Tests
 ```bash
-cd /path/to/f1-workbench
+cd apex
 pytest tests/ -v
 ```
 

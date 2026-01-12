@@ -588,7 +588,7 @@ Include in your bug report:
 4. Steps to reproduce
 5. Configuration (without secrets)
 
-File issues at: https://github.com/your-org/rsw/issues
+File issues at: https://github.com/cagancaliskan/rsw/issues
 
 ---
 

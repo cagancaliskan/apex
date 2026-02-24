@@ -64,6 +64,8 @@ class RLSEstimator:
         self.n_updates = 0
         self.residual_sum = 0.0
         self._last_residual = 0.0
+        # EMA of squared error (recent RMSE, α=0.3 — forgets warm-start bias)
+        self._ema_sq_error: float = 0.0
 
     def update(self, x: NDArray[np.float64], y: float) -> float:
         """
@@ -101,6 +103,11 @@ class RLSEstimator:
         self.n_updates += 1
         self.residual_sum += error**2
         self._last_residual = error
+        # EMA of squared error — decays old warm-start errors (recent performance only)
+        if self.n_updates == 1:
+            self._ema_sq_error = error**2
+        else:
+            self._ema_sq_error = 0.7 * self._ema_sq_error + 0.3 * error**2
 
         return error
 
@@ -153,6 +160,12 @@ class RLSEstimator:
             return 0.0
         return float(np.sqrt(self.residual_sum / self.n_updates))
 
+    def get_recent_rmse(self) -> float:
+        """Get recent RMSE using EMA of squared errors (ignores warm-start bias)."""
+        if self.n_updates == 0:
+            return 0.0
+        return float(np.sqrt(self._ema_sq_error))
+
     def reset(self, initial_covariance: float = 1000.0) -> None:
         """Reset the estimator to initial state."""
         self.theta = np.zeros(self.n_features)
@@ -160,6 +173,7 @@ class RLSEstimator:
         self.n_updates = 0
         self.residual_sum = 0.0
         self._last_residual = 0.0
+        self._ema_sq_error = 0.0
 
     def warm_start(
         self,

@@ -220,12 +220,14 @@ class DriverDegradationModel:
         cliff_threshold = get_cliff_risk_threshold(stint.compound)
         cliff_risk = min(1.0, max(0.0, deg_slope / cliff_threshold))
 
-        # Model confidence (based on observations and RMSE)
+        # Model confidence (based on observations and recent RMSE)
+        # Use EMA-based recent RMSE so early warm-start errors don't permanently
+        # suppress confidence — it rises naturally as predictions converge.
         if rls.n_updates < self.min_observations:
             model_confidence = 0.3 * (rls.n_updates / self.min_observations)
         else:
-            rmse = rls.get_rmse()
-            # Lower RMSE = higher confidence
+            rmse = rls.get_recent_rmse()
+            # Lower RMSE = higher confidence; floor at 0.3
             model_confidence = max(0.3, 1.0 - min(1.0, rmse / 2.0))
 
         return DegradationPrediction(

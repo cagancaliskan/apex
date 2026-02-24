@@ -198,11 +198,18 @@ class RaceStateStore:
                     "pit_reason": d.pit_reason,
                     "undercut_threat": d.undercut_threat,
                     "overcut_opportunity": d.overcut_opportunity,
+                    "sector_1": d.sector_1,
+                    "sector_2": d.sector_2,
+                    "sector_3": d.sector_3,
+                    "is_pit_out_lap": d.is_pit_out_lap,
+                    "fuel_remaining_kg": d.fuel_remaining_kg,
+                    "x": getattr(d, "x", None),
+                    "y": getattr(d, "y", None),
                 }
                 for d in state.get_drivers_sorted()
             ],
             "recent_pits": state.recent_pits,
-            "recent_messages": state.recent_messages,
+            "race_control_messages": state.recent_messages,
         }
 
 

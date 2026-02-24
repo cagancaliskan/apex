@@ -247,7 +247,7 @@ const App: FC = () => {
                 {currentPage === 'replay' ? (
                     <ReplayPage />
                 ) : raceState && driversArray.length > 0 ? (
-                    <LiveDashboard raceState={raceState} isPolling={isPolling} />
+                    <LiveDashboard />
                 ) : (
                     <div className="flex flex-col items-center justify-center" style={{ height: '80vh', textAlign: 'center' }}>
                         <div className="text-gradient" style={{ fontSize: '4rem', marginBottom: 'var(--space-lg)' }}>

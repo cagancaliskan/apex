@@ -1,57 +1,45 @@
 /* ============================================================================
-   Race Strategy Workbench - Futuristic Dark Theme
+   Race Strategy Workbench - v6 Professional Dark Theme
    ============================================================================ */
 
-/* CSS Variables - Design System */
+/* CSS Variables - Design System (v6 professional ATLAS/TCDS inspired) */
 :root {
-  /* Background colors - deep dark blues */
-  --bg-primary: #0a0e17;
-  --bg-secondary: #0d1321;
-  --bg-tertiary: #131a2b;
-  --bg-card: #151d2e;
-  --bg-card-hover: #1a2540;
+  /* Background colors */
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #1c2128;
+  --bg-card: #161b22;
+  --bg-card-hover: #1c2128;
 
-  /* Accent colors - neon/cyber */
-  --accent-cyan: #06f9f9;
-  --accent-magenta: #ff0055;
-  --accent-purple: #9d4edd;
-  --accent-blue: #3b82f6;
-  --accent-green: #00ff88;
-  --accent-yellow: #ffd000;
-  --accent-orange: #ff6b00;
+  /* Status & semantic colors (professional palette) */
+  --color-info: #58a6ff;
+  --color-purple: #a371f7;
+  --status-green: #3fb950;
+  --status-amber: #d29922;
+  --status-red: #f85149;
+  --color-orange: #ff6b00;
 
   /* Text colors */
   --text-primary: #ffffff;
-  --text-secondary: #a0aec0;
-  --text-tertiary: #6b7280;
-  --text-muted: #4a5568;
+  --text-secondary: #8b949e;
+  --text-tertiary: #6e7681;
+  --text-muted: #484f58;
 
-  /* Tyre compound colors */
+  /* Tyre compound colors (unchanged from F1 spec) */
   --tyre-soft: #ff0000;
   --tyre-medium: #ffd700;
   --tyre-hard: #ffffff;
   --tyre-inter: #00ff00;
   --tyre-wet: #0066ff;
 
-  /* Status colors */
-  --status-green: #00ff88;
-  --status-yellow: #ffd000;
-  --status-red: #ff0055;
-  --status-blue: #3b82f6;
-
-  /* Gradients */
-  --gradient-cyan-magenta: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
-  --gradient-purple-blue: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
-  --gradient-glow: radial-gradient(ellipse at center, rgba(6, 249, 249, 0.15) 0%, transparent 70%);
-
-  /* Shadows & Glows */
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
-  --shadow-glow-cyan: 0 0 20px rgba(6, 249, 249, 0.3);
-  --shadow-glow-magenta: 0 0 20px rgba(255, 0, 85, 0.3);
+  /* Layout dimensions */
+  --sidebar-width: 48px;
+  --topbar-height: 44px;
+  --panel-header: 32px;
 
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: 'Orbitron', var(--font-sans);
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   /* Spacing */
   --space-xs: 0.25rem;
@@ -62,16 +50,15 @@
   --space-2xl: 3rem;
 
   /* Border radius */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   --radius-full: 9999px;
 
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 250ms ease;
-  --transition-slow: 400ms ease;
+  /* Transitions (minimal, professional) */
+  --transition-fast: 100ms ease;
+  --transition-base: 200ms ease;
 }
 
 /* Reset & Base */
@@ -85,7 +72,7 @@
 
 html {
   font-size: 16px;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 
 body {
@@ -97,21 +84,6 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* Background Effects */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    radial-gradient(ellipse at top right, rgba(157, 78, 221, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at bottom left, rgba(6, 249, 249, 0.05) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: -1;
 }
 
 #root {
@@ -128,24 +100,85 @@ body::before {
 }
 
 .sidebar {
-  width: 260px;
+  width: var(--sidebar-width);
   background: var(--bg-secondary);
   border-right: 1px solid rgba(255, 255, 255, 0.05);
-  padding: var(--space-lg);
   display: flex;
   flex-direction: column;
+  align-items: center;
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
   z-index: 100;
+  padding: var(--space-sm);
+  gap: var(--space-md);
+}
+
+.sidebar-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+  border-radius: var(--radius-sm);
+}
+
+.sidebar-icon:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .main-content {
   flex: 1;
-  margin-left: 260px;
-  padding: var(--space-xl);
+  margin-left: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+}
+
+.topbar {
+  height: var(--topbar-height);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-md);
+  gap: var(--space-lg);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-left: auto;
+}
+
+.topbar-label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.topbar-value {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 /* ============================================================================
@@ -157,36 +190,18 @@ body::before {
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
-  box-shadow: var(--shadow-card);
-  transition: all var(--transition-base);
+  transition: background var(--transition-fast);
 }
 
 .card:hover {
   background: var(--bg-card-hover);
-  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .card-glass {
-  background: rgba(21, 29, 46, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(22, 27, 34, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.card-glow {
-  position: relative;
-  overflow: hidden;
-}
-
-.card-glow::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--gradient-cyan-magenta);
-  opacity: 0.5;
 }
 
 /* ============================================================================
@@ -199,41 +214,19 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-weight: 600;
   line-height: 1.2;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.02em;
 }
 
-h1 {
-  font-size: 2rem;
-}
-
-h2 {
-  font-size: 1.5rem;
-}
-
-h3 {
-  font-size: 1.25rem;
-}
-
-h4 {
-  font-size: 1rem;
-}
-
-.text-gradient {
-  background: var(--gradient-cyan-magenta);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.text-glow {
-  text-shadow: 0 0 10px rgba(6, 249, 249, 0.5);
-}
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1rem; }
 
 .text-mono {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -246,87 +239,62 @@ h4 {
   flex-direction: column;
   gap: var(--space-sm);
   padding: var(--space-lg);
-  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-tertiary) 100%);
+  background: var(--bg-card);
   border-radius: var(--radius-lg);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  position: relative;
-  overflow: hidden;
-}
-
-.metric-card::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--gradient-cyan-magenta);
-  opacity: 0.7;
 }
 
 .metric-card .label {
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
 
 .metric-card .value {
-  font-family: var(--font-display);
-  font-size: 2rem;
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1;
 }
 
-.metric-card .value.cyan {
-  color: var(--accent-cyan);
-}
-
-.metric-card .value.magenta {
-  color: var(--accent-magenta);
-}
-
-.metric-card .value.green {
-  color: var(--accent-green);
-}
+.metric-card .value.info { color: var(--color-info); }
+.metric-card .value.green { color: var(--status-green); }
+.metric-card .value.amber { color: var(--status-amber); }
+.metric-card .value.red { color: var(--status-red); }
 
 .metric-card .delta {
   font-size: 0.875rem;
   font-weight: 500;
 }
 
-.metric-card .delta.positive {
-  color: var(--status-green);
-}
-
-.metric-card .delta.negative {
-  color: var(--status-red);
-}
+.metric-card .delta.positive { color: var(--status-green); }
+.metric-card .delta.negative { color: var(--status-red); }
 
 /* ============================================================================
-   Driver Table
+   Driver Table (Leaderboard)
    ============================================================================ */
 
 .driver-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
 }
 
 .driver-table th {
-  padding: var(--space-md) var(--space-sm);
+  padding: var(--space-sm);
   text-align: left;
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   position: sticky;
-  top: 0;
+  top: var(--topbar-height);
   background: var(--bg-card);
   z-index: 10;
 }
@@ -342,22 +310,25 @@ h4 {
 }
 
 .driver-table .position-cell {
-  width: 50px;
-  font-family: var(--font-display);
+  width: 28px;
+  font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
 .driver-table .driver-cell {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  min-width: 120px;
 }
 
 .driver-table .team-color {
   width: 4px;
-  height: 28px;
+  height: 24px;
   border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .driver-table .driver-name {
@@ -371,61 +342,38 @@ h4 {
 }
 
 .driver-table .gap-cell {
-  font-family: 'JetBrains Mono', monospace;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .driver-table .lap-time-cell {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
-.driver-table .lap-time-cell.best {
-  color: var(--accent-purple);
-}
-
-.driver-table .lap-time-cell.personal-best {
-  color: var(--accent-green);
-}
+.driver-table .lap-time-cell.best { color: var(--color-purple); }
+.driver-table .lap-time-cell.personal-best { color: var(--status-green); }
 
 /* Tyre compound badge */
 .tyre-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: var(--radius-full);
   font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
-.tyre-badge.soft {
-  background: var(--tyre-soft);
-  color: white;
-}
-
-.tyre-badge.medium {
-  background: var(--tyre-medium);
-  color: black;
-}
-
-.tyre-badge.hard {
-  background: var(--tyre-hard);
-  color: black;
-}
-
-.tyre-badge.intermediate {
-  background: var(--tyre-inter);
-  color: black;
-}
-
-.tyre-badge.wet {
-  background: var(--tyre-wet);
-  color: white;
-}
+.tyre-badge.soft { background: var(--tyre-soft); color: white; }
+.tyre-badge.medium { background: var(--tyre-medium); color: black; }
+.tyre-badge.hard { background: var(--tyre-hard); color: black; }
+.tyre-badge.intermediate { background: var(--tyre-inter); color: black; }
+.tyre-badge.wet { background: var(--tyre-wet); color: white; }
 
 .tyre-age {
   font-size: 0.7rem;
@@ -450,41 +398,21 @@ h4 {
 }
 
 .status-badge.green {
-  background: rgba(0, 255, 136, 0.15);
+  background: rgba(63, 185, 80, 0.15);
   color: var(--status-green);
-  border: 1px solid rgba(0, 255, 136, 0.3);
+  border: 1px solid rgba(63, 185, 80, 0.3);
 }
 
-.status-badge.yellow {
-  background: rgba(255, 208, 0, 0.15);
-  color: var(--status-yellow);
-  border: 1px solid rgba(255, 208, 0, 0.3);
+.status-badge.amber {
+  background: rgba(210, 153, 34, 0.15);
+  color: var(--status-amber);
+  border: 1px solid rgba(210, 153, 34, 0.3);
 }
 
 .status-badge.red {
-  background: rgba(255, 0, 85, 0.15);
+  background: rgba(248, 81, 73, 0.15);
   color: var(--status-red);
-  border: 1px solid rgba(255, 0, 85, 0.3);
-}
-
-.status-badge.sc,
-.status-badge.vsc {
-  background: rgba(255, 208, 0, 0.2);
-  color: var(--status-yellow);
-  border: 1px solid rgba(255, 208, 0, 0.4);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.6;
-  }
+  border: 1px solid rgba(248, 81, 73, 0.3);
 }
 
 /* Connection status dot */
@@ -495,20 +423,9 @@ h4 {
   display: inline-block;
 }
 
-.connection-dot.connected {
-  background: var(--status-green);
-  box-shadow: 0 0 8px var(--status-green);
-}
-
-.connection-dot.disconnected {
-  background: var(--status-red);
-  box-shadow: 0 0 8px var(--status-red);
-}
-
-.connection-dot.connecting {
-  background: var(--status-yellow);
-  animation: pulse 1s ease-in-out infinite;
-}
+.connection-dot.connected { background: var(--status-green); }
+.connection-dot.disconnected { background: var(--status-red); }
+.connection-dot.connecting { background: var(--status-amber); }
 
 /* ============================================================================
    Buttons
@@ -530,13 +447,12 @@ h4 {
 }
 
 .btn-primary {
-  background: var(--gradient-cyan-magenta);
-  color: white;
+  background: var(--color-info);
+  color: var(--bg-primary);
 }
 
 .btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-glow-cyan);
+  background: #68b5ff;
 }
 
 .btn-secondary {
@@ -581,12 +497,11 @@ h4 {
 
 .session-option:hover {
   background: var(--bg-card-hover);
-  border-color: var(--accent-cyan);
+  border-color: var(--color-info);
 }
 
 .session-option.active {
-  border-color: var(--accent-cyan);
-  box-shadow: var(--shadow-glow-cyan);
+  border-color: var(--color-info);
 }
 
 .session-option .session-name {
@@ -633,8 +548,8 @@ h4 {
 }
 
 .session-info .circuit {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-family: var(--font-sans);
+  font-size: 1.2rem;
   font-weight: 600;
 }
 
@@ -646,18 +561,13 @@ h4 {
 }
 
 .lap-counter {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 1.5rem;
   font-weight: 700;
 }
 
-.lap-counter .current {
-  color: var(--accent-cyan);
-}
-
-.lap-counter .total {
-  color: var(--text-tertiary);
-}
+.lap-counter .current { color: var(--color-info); }
+.lap-counter .total { color: var(--text-tertiary); }
 
 /* ============================================================================
    Grid Layouts
@@ -672,8 +582,11 @@ h4 {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr 350px;
-  gap: var(--space-xl);
+  grid-template-columns: 460px 1fr;
+  gap: var(--space-md);
+  flex: 1;
+  overflow: hidden;
+  padding: var(--space-md);
 }
 
 @media (max-width: 1400px) {
@@ -683,61 +596,21 @@ h4 {
 }
 
 /* ============================================================================
-   Animations
+   Animations (minimal, professional)
    ============================================================================ */
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes glow {
-
-  0%,
-  100% {
-    box-shadow: 0 0 5px rgba(6, 249, 249, 0.3);
-  }
-
-  50% {
-    box-shadow: 0 0 20px rgba(6, 249, 249, 0.5);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s ease forwards;
-}
-
-.animate-slide-in {
-  animation: slideIn 0.3s ease forwards;
-}
-
-/* Position change animations */
-.position-up {
-  background: linear-gradient(90deg, rgba(0, 255, 136, 0.1) 0%, transparent 100%);
-}
-
-.position-down {
-  background: linear-gradient(90deg, rgba(255, 0, 85, 0.1) 0%, transparent 100%);
-}
+.animate-fade-in { animation: fadeIn 0.2s ease forwards; }
+.animate-slide-in { animation: slideIn 0.2s ease forwards; }
 
 /* ============================================================================
    Scrollbar
@@ -748,74 +621,28 @@ h4 {
   height: 8px;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--bg-tertiary); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
 
 /* ============================================================================
    Utility Classes
    ============================================================================ */
 
-.flex {
-  display: flex;
-}
-
-.flex-col {
-  flex-direction: column;
-}
-
-.items-center {
-  align-items: center;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.gap-sm {
-  gap: var(--space-sm);
-}
-
-.gap-md {
-  gap: var(--space-md);
-}
-
-.gap-lg {
-  gap: var(--space-lg);
-}
-
-.text-sm {
-  font-size: 0.875rem;
-}
-
-.text-xs {
-  font-size: 0.75rem;
-}
-
-.text-muted {
-  color: var(--text-tertiary);
-}
-
-.mb-md {
-  margin-bottom: var(--space-md);
-}
-
-.mb-lg {
-  margin-bottom: var(--space-lg);
-}
-
-.mb-xl {
-  margin-bottom: var(--space-xl);
-}
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-sm { gap: var(--space-sm); }
+.gap-md { gap: var(--space-md); }
+.gap-lg { gap: var(--space-lg); }
+.text-sm { font-size: 0.875rem; }
+.text-xs { font-size: 0.75rem; }
+.text-muted { color: var(--text-tertiary); }
+.text-secondary { color: var(--text-secondary); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+.mb-xl { margin-bottom: var(--space-xl); }
 
 /* ============================================================================
    Telemetry Panel
@@ -825,39 +652,20 @@ h4 {
   min-width: 320px;
 }
 
-.telemetry-panel .speed-gauge {
-  flex-shrink: 0;
-}
+.telemetry-panel .speed-gauge { flex-shrink: 0; }
+.telemetry-panel .gear-indicator { min-width: 60px; }
+.telemetry-panel .vertical-bar { flex-shrink: 0; }
 
-.telemetry-panel .gear-indicator {
-  min-width: 60px;
-}
-
-.telemetry-panel .vertical-bar {
-  flex-shrink: 0;
-}
-
-/* DRS Indicator States */
 .drs-indicator.active {
-  animation: drs-glow 1s ease-in-out infinite;
+  animation: drs-pulse 0.8s ease-in-out infinite;
 }
 
-@keyframes drs-glow {
-
-  0%,
-  100% {
-    filter: brightness(1);
-  }
-
-  50% {
-    filter: brightness(1.3);
-  }
+@keyframes drs-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
 }
 
-/* ============================================================================
-   Mini Telemetry (for DriverTable rows)
-   ============================================================================ */
-
+/* Mini telemetry (for driver table rows) */
 .mini-telemetry {
   display: flex;
   align-items: center;
@@ -865,7 +673,7 @@ h4 {
 }
 
 .mini-speed {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
@@ -873,10 +681,10 @@ h4 {
 }
 
 .mini-gear {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--accent-cyan);
+  color: var(--color-info);
   min-width: 20px;
   text-align: center;
 }
@@ -888,20 +696,9 @@ h4 {
   flex-shrink: 0;
 }
 
-.mini-drs.off {
-  background: var(--text-muted);
-}
-
-.mini-drs.available {
-  background: var(--accent-yellow);
-  box-shadow: 0 0 4px var(--accent-yellow);
-}
-
-.mini-drs.active {
-  background: var(--accent-green);
-  box-shadow: 0 0 6px var(--accent-green);
-  animation: pulse 1s ease-in-out infinite;
-}
+.mini-drs.off { background: var(--text-muted); }
+.mini-drs.available { background: var(--status-amber); }
+.mini-drs.active { background: var(--status-green); }
 
 /* Mini throttle/brake bars */
 .mini-bars {
@@ -928,160 +725,8 @@ h4 {
   border-radius: 2px;
 }
 
-.mini-bar-fill.throttle {
-  background: var(--accent-green);
-}
-
-.mini-bar-fill.brake {
-  background: var(--status-red);
-}
-
-/* ============================================================================
-   New DriverTable Columns
-   ============================================================================ */
-
-.driver-table .telemetry-cell {
-  padding: var(--space-xs) var(--space-sm);
-}
-
-.driver-table .speed-cell {
-  font-family: 'JetBrains Mono', monospace;
-  font-variant-numeric: tabular-nums;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-.driver-table .gear-cell {
-  font-family: var(--font-display);
-  font-weight: 600;
-  color: var(--accent-cyan);
-  font-size: 0.8rem;
-}
-
-/* Braking intensity indicator */
-.braking-indicator {
-  width: 6px;
-  height: 16px;
-  background: var(--bg-tertiary);
-  border-radius: 2px;
-  overflow: hidden;
-  position: relative;
-}
-
-.braking-indicator-fill {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--status-red);
-  transition: height 0.1s ease;
-  border-radius: 2px;
-}
-
-.braking-indicator-fill.intensity-high {
-  background: #ff0000;
-  box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
-}
-
-.braking-indicator-fill.intensity-medium {
-  background: #ff6600;
-}
-
-.braking-indicator-fill.intensity-low {
-  background: #ff9933;
-}
-
-/* ============================================================================
-   Race Progress Bar
-   ============================================================================ */
-
-.race-progress-bar-container {
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.race-progress-bar {
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.race-progress-bar:hover .progress-head {
-  transform: translate(-50%, -50%) scale(1.2);
-}
-
-.event-marker {
-  opacity: 0.9;
-  transition: all 0.15s ease;
-}
-
-.event-marker:hover {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1.3);
-  z-index: 20 !important;
-}
-
-.flag-period {
-  pointer-events: none;
-}
-
-/* ============================================================================
-   Weather Widget
-   ============================================================================ */
-
-.weather-widget {
-  min-width: 200px;
-}
-
-.weather-widget-compact {
-  font-size: 0.85rem;
-}
-
-.weather-widget .temperature-display {
-  transition: color 0.3s ease;
-}
-
-/* Rain animation */
-@keyframes rain-drop {
-  0% {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-
-  50% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-}
-
-.rain-active {
-  animation: rain-drop 1s ease-in-out infinite;
-}
-
-/* Wind arrow rotation */
-.wind-arrow {
-  transition: transform 0.5s ease;
-}
-
-/* Weather condition colors */
-.weather-sunny {
-  color: var(--accent-yellow);
-}
-
-.weather-cloudy {
-  color: var(--text-secondary);
-}
-
-.weather-rain {
-  color: var(--accent-cyan);
-}
-
-.weather-heavy-rain {
-  color: var(--accent-blue);
-}
+.mini-bar-fill.throttle { background: var(--status-green); }
+.mini-bar-fill.brake { background: var(--status-red); }
 
 /* ============================================================================
    Track Map
@@ -1099,119 +744,55 @@ h4 {
 
 .track-map .car-marker {
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform 0.1s ease;
+  will-change: transform;
 }
 
-.track-map .car-marker:hover {
-  transform: scale(1.2);
-}
+.track-map .car-marker:hover { transform: scale(1.15); }
 
 /* ============================================================================
    Telemetry Charts
    ============================================================================ */
 
-.telemetry-chart-panel {
-  min-width: 320px;
+.telemetry-chart-panel { min-width: 320px; }
+.telemetry-chart svg { display: block; width: 100%; }
+.telemetry-chart path { vector-effect: non-scaling-stroke; }
+
+/* ============================================================================
+   Race Progress Bar
+   ============================================================================ */
+
+.race-progress-bar-container {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.telemetry-chart svg {
-  display: block;
-  width: 100%;
-}
-
-.telemetry-chart path {
-  vector-effect: non-scaling-stroke;
-}
-
-.comparison-chart path:nth-child(2) {
-  opacity: 0.7;
-}
-
-.throttle-brake-chart path {
-  transition: d 0.1s ease;
+.race-progress-bar {
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* ============================================================================
-   DRS Zone Overlay
+   Weather Widget
    ============================================================================ */
 
-.drs-zone-overlay path {
-  filter: drop-shadow(0 0 4px var(--accent-green));
-}
-
-.drs-status-indicator.active {
-  animation: drs-pulse 1s ease-in-out infinite;
-}
-
-@keyframes drs-pulse {
-
-  0%,
-  100% {
-    box-shadow: 0 0 4px rgba(0, 255, 136, 0.3);
-  }
-
-  50% {
-    box-shadow: 0 0 12px rgba(0, 255, 136, 0.6);
-  }
-}
-
-.drs-zone-bar {
-  transition: all 0.2s ease;
-}
-
-/* ============================================================================
-   Braking Zone Indicators
-   ============================================================================ */
-
-.braking-intensity-bar {
-  transition: all 0.15s ease;
-}
-
-.braking-zone-marker {
-  filter: drop-shadow(0 0 4px rgba(255, 0, 85, 0.5));
-}
-
-.throttle-brake-indicator {
-  transition: all 0.1s ease;
-}
-
-/* High intensity braking glow effect */
-@keyframes brake-glow {
-
-  0%,
-  100% {
-    box-shadow: 0 0 4px rgba(255, 0, 0, 0.3);
-  }
-
-  50% {
-    box-shadow: 0 0 12px rgba(255, 0, 0, 0.7);
-  }
-}
-
-.braking-indicator-fill.intensity-high {
-  animation: brake-glow 0.5s ease-in-out infinite;
-}
+.weather-widget { min-width: 200px; }
+.weather-widget-compact { font-size: 0.85rem; }
+.weather-widget .temperature-display { transition: color 0.3s ease; }
+.weather-sunny { color: var(--status-amber); }
+.weather-cloudy { color: var(--text-secondary); }
+.weather-rain { color: var(--color-info); }
 
 /* ============================================================================
    Responsive Adjustments
    ============================================================================ */
 
 @media (max-width: 1200px) {
-  .track-map {
-    min-width: 240px;
-  }
-
-  .telemetry-chart-panel {
-    min-width: 280px;
-  }
+  .track-map { min-width: 240px; }
+  .telemetry-chart-panel { min-width: 280px; }
 }
 
 @media (max-width: 900px) {
-  .track-map svg {
-    max-height: 200px;
-  }
-
-  .telemetry-chart svg {
-    max-height: 60px;
-  }
+  .track-map svg { max-height: 200px; }
+  .dashboard-grid { grid-template-columns: 1fr; }
 }

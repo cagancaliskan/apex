@@ -8,6 +8,7 @@ and debugging much easier.
 
 from datetime import UTC, datetime
 
+from ..models.degradation.calibration import COMPOUND_PRIORS
 from ..ingest.base import (
     DriverInfo,
     IntervalData,
@@ -79,13 +80,10 @@ def apply_laps(state: RaceState, laps: list[LapData]) -> RaceState:
             tyre_age = lap.tyre_age if lap.tyre_age > 0 else (driver.tyre_age + 1)
             compound = lap.compound or driver.compound or "MEDIUM"
 
-            # Simple degradation slopes (seconds lost per lap)
-            deg_map = {"SOFT": 0.12, "MEDIUM": 0.08, "HARD": 0.05, "INTERMEDIATE": 0.1, "WET": 0.1}
-            deg_slope = deg_map.get(compound, 0.08)
-
-            # Cliff risk increases exponentially after critical age
-            critical_age_map = {"SOFT": 15, "MEDIUM": 25, "HARD": 35, "INTERMEDIATE": 20, "WET": 20}
-            critical_age = critical_age_map.get(compound, 25)
+            # Degradation from canonical priors (overwritten by RLS model later)
+            prior = COMPOUND_PRIORS.get(compound, COMPOUND_PRIORS["MEDIUM"])
+            deg_slope = prior.deg_per_lap
+            critical_age = prior.cliff_lap
             cliff_risk = min(1.0, max(0.0, (tyre_age - critical_age + 5) / 10.0))
 
             # Pit window logic (start looking 3 laps before critical age)

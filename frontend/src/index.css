@@ -2,7 +2,7 @@
    Race Strategy Workbench - v6 Professional Dark Theme
    ============================================================================ */
 
-/* CSS Variables - Design System (v6 professional ATLAS/TCDS inspired) */
+/* CSS Variables - Design System (v7 professional ATLAS/TCDS inspired) */
 :root {
   /* Background colors */
   --bg-primary: #0d1117;
@@ -19,6 +19,16 @@
   --status-red: #f85149;
   --color-orange: #ff6b00;
 
+  /* Legacy alias tokens (preserve backward compat with existing components) */
+  --status-yellow: var(--status-amber);
+  --accent-green: var(--status-green);
+  --accent-yellow: var(--status-amber);
+  --accent-cyan: #4fd1c5;
+  --accent-orange: var(--color-orange);
+  --accent-magenta: var(--status-red);
+  --accent-purple: var(--color-purple);
+  --font-display: var(--font-sans);
+
   /* Text colors */
   --text-primary: #ffffff;
   --text-secondary: #8b949e;
@@ -28,14 +38,19 @@
   /* Tyre compound colors (unchanged from F1 spec) */
   --tyre-soft: #ff0000;
   --tyre-medium: #ffd700;
-  --tyre-hard: #ffffff;
-  --tyre-inter: #00ff00;
-  --tyre-wet: #0066ff;
+  --tyre-hard: #e8e8e8;
+  --tyre-inter: #39d353;
+  --tyre-wet: #0080ff;
 
   /* Layout dimensions */
   --sidebar-width: 48px;
   --topbar-height: 44px;
+  --status-bar-height: 32px;
+  --tab-bar-height: 28px;
   --panel-header: 32px;
+  --row-height: 28px;
+  --leaderboard-width: 320px;
+  --strategy-width: 360px;
 
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -87,18 +102,238 @@ body {
 }
 
 #root {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
+
+/* Stub classes — referenced in legacy components, kept harmless */
+.card-glow { /* no glow in v7 */ }
+.text-gradient { color: var(--color-info); }
 
 /* ============================================================================
    Layout Components
    ============================================================================ */
 
+/* New app shell: status bar + tab bar + content */
 .app-container {
-  display: flex;
-  min-height: 100vh;
+  display: grid;
+  grid-template-rows: var(--status-bar-height) var(--tab-bar-height) 1fr;
+  height: 100vh;
+  overflow: hidden;
 }
 
+/* Status bar — single-line dense session info */
+.status-bar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 12px;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.status-bar .status-sep {
+  color: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.status-bar .status-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.status-bar .status-item.primary {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.status-bar .status-spacer {
+  flex: 1;
+}
+
+.status-bar .menu-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  line-height: 1;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.status-bar .menu-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Flag indicator dot */
+.flag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.flag-dot.green { background: var(--status-green); }
+.flag-dot.yellow { background: var(--status-amber); }
+.flag-dot.red { background: var(--status-red); }
+.flag-dot.sc { background: var(--status-amber); }
+.flag-dot.vsc { background: var(--status-amber); }
+
+/* Tab bar — page navigation */
+.tab-bar {
+  background: var(--bg-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: stretch;
+  padding: 0 12px;
+  gap: 2px;
+  z-index: 90;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0 14px;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  margin-bottom: -1px;
+}
+
+.tab-btn:hover {
+  color: var(--text-secondary);
+}
+
+.tab-btn.active {
+  color: var(--color-info);
+  border-bottom-color: var(--color-info);
+}
+
+/* Main content area */
+.main-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Session drawer — slide-in overlay from left */
+.session-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+}
+
+.session-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  background: var(--bg-secondary);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  animation: slideInLeft 0.15s ease;
+  overflow: hidden;
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.session-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.session-drawer-header button {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.session-drawer-header button:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.session-drawer-active {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(88, 166, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.session-drawer-active .active-circuit {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.session-drawer-active .active-details {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.session-drawer-controls {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.session-drawer-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.session-drawer-list-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  padding: 6px 12px 4px;
+}
+
+/* Keep legacy sidebar classes for any remaining usage */
 .sidebar {
   width: var(--sidebar-width);
   background: var(--bg-secondary);
@@ -130,14 +365,6 @@ body {
 .sidebar-icon:hover {
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.05);
-}
-
-.main-content {
-  flex: 1;
-  margin-left: var(--sidebar-width);
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
 }
 
 .topbar {
@@ -580,19 +807,281 @@ h4 { font-size: 1rem; }
   margin-bottom: var(--space-xl);
 }
 
+/* 3-column professional dashboard layout */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 460px 1fr;
-  gap: var(--space-md);
-  flex: 1;
+  grid-template-columns: var(--leaderboard-width) 1fr var(--strategy-width);
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  gap: 4px;
+  padding: 4px;
   overflow: hidden;
-  padding: var(--space-md);
+}
+
+/* Alert banner spans all 3 columns */
+.dashboard-grid .alert-banner-row {
+  grid-column: 1 / -1;
+}
+
+/* Dashboard columns */
+.col-leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.col-center {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.col-strategy {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 @media (max-width: 1400px) {
   .dashboard-grid {
+    grid-template-columns: var(--leaderboard-width) 1fr;
+  }
+  .col-strategy {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
     grid-template-columns: 1fr;
   }
+  .col-leaderboard {
+    display: none;
+  }
+}
+
+/* ============================================================================
+   Alert Banner
+   ============================================================================ */
+
+.alert-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.alert-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid transparent;
+}
+
+.alert-row.alert-flag,
+.alert-row.alert-sc {
+  background: rgba(210, 153, 34, 0.12);
+  border-left-color: var(--status-amber);
+  color: var(--status-amber);
+}
+
+.alert-row.alert-pit_now {
+  background: rgba(248, 81, 73, 0.12);
+  border-left-color: var(--status-red);
+  color: var(--status-red);
+}
+
+.alert-row.alert-threat {
+  background: rgba(255, 107, 0, 0.12);
+  border-left-color: var(--color-orange);
+  color: var(--color-orange);
+}
+
+.alert-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: currentColor;
+  color: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+.alert-row .alert-msg {
+  flex: 1;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.alert-row .alert-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 0.9rem;
+  line-height: 1;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.alert-row .alert-dismiss:hover {
+  color: var(--text-primary);
+}
+
+/* ============================================================================
+   Data Cells & Telemetry Typography
+   ============================================================================ */
+
+.data-cell {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  text-align: right;
+  color: var(--text-secondary);
+}
+
+/* Small tyre badge (20px for compact leaderboard) */
+.tyre-badge-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  font-size: 0.6rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.tyre-badge-sm.soft { background: var(--tyre-soft); color: white; }
+.tyre-badge-sm.medium { background: var(--tyre-medium); color: black; }
+.tyre-badge-sm.hard { background: var(--tyre-hard); color: black; }
+.tyre-badge-sm.intermediate { background: var(--tyre-inter); color: black; }
+.tyre-badge-sm.wet { background: var(--tyre-wet); color: white; }
+
+/* Pit window bar */
+.pit-window-bar {
+  position: relative;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pit-window-bar .pit-range {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: rgba(88, 166, 255, 0.25);
+  border-radius: 3px;
+}
+
+.pit-window-bar .pit-ideal {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--color-info);
+}
+
+/* Speed readout (large number, replaces arc gauge) */
+.speed-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.speed-readout .speed-value {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.speed-readout .speed-unit {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Horizontal telemetry bars (replaces vertical bars) */
+.h-bar-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.h-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 80ms linear;
+}
+
+.h-bar-fill.throttle { background: var(--status-green); }
+.h-bar-fill.brake { background: var(--status-red); }
+
+/* Sector delta in telemetry HUD */
+.sector-delta {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sector-delta.faster { color: var(--status-green); }
+.sector-delta.slower { color: var(--status-amber); }
+.sector-delta.much-slower { color: var(--status-red); }
+.sector-delta.no-data { color: var(--text-muted); }
+
+/* Leaderboard row borders for urgency states */
+.lb-row-pit-now { border-left: 3px solid var(--status-red) !important; }
+.lb-row-window { border-left: 3px solid var(--status-amber) !important; }
+.lb-row-threat { border-left: 3px solid var(--color-orange) !important; }
+
+/* In-pit indicator dot */
+.in-pit-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+}
+
+/* Strategy console sections */
+.strategy-section {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.strategy-section:last-child {
+  border-bottom: none;
+}
+
+.strategy-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
 }
 
 /* ============================================================================

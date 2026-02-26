@@ -12,7 +12,9 @@ import type {
     DriverState,
     WeatherData,
     SimulationSpeed,
-    Session
+    Session,
+    RaceMessage,
+    TrackConfig,
 } from '../types';
 
 // =============================================================================
@@ -41,6 +43,16 @@ interface RaceStore {
 
     // Weather
     weather: WeatherData | null;
+
+    // Race status
+    flags: string[];
+    safetycar: boolean;
+    virtualSafetyCar: boolean;
+    redFlag: boolean;
+    trackStatus: string;
+    raceControlMessages: RaceMessage[];
+    trackName: string;
+    trackConfig: TrackConfig | null;
 
     // Simulation
     simulationSpeed: SimulationSpeed;
@@ -78,6 +90,14 @@ const initialState = {
     selectedDriverNumber: null,
     selectedDriver: null,
     weather: null,
+    flags: [] as string[],
+    safetycar: false,
+    virtualSafetyCar: false,
+    redFlag: false,
+    trackStatus: 'GREEN',
+    raceControlMessages: [] as RaceMessage[],
+    trackName: '',
+    trackConfig: null as TrackConfig | null,
     simulationSpeed: 1 as SimulationSpeed,
     isSimulationRunning: false,
     availableSessions: [],
@@ -106,17 +126,39 @@ export const useRaceStore = create<RaceStore>()(
                 if (state.current_lap !== undefined) updates.currentLap = state.current_lap;
                 if (state.total_laps !== undefined) updates.totalLaps = state.total_laps;
                 if (state.weather !== undefined) updates.weather = state.weather;
+                if (state.track_name !== undefined) updates.trackName = state.track_name;
+                if (state.flags !== undefined) {
+                    // Backend sends flags as array; TS type may say string — normalize
+                    const rawFlags = state.flags as unknown;
+                    updates.flags = Array.isArray(rawFlags) ? rawFlags as string[] : (rawFlags ? [rawFlags as string] : []);
+                }
+                if (state.safety_car !== undefined) updates.safetycar = state.safety_car;
+                if (state.virtual_safety_car !== undefined) updates.virtualSafetyCar = state.virtual_safety_car;
+                if (state.red_flag !== undefined) updates.redFlag = state.red_flag;
+                if (state.track_status !== undefined) updates.trackStatus = state.track_status as string;
+                if (state.race_control_messages !== undefined) updates.raceControlMessages = state.race_control_messages;
+                if (state.track_config !== undefined) updates.trackConfig = state.track_config as TrackConfig | null;
 
                 if (state.drivers) {
-                    updates.drivers = state.drivers;
-                    updates.sortedDrivers = Object.values(state.drivers)
+                    // Backend sends drivers as an array; convert to Record keyed by driver_number
+                    let driversRecord: Record<number, DriverState>;
+                    if (Array.isArray(state.drivers)) {
+                        driversRecord = {};
+                        for (const d of state.drivers as unknown as DriverState[]) {
+                            driversRecord[d.driver_number] = d;
+                        }
+                    } else {
+                        driversRecord = state.drivers as unknown as Record<number, DriverState>;
+                    }
+                    updates.drivers = driversRecord;
+                    updates.sortedDrivers = Object.values(driversRecord)
                         .filter(d => d.position !== null && d.position > 0)
                         .sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
 
                     // Update selected driver if exists
                     const selectedNum = get().selectedDriverNumber;
-                    if (selectedNum && state.drivers[selectedNum]) {
-                        updates.selectedDriver = state.drivers[selectedNum];
+                    if (selectedNum && driversRecord[selectedNum]) {
+                        updates.selectedDriver = driversRecord[selectedNum];
                     }
                 }
 

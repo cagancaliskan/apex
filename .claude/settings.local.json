@@ -25,7 +25,18 @@
       "Bash(python -c \"import sys; sys.path.insert\\(0,''src''\\); from rsw.models.physics.fuel_model import *; print\\(''OK''\\)\")",
       "Bash(python -c \"import sys; sys.path.insert\\(0,''src''\\); from rsw.services.simulation_service import *; print\\(''OK''\\)\")",
       "Bash(python -c \"import sys; sys.path.insert\\(0,''src''\\); from rsw.services.strategy_service import *; print\\(''OK''\\)\")",
-      "Bash(git add -A)"
+      "Bash(git add -A)",
+      "Bash(wc -l /Users/cagancaliskan/Desktop/F1/frontend/src/components/*.tsx)",
+      "Bash(python3 -c \"import sys, json; data = json.load\\(sys.stdin\\); print\\(data[0][''text'']\\)\")",
+      "Bash(npx vite build)",
+      "Bash(python -m py_compile src/rsw/ingest/fastf1_service.py src/rsw/services/simulation_service.py)",
+      "Bash(python -m py_compile src/rsw/services/simulation_service.py)",
+      "Bash(python -m py_compile src/rsw/strategy/pit_window.py)",
+      "Bash(python -m py_compile src/rsw/state/schemas.py)",
+      "Bash(python -m py_compile src/rsw/state/store.py)",
+      "Bash(python -m py_compile src/rsw/state/reducers.py)",
+      "Bash(python -m py_compile src/rsw/strategy/decision.py)",
+      "Bash(python -m py_compile src/rsw/services/strategy_service.py)"
     ]
   }
 }

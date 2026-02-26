@@ -30,6 +30,27 @@ class CompoundDegradation:
 
 
 @dataclass
+class DriverCompoundProfile:
+    """Per-compound degradation stats for a specific driver."""
+
+    compound: str
+    avg_deg_per_lap: float
+    avg_base_pace: float
+    sample_count: int = 0
+
+
+@dataclass
+class DriverProfile:
+    """Cross-session performance profile for a single driver."""
+
+    driver_number: int
+    name: str = ""
+    compound_profiles: dict[str, DriverCompoundProfile] = field(default_factory=dict)
+    overall_base_pace: float = 90.0
+    sessions_count: int = 0
+
+
+@dataclass
 class TrackCharacteristics:
     """
     Learned characteristics for a specific track.
@@ -57,6 +78,9 @@ class TrackCharacteristics:
     drs_pass_rate: float = 0.4  # Success rate when DRS available
     drs_sample_count: int = 0
 
+    # Per-driver cross-session profiles
+    driver_profiles: dict[int, DriverProfile] = field(default_factory=dict)
+
     # Metadata
     last_updated: str = ""
     sessions_analyzed: list[str] = field(default_factory=list)
@@ -74,7 +98,14 @@ class TrackCharacteristics:
         compound_deg = {
             k: CompoundDegradation(**v) for k, v in compound_data.items()
         }
-        return cls(compound_degradation=compound_deg, **data)
+        # Handle driver_profiles
+        profile_data = data.pop("driver_profiles", {})
+        driver_profiles = {}
+        for drv_key, prof in profile_data.items():
+            cp_data = prof.pop("compound_profiles", {})
+            cp = {k: DriverCompoundProfile(**v) for k, v in cp_data.items()}
+            driver_profiles[int(drv_key)] = DriverProfile(compound_profiles=cp, **prof)
+        return cls(compound_degradation=compound_deg, driver_profiles=driver_profiles, **data)
 
 
 class TrackLearner:
@@ -345,6 +376,98 @@ class TrackLearner:
 
         return result
 
+    def extract_driver_profiles(
+        self,
+        stint_data: list[dict[str, Any]],
+        lap_data: list[dict[str, Any]],
+    ) -> dict[int, DriverProfile]:
+        """
+        Extract per-driver degradation profiles from session data.
+
+        Computes per-driver, per-compound degradation rates and base pace
+        for cross-session learning.
+        """
+        if not stint_data or not lap_data:
+            return {}
+
+        # Group laps by driver
+        lap_by_driver: dict[int, list[dict]] = {}
+        for lap in lap_data:
+            driver = lap.get("driver_number")
+            if driver:
+                lap_by_driver.setdefault(driver, []).append(lap)
+
+        profiles: dict[int, DriverProfile] = {}
+
+        for stint in stint_data:
+            driver = stint.get("driver_number")
+            compound = stint.get("compound", "UNKNOWN")
+            lap_start = stint.get("lap_start", 1)
+            lap_end = stint.get("lap_end")
+
+            if not driver or not lap_end or driver not in lap_by_driver:
+                continue
+
+            # Get clean lap times for this stint
+            stint_laps = [
+                l.get("lap_duration")
+                for l in lap_by_driver[driver]
+                if l.get("lap_duration")
+                and lap_start <= l.get("lap_number", 0) <= lap_end
+                and not l.get("is_pit_out_lap")
+                and 60.0 < l.get("lap_duration", 0) < 150.0
+            ]
+
+            if len(stint_laps) < 5:
+                continue
+
+            # Linear regression for degradation
+            n = len(stint_laps)
+            x_mean = (n - 1) / 2
+            y_mean = sum(stint_laps) / n
+            numerator = sum((i - x_mean) * (t - y_mean) for i, t in enumerate(stint_laps))
+            denominator = sum((i - x_mean) ** 2 for i in range(n))
+
+            if denominator <= 0:
+                continue
+            slope = numerator / denominator
+            if not (0 < slope < 0.3):
+                continue
+
+            base_pace = stint_laps[0]  # First clean lap as base
+
+            # Create or update driver profile
+            if driver not in profiles:
+                profiles[driver] = DriverProfile(
+                    driver_number=driver,
+                    overall_base_pace=base_pace,
+                    sessions_count=1,
+                )
+
+            prof = profiles[driver]
+            if compound in prof.compound_profiles:
+                old = prof.compound_profiles[compound]
+                total = old.sample_count + 1
+                prof.compound_profiles[compound] = DriverCompoundProfile(
+                    compound=compound,
+                    avg_deg_per_lap=round((old.avg_deg_per_lap * old.sample_count + slope) / total, 4),
+                    avg_base_pace=round((old.avg_base_pace * old.sample_count + base_pace) / total, 3),
+                    sample_count=total,
+                )
+            else:
+                prof.compound_profiles[compound] = DriverCompoundProfile(
+                    compound=compound,
+                    avg_deg_per_lap=round(slope, 4),
+                    avg_base_pace=round(base_pace, 3),
+                    sample_count=1,
+                )
+
+            # Update overall base pace
+            all_paces = [cp.avg_base_pace for cp in prof.compound_profiles.values()]
+            prof.overall_base_pace = round(sum(all_paces) / len(all_paces), 3)
+
+        return profiles
+
     def learn_from_session(
         self,
         circuit_key: str,
@@ -428,6 +551,35 @@ class TrackLearner:
                 )
             else:
                 existing.compound_degradation[compound] = deg
+
+        # Extract and merge driver profiles
+        driver_profiles = self.extract_driver_profiles(stint_data, lap_data)
+        for drv_num, profile in driver_profiles.items():
+            if drv_num in existing.driver_profiles:
+                old_prof = existing.driver_profiles[drv_num]
+                old_prof.sessions_count += 1
+                # Merge compound profiles
+                for comp, cp in profile.compound_profiles.items():
+                    if comp in old_prof.compound_profiles:
+                        old_cp = old_prof.compound_profiles[comp]
+                        total = old_cp.sample_count + cp.sample_count
+                        old_prof.compound_profiles[comp] = DriverCompoundProfile(
+                            compound=comp,
+                            avg_deg_per_lap=round(
+                                (old_cp.avg_deg_per_lap * old_cp.sample_count
+                                 + cp.avg_deg_per_lap * cp.sample_count) / total, 4),
+                            avg_base_pace=round(
+                                (old_cp.avg_base_pace * old_cp.sample_count
+                                 + cp.avg_base_pace * cp.sample_count) / total, 3),
+                            sample_count=total,
+                        )
+                    else:
+                        old_prof.compound_profiles[comp] = cp
+                # Update overall base pace
+                all_paces = [c.avg_base_pace for c in old_prof.compound_profiles.values()]
+                old_prof.overall_base_pace = round(sum(all_paces) / len(all_paces), 3)
+            else:
+                existing.driver_profiles[drv_num] = profile
 
         existing.sessions_analyzed.append(session_id)
         self.save(existing)

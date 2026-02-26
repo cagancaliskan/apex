@@ -91,6 +91,8 @@ class StrategyService(IStrategyCalculator):
         self,
         driver: DriverState,
         race_state: RaceState,
+        pit_loss: float = 22.0,
+        cliff_age: int | None = None,
     ) -> dict:
         """
         Get pit recommendation for a driver.
@@ -109,8 +111,9 @@ class StrategyService(IStrategyCalculator):
             current_pace=driver.last_lap_time or 90.0,
             tyre_age=driver.tyre_age,
             compound=driver.compound or "MEDIUM",
-            pit_loss=22.0,  # TODO: get from track config
+            pit_loss=pit_loss,
             safety_car=race_state.safety_car,
+            cliff_age=cliff_age,
         )
 
         return {

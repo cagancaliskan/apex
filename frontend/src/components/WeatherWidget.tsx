@@ -94,7 +94,7 @@ const WindArrow: FC<WindArrowProps> = ({ direction, size = 16 }) => {
 
     return (
         <svg width={size} height={size} viewBox="0 0 24 24" style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.3s ease' }}>
-            <path d="M12 2L8 10h8L12 2z" fill="var(--accent-cyan)" />
+            <path d="M12 2L8 10h8L12 2z" fill="var(--color-info)" />
             <path d="M12 22V10" stroke="var(--text-muted)" strokeWidth="2" />
         </svg>
     );
@@ -111,15 +111,15 @@ interface TemperatureDisplayProps {
 const TemperatureDisplay: FC<TemperatureDisplayProps> = ({ value, label, min = 10, max = 50, unit = '°C' }) => {
     const percentage = value !== undefined ? Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100)) : 50;
 
-    let color = 'var(--accent-cyan)';
+    let color = 'var(--color-info)';
     if (percentage > 70) color = 'var(--status-red)';
-    else if (percentage > 50) color = 'var(--accent-orange)';
-    else if (percentage > 30) color = 'var(--accent-yellow)';
+    else if (percentage > 50) color = 'var(--color-orange)';
+    else if (percentage > 30) color = 'var(--status-amber)';
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
             <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{label}</span>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 600, color }}>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: '1.1rem', fontWeight: 600, color }}>
                 {value !== undefined ? `${Math.round(value)}${unit}` : '-'}
             </span>
         </div>
@@ -144,8 +144,8 @@ const RainIndicator: FC<RainIndicatorProps> = ({ isRaining, rainfall = 0 }) => {
     const intensity = rainfall > 2 ? 'Heavy' : rainfall > 0.5 ? 'Light' : 'Drizzle';
 
     return (
-        <div style={{ fontSize: '0.7rem', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <div style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: 'var(--accent-cyan)', animation: 'pulse 1s ease-in-out infinite' }} />
+        <div style={{ fontSize: '0.7rem', color: 'var(--color-info)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: 'var(--color-info)', opacity: 0.8 }} />
             {intensity} Rain
         </div>
     );
@@ -181,14 +181,14 @@ const WeatherWidget: FC<WeatherWidgetProps> = ({ weather, compact = false }) => 
         return (
             <div className="weather-widget-compact" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', padding: 'var(--space-sm) var(--space-md)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
                 <WeatherIcon condition={condition} size={20} />
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem' }}>{air_temp !== undefined ? `${Math.round(air_temp)}°C` : '-'}</span>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem' }}>{air_temp !== undefined ? `${Math.round(air_temp)}°C` : '-'}</span>
                 <RainIndicator isRaining={is_raining} rainfall={rainfall} />
             </div>
         );
     }
 
     return (
-        <div className="weather-widget card card-glow">
+        <div className="weather-widget card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)', paddingBottom: 'var(--space-sm)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Weather</span>
                 <WeatherIcon condition={condition} size={24} />

@@ -32,6 +32,8 @@ from rsw.api.routes.sessions import router as sessions_router
 from rsw.api.routes.simulation import init_simulation_routes
 from rsw.api.routes.simulation import router as simulation_router
 from rsw.api.routes.weather import router as weather_router
+from rsw.api.routes.explain_route import init_explain_routes
+from rsw.api.routes.explain_route import router as explain_router
 from rsw.api.websocket_manager import ConnectionManager
 from rsw.config import load_app_config, load_tracks_config
 from rsw.ingest import OpenF1Client
@@ -101,6 +103,7 @@ async def lifespan(app: FastAPI):
     # Initialize route modules with app state
     init_simulation_routes(app_state)
     init_session_routes(app_state)
+    init_explain_routes(app_state)
 
     logger.info("application_ready")
 
@@ -152,6 +155,7 @@ app.include_router(health_router, prefix="/api", tags=["health"])
 app.include_router(simulation_router, prefix="/api", tags=["simulation"])
 app.include_router(sessions_router, prefix="/api", tags=["sessions"])
 app.include_router(weather_router, prefix="/api", tags=["weather"])
+app.include_router(explain_router, prefix="/api", tags=["explainability"])
 
 
 # =============================================================================

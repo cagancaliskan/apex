@@ -58,6 +58,7 @@ const mockDriver = (overrides: Partial<DriverState> = {}): DriverState => ({
     retired: false,
     stint_number: 1,
     fuel_remaining_kg: 50,
+    fuel_laps_remaining: 29,
     model_confidence: 0.7,
     ...overrides,
 });

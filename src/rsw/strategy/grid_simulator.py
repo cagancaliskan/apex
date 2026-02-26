@@ -89,7 +89,7 @@ class GridSimulator:
 
                 traffic_pen = self.dirty_air_model.get_pace_penalty(gap_to_ahead)
 
-                predicted_pace = 90.0 + fuel_pen + tyre_pen - track_gain + traffic_pen
+                predicted_pace = (getattr(driver, 'last_lap_time', None) or 90.0) + fuel_pen + tyre_pen - track_gain + traffic_pen
 
                 # --- C. Pit Stops ---
                 pit_loss = 0.0

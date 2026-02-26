@@ -203,6 +203,7 @@ class RaceStateStore:
                     "sector_3": d.sector_3,
                     "is_pit_out_lap": d.is_pit_out_lap,
                     "fuel_remaining_kg": d.fuel_remaining_kg,
+                    "fuel_laps_remaining": d.fuel_laps_remaining,
                     "x": getattr(d, "x", None),
                     "y": getattr(d, "y", None),
                 }

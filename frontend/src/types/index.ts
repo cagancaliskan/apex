@@ -74,6 +74,7 @@ export interface DriverState {
 
     // Physics & ML
     fuel_remaining_kg: number;
+    fuel_laps_remaining: number;
     model_confidence: number;
 }
 

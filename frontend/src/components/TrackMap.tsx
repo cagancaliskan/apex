@@ -129,13 +129,10 @@ const CarMarker: FC<CarMarkerProps> = ({ driver, x, y, isSelected, onClick }) =>
             style={{ cursor: 'pointer', transition: 'transform 0.05s linear', willChange: 'transform' }}
         >
             {isSelected && (
-                <circle r={10} fill="none" stroke={teamColor} strokeWidth={2} opacity={0.5}>
-                    <animate attributeName="r" values="10;14;10" dur="1s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.5;0.2;0.5" dur="1s" repeatCount="indefinite" />
-                </circle>
+                <circle r={10} fill="none" stroke={teamColor} strokeWidth={2} opacity={0.6} />
             )}
             <circle r={5} fill={teamColor} stroke="#000" strokeWidth={1} />
-            <text y={-10} textAnchor="middle" fill="white" fontSize="8" fontWeight="bold" fontFamily="var(--font-display)">
+            <text y={-10} textAnchor="middle" fill="white" fontSize="8" fontWeight="bold" fontFamily="var(--font-mono)">
                 {driver.name_acronym || driver.driver_number}
             </text>
         </g>
@@ -162,13 +159,11 @@ const DRSZoneHighlight: FC<DRSZoneHighlightProps> = ({ zone, bounds, width, heig
             y1={start.y}
             x2={end.x}
             y2={end.y}
-            stroke="rgba(0, 255, 136, 0.8)"
+            stroke="rgba(63, 185, 80, 0.7)"
             strokeWidth={6}
             strokeLinecap="round"
             opacity={0.7}
-        >
-            <animate attributeName="opacity" values="0.5;0.9;0.5" dur="2s" repeatCount="indefinite" />
-        </line>
+        />
     );
 };
 
@@ -353,7 +348,7 @@ const TrackMap: FC<TrackMapProps> = ({
     };
 
     return (
-        <div ref={containerRef} className="track-map card card-glow" style={containerStyle}>
+        <div ref={containerRef} className="track-map card" style={containerStyle}>
             {/* Header */}
             <div style={headerStyle}>
                 <span

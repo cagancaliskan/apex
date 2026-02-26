@@ -22,6 +22,16 @@ class PitWindow:
     reason: str  # Explanation for window
 
 
+# Compound cliff ages: laps of tyre life until performance falls off sharply
+_CLIFF_AGES: dict[str, int] = {
+    "SOFT": 15,
+    "MEDIUM": 25,
+    "HARD": 35,
+    "INTERMEDIATE": 20,
+    "WET": 20,
+}
+
+
 @dataclass
 class CompetitorThreat:
     """Threat assessment from a competitor."""
@@ -43,6 +53,7 @@ def find_optimal_window(
     compound: str,
     cliff_risk: float,
     min_stint_laps: int = 10,
+    cliff_age: int | None = None,
 ) -> PitWindow:
     """
     Find optimal pit stop window based on degradation model.
@@ -73,32 +84,34 @@ def find_optimal_window(
             reason="Too late to pit - stay out to finish",
         )
 
-    # Calculate crossover point
-    # Where staying out loses more than pit loss
-    laps_until_crossover = int(pit_loss / max(deg_slope, 0.01))
+    # Compound-specific cliff age drives the pit window
+    # Use track-learned cliff age if provided, otherwise fall back to defaults
+    if cliff_age is None:
+        cliff_age = _CLIFF_AGES.get(compound.upper(), 25)
 
-    # Window boundaries
-    min_lap = current_lap + max(1, min_stint_laps - tyre_age)
-    max_lap = current_lap + min(remaining_laps - min_stint_laps, laps_until_crossover + 5)
+    # Window: pit 3 laps before cliff up to 5 laps past cliff
+    min_lap = max(current_lap + 1, cliff_age - 3)
+    max_lap = min(total_laps - min_stint_laps, cliff_age + 5)
+    max_lap = max(min_lap, max_lap)
 
-    # Adjust for cliff risk
+    # Ideal: the cliff lap itself, pulled earlier under high risk
     if cliff_risk > 0.7:
-        # High cliff risk - pit sooner
-        ideal_lap = current_lap + max(1, int((max_lap - min_lap) * 0.3))
-        reason = "High cliff risk - pit early recommended"
+        # Tyre is degrading fast - pit 3 laps before cliff
+        ideal_lap = max(min_lap, cliff_age - 3)
+        reason = f"High cliff risk — pit early (L{ideal_lap})"
     elif cliff_risk > 0.4:
-        # Moderate risk - pit in middle of window
-        ideal_lap = current_lap + (max_lap - min_lap) // 2
-        reason = "Moderate degradation - flexible window"
+        # Moderate risk - pit at cliff age
+        ideal_lap = cliff_age
+        reason = f"Moderate degradation — pit at cliff age L{cliff_age}"
     else:
-        # Low risk - can extend stint
-        ideal_lap = max_lap
-        reason = "Low degradation - extend stint if possible"
+        # Low risk - target cliff age
+        ideal_lap = cliff_age
+        reason = f"Target pit: L{cliff_age} ({compound} cliff)"
 
     # Clamp to valid range
     ideal_lap = max(min_lap, min(max_lap, ideal_lap))
 
-    # Confidence based on deg slope uncertainty
+    # Confidence based on how close we are to cliff risk threshold
     confidence = 1.0 - min(0.5, cliff_risk * 0.5)
 
     return PitWindow(

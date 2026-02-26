@@ -1,8 +1,9 @@
 /**
- * Telemetry Panel Component
+ * Telemetry Panel Component — v2.1
  *
  * Real-time driver telemetry visualization.
- * Displays speed, gear, throttle/brake bars, and DRS status.
+ * Horizontal bar layout — no arc gauges, no glows.
+ * Speed displayed as plain number. Compact mode for HUD strip.
  *
  * @module components/TelemetryPanel
  */
@@ -19,23 +20,6 @@ interface DRSIndicatorProps {
     size?: 'small' | 'medium' | 'large';
 }
 
-interface VerticalBarProps {
-    value: number;
-    maxValue?: number;
-    color: string;
-    label: string;
-    height?: number;
-}
-
-interface SpeedGaugeProps {
-    speed: number;
-    maxSpeed?: number;
-}
-
-interface GearIndicatorProps {
-    gear: number;
-}
-
 interface TelemetryPanelProps {
     driver?: DriverState | null;
     compact?: boolean;
@@ -48,63 +32,38 @@ interface TelemetryPanelProps {
 const DRSIndicator: FC<DRSIndicatorProps> = ({ status, size = 'medium' }) => {
     const isActive = [10, 12, 14].includes(status);
     const isAvailable = status === 8;
+    const dotSize = size === 'small' ? 7 : size === 'large' ? 14 : 10;
+    const textSize = size === 'small' ? '0.6rem' : size === 'large' ? '0.8rem' : '0.7rem';
 
-    const sizeClasses = { small: { dot: 8, text: '0.65rem' }, medium: { dot: 12, text: '0.75rem' }, large: { dot: 16, text: '0.875rem' } };
-    const { dot, text } = sizeClasses[size];
-
-    let color = 'var(--text-muted)', label = 'OFF', glow = 'none';
-    if (isActive) { color = 'var(--accent-green)'; label = 'DRS'; glow = '0 0 8px var(--accent-green)'; }
-    else if (isAvailable) { color = 'var(--accent-yellow)'; label = 'AVAIL'; glow = '0 0 5px var(--accent-yellow)'; }
+    const color = isActive ? 'var(--status-green)' : isAvailable ? 'var(--status-amber)' : 'var(--text-muted)';
+    const label = isActive ? 'DRS' : isAvailable ? 'AVAIL' : 'DRS';
 
     return (
-        <div className="drs-indicator" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: dot, height: dot, borderRadius: '50%', backgroundColor: color, boxShadow: glow, transition: 'all 0.15s ease' }} />
-            <span style={{ fontSize: text, color, fontWeight: 600, letterSpacing: '0.05em' }}>{label}</span>
+        <div className="drs-indicator" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div style={{ width: dotSize, height: dotSize, borderRadius: '50%', background: color }} />
+            <span style={{ fontSize: textSize, color, fontWeight: 600, letterSpacing: '0.05em' }}>{label}</span>
         </div>
     );
 };
 
-const VerticalBar: FC<VerticalBarProps> = ({ value, maxValue = 100, color, label, height = 100 }) => {
-    const percentage = Math.min(100, Math.max(0, (value / maxValue) * 100));
+// Horizontal bar for throttle/brake
+interface HBarProps {
+    value: number;
+    color: string;
+    label: string;
+}
+
+const HBar: FC<HBarProps> = ({ value, color, label }) => {
+    const pct = Math.min(100, Math.max(0, value));
     return (
-        <div className="vertical-bar" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>{label}</span>
-            <div style={{ width: 24, height, backgroundColor: 'var(--bg-tertiary)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${percentage}%`, backgroundColor: color, transition: 'height 0.1s ease', borderRadius: 4 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, minWidth: '26px', letterSpacing: '0.04em' }}>{label}</span>
+            <div className="h-bar-track" style={{ flex: 1 }}>
+                <div className="h-bar-fill" style={{ width: `${pct}%`, background: color }} />
             </div>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(value)}%</span>
-        </div>
-    );
-};
-
-const SpeedGauge: FC<SpeedGaugeProps> = ({ speed, maxSpeed = 360 }) => {
-    const percentage = Math.min(100, (speed / maxSpeed) * 100);
-    return (
-        <div className="speed-gauge" style={{ position: 'relative', width: 120, height: 80 }}>
-            <svg viewBox="0 0 100 60" style={{ width: '100%', height: '100%' }}>
-                <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="var(--bg-tertiary)" strokeWidth="8" strokeLinecap="round" />
-                <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="url(#speedGradient)" strokeWidth="8" strokeLinecap="round" strokeDasharray="126" strokeDashoffset={126 - (126 * percentage) / 100} style={{ transition: 'stroke-dashoffset 0.1s ease' }} />
-                <defs>
-                    <linearGradient id="speedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="var(--accent-cyan)" />
-                        <stop offset="100%" stopColor="var(--accent-magenta)" />
-                    </linearGradient>
-                </defs>
-            </svg>
-            <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{Math.round(speed)}</div>
-                <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', marginTop: 2 }}>km/h</div>
-            </div>
-        </div>
-    );
-};
-
-const GearIndicator: FC<GearIndicatorProps> = ({ gear }) => {
-    const gearDisplay = gear === 0 ? 'N' : gear === -1 ? 'R' : gear;
-    return (
-        <div className="gear-indicator" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '60px' }}>
-            <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Gear</span>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', fontWeight: 700, color: 'var(--accent-cyan)', lineHeight: 1, textShadow: '0 0 10px rgba(6, 249, 249, 0.3)' }}>{gearDisplay}</div>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', minWidth: '32px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                {Math.round(pct)}%
+            </span>
         </div>
     );
 };
@@ -116,54 +75,67 @@ const GearIndicator: FC<GearIndicatorProps> = ({ gear }) => {
 const TelemetryPanel: FC<TelemetryPanelProps> = ({ driver, compact = false }) => {
     if (!driver) {
         return (
-            <div className="telemetry-panel card" style={{ padding: 'var(--space-lg)', textAlign: 'center' }}>
-                <p className="text-muted">Select a driver to view telemetry</p>
+            <div className="telemetry-panel card" style={{ padding: 'var(--space-md)', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Select a driver to view telemetry
             </div>
         );
     }
 
-    const { speed = 0, gear = 0, throttle = 0, brake = 0, drs = 0 } = driver;
-    const normalizedBrake = brake > 1 ? brake : brake * 100;
+    const speed = driver.speed || 0;
+    const gear = driver.gear || 0;
+    const throttle = Math.min(100, Math.max(0, driver.throttle || 0) * 100);
+    const brake = Math.min(100, Math.max(0, driver.brake || 0) * 100);
+    const drs = driver.drs || 0;
+    const teamColor = driver.team_colour ? `#${driver.team_colour}` : 'var(--color-info)';
+    const gearDisplay = gear === 0 ? 'N' : gear === -1 ? 'R' : String(gear);
 
     if (compact) {
         return (
-            <div className="telemetry-panel-compact" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', padding: 'var(--space-sm) var(--space-md)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', height: '100%' }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem' }}>{Math.round(speed)} km/h</span>
-                <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>G{gear}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 10px', height: '100%', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)', minWidth: '52px' }}>{Math.round(speed)} <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>km/h</span></span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', fontWeight: 700, color: 'var(--color-info)', minWidth: '16px' }}>G{gearDisplay}</span>
                 <DRSIndicator status={drs} size="small" />
-                <div style={{ display: 'flex', gap: '4px', height: 20, alignItems: 'flex-end' }}>
-                    <div style={{ width: 6, height: 20, background: 'var(--bg-card)', borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
-                        <div style={{ width: '100%', height: `${Math.min(100, throttle)}%`, background: 'var(--accent-green)', position: 'absolute', bottom: 0, left: 0 }} />
-                    </div>
-                    <div style={{ width: 6, height: 20, background: 'var(--bg-card)', borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
-                        <div style={{ width: '100%', height: `${Math.min(100, normalizedBrake)}%`, background: 'var(--status-red)', position: 'absolute', bottom: 0, left: 0 }} />
-                    </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: 0 }}>
+                    <HBar value={throttle} color="var(--status-green)" label="T" />
+                    <HBar value={brake} color="var(--status-red)" label="B" />
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="telemetry-panel card card-glow">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)', paddingBottom: 'var(--space-sm)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-                    <div style={{ width: 4, height: 24, backgroundColor: driver.team_colour ? `#${driver.team_colour}` : 'var(--accent-cyan)', borderRadius: 2 }} />
-                    <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{driver.name_acronym || `#${driver.driver_number}`}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>{driver.team_name || 'Unknown Team'}</div>
-                    </div>
+        <div className="telemetry-panel card" style={{ padding: 'var(--space-md)' }}>
+            {/* Driver header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ width: 3, height: 22, background: teamColor, borderRadius: 2, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{driver.name_acronym || `#${driver.driver_number}`}</div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>{driver.team_name || '—'}</div>
                 </div>
                 <DRSIndicator status={drs} size="medium" />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 'var(--space-lg)', alignItems: 'center' }}>
-                <SpeedGauge speed={speed} />
-                <GearIndicator gear={gear} />
-                <VerticalBar value={throttle} color="var(--accent-green)" label="THR" height={80} />
-                <VerticalBar value={normalizedBrake} color="var(--status-red)" label="BRK" height={80} />
+
+            {/* Speed + Gear row */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '20px', marginBottom: '12px' }}>
+                <div className="speed-readout">
+                    <span className="speed-value">{Math.round(speed)}</span>
+                    <span className="speed-unit">km/h</span>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gear</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-info)', lineHeight: 1 }}>{gearDisplay}</div>
+                </div>
+            </div>
+
+            {/* Throttle / Brake bars */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <HBar value={throttle} color="var(--status-green)" label="THR" />
+                <HBar value={brake} color="var(--status-red)" label="BRK" />
             </div>
         </div>
     );
 };
 
 export default TelemetryPanel;
-export { DRSIndicator, VerticalBar, SpeedGauge, GearIndicator };
+// Keep named exports for backward compatibility with any ReplayPage/BacktestPage imports
+export { DRSIndicator };

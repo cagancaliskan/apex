@@ -558,16 +558,71 @@ def extract_race_data(session):
         print(f"Warning: Failed to extract pits: {e}")
         all_pits = []
 
-    # 4. Stints - Convert to StintData Pydantic models
+    # 4. Stints - Parse real stints from FastF1 lap data (Stint + Compound columns)
     all_stints = []
-    if all_laps:
+    _compound_aliases = {
+        "SOFT": "SOFT", "MEDIUM": "MEDIUM", "HARD": "HARD",
+        "INTERMEDIATE": "INTERMEDIATE", "WET": "WET",
+        "SUPERSOFT": "SOFT", "ULTRASOFT": "SOFT", "HYPERSOFT": "SOFT",
+        "C1": "HARD", "C2": "HARD", "C3": "MEDIUM",
+        "C4": "MEDIUM", "C5": "SOFT",
+    }
+    try:
+        if hasattr(session, "laps"):
+            laps_df = session.laps
+            required_cols = {"DriverNumber", "Stint", "Compound", "LapNumber"}
+            if required_cols.issubset(laps_df.columns):
+                for (drv_num, stint_num), grp in laps_df.groupby(["DriverNumber", "Stint"]):
+                    try:
+                        drv_int = int(drv_num)
+                        stint_int = int(stint_num)
+
+                        # Use most common non-null compound value in this stint group
+                        raw_compounds = [
+                            str(c).strip().upper()
+                            for c in grp["Compound"].dropna().tolist()
+                            if str(c).strip() not in ("", "NAN", "NONE", "UNKNOWN")
+                        ]
+                        if raw_compounds:
+                            raw_compound = max(set(raw_compounds), key=raw_compounds.count)
+                            compound = _compound_aliases.get(raw_compound, "UNKNOWN")
+                        else:
+                            compound = "UNKNOWN"
+
+                        lap_start = int(grp["LapNumber"].min())
+                        lap_end = int(grp["LapNumber"].max())
+
+                        # TyreLife on lap 1 of stint = 1 (new tyre) or higher (used tyre)
+                        tyre_age_at_start = 0
+                        if "TyreLife" in grp.columns:
+                            first_life = grp["TyreLife"].iloc[0]
+                            if pd.notna(first_life):
+                                tyre_age_at_start = max(0, int(first_life) - 1)
+
+                        all_stints.append(
+                            StintData(
+                                driver_number=drv_int,
+                                stint_number=stint_int,
+                                compound=compound,
+                                lap_start=lap_start,
+                                lap_end=lap_end,
+                                tyre_age_at_start=tyre_age_at_start,
+                            )
+                        )
+                    except Exception:
+                        continue
+    except Exception as e:
+        print(f"Warning: Failed to extract real stints: {e}")
+
+    # Fallback: if no stints were extracted, create a single dummy stint per driver
+    if not all_stints and all_laps:
         max_lap = max(l.lap_number for l in all_laps)
         for drv in drivers:
             all_stints.append(
                 StintData(
                     driver_number=drv.driver_number,
                     stint_number=1,
-                    compound="MEDIUM",  # Default; ideally parse from FastF1
+                    compound="UNKNOWN",
                     lap_start=1,
                     lap_end=max_lap,
                     tyre_age_at_start=0,

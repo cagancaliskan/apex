@@ -8,6 +8,8 @@ providing pace predictions and cliff risk assessment.
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from rsw.models.physics.fuel_model import FuelModel
+
 from .calibration import get_cliff_risk_threshold, get_warm_start_params
 from .rls import RLSEstimator, create_feature_vector
 
@@ -82,12 +84,16 @@ class DriverDegradationModel:
         # Base pace estimate (updated from first stint)
         self.estimated_base_pace: float | None = None
 
+        # Fuel model for correcting lap times before RLS update
+        self.fuel_model = FuelModel()
+
     def new_stint(
         self,
         stint_number: int,
         compound: str,
         start_lap: int,
         base_pace: float | None = None,
+        season_priors: tuple[float | None, float | None] | None = None,
     ) -> None:
         """
         Start a new stint with a fresh model.
@@ -97,6 +103,8 @@ class DriverDegradationModel:
             compound: Tyre compound for this stint
             start_lap: Race lap where stint starts
             base_pace: Optional known base pace
+            season_priors: Optional (base_pace, deg_slope) from SeasonLearner
+                          — overrides generic compound defaults when available
         """
         # Archive current stint
         if self.current_stint is not None:
@@ -109,10 +117,16 @@ class DriverDegradationModel:
             forgetting_factor=self.forgetting_factor,
         )
 
-        # Warm start with priors
+        # Warm start: prefer season-learned priors > generic compound defaults
         bp = base_pace or self.estimated_base_pace
-        warm_base, warm_deg = get_warm_start_params(compound, bp)
-        rls.warm_start(warm_base, warm_deg, uncertainty=50.0)
+        if season_priors and season_priors[0] is not None:
+            warm_base = season_priors[0]
+            warm_deg = season_priors[1] if season_priors[1] is not None else get_warm_start_params(compound, bp)[1]
+            # Lower uncertainty — we have cross-session data
+            rls.warm_start(warm_base, warm_deg, uncertainty=20.0)
+        else:
+            warm_base, warm_deg = get_warm_start_params(compound, bp)
+            rls.warm_start(warm_base, warm_deg, uncertainty=50.0)
 
         self.current_stint = StintModel(
             stint_number=stint_number,
@@ -126,14 +140,19 @@ class DriverDegradationModel:
         lap_in_stint: int,
         lap_time: float,
         is_valid: bool = True,
+        race_lap: int | None = None,
     ) -> float:
         """
         Update the model with a new lap observation.
+
+        Applies fuel correction before feeding into RLS so the model
+        learns pure tyre degradation, not fuel-burn improvement.
 
         Args:
             lap_in_stint: Lap number within current stint
             lap_time: Observed lap time in seconds
             is_valid: Whether this is a valid racing lap
+            race_lap: Absolute race lap number (for fuel correction)
 
         Returns:
             Prediction error (residual)
@@ -144,25 +163,34 @@ class DriverDegradationModel:
 
         assert self.current_stint is not None
 
-        # Record lap time
+        # Record raw lap time
         self.current_stint.lap_times.append(lap_time)
 
         # Only update model with valid laps
         if not is_valid or lap_time <= 0:
             return 0.0
 
+        # --- Fuel correction ---
+        # Subtract fuel time penalty so RLS learns pure tyre degradation.
+        # Without this, the ~0.035s/kg × fuel_mass improvement each lap
+        # gets conflated with degradation, making deg_slope systematically wrong.
+        corrected_time = lap_time
+        if race_lap is not None and race_lap > 0:
+            fuel_penalty = self.fuel_model.get_fuel_penalty(race_lap)
+            corrected_time = lap_time - fuel_penalty
+
         # Create feature vector
         x = create_feature_vector(lap_in_stint)
 
-        # Update RLS
-        error = self.current_stint.rls.update(x, lap_time)
+        # Update RLS with fuel-corrected time
+        error = self.current_stint.rls.update(x, corrected_time)
 
-        # Update base pace estimate
+        # Update base pace estimate (use corrected time)
         if self.estimated_base_pace is None:
-            self.estimated_base_pace = lap_time
+            self.estimated_base_pace = corrected_time
         else:
             # Exponential moving average
-            self.estimated_base_pace = 0.9 * self.estimated_base_pace + 0.1 * lap_time
+            self.estimated_base_pace = 0.9 * self.estimated_base_pace + 0.1 * corrected_time
 
         return error
 
@@ -304,19 +332,25 @@ class ModelManager:
         stint_number: int,
         compound: str,
         is_valid: bool = True,
+        race_lap: int | None = None,
+        season_priors: tuple[float | None, float | None] | None = None,
     ) -> float:
         """
         Update a driver's model with new lap data.
 
         Handles stint changes automatically.
+
+        Args:
+            race_lap: Absolute race lap number (for fuel correction)
+            season_priors: Optional (base_pace, deg_slope) from SeasonLearner
         """
         model = self.get_or_create(driver_number)
 
         # Check for stint change
         if model.current_stint is None or model.current_stint.stint_number != stint_number:
-            model.new_stint(stint_number, compound, lap_in_stint)
+            model.new_stint(stint_number, compound, lap_in_stint, season_priors=season_priors)
 
-        return model.update(lap_in_stint, lap_time, is_valid)
+        return model.update(lap_in_stint, lap_time, is_valid, race_lap=race_lap)
 
     def get_all_predictions(self, k: int = 5) -> dict[int, DegradationPrediction]:
         """Get predictions for all drivers."""

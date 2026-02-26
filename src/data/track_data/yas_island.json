@@ -1,0 +1,17 @@
+{
+  "circuit_name": "Yas Island",
+  "circuit_key": "yas_island",
+  "actual_pit_loss_mean": 22.0,
+  "actual_pit_loss_std": 1.5,
+  "pit_stop_count": 0,
+  "overtaking_success_rate": 0.3,
+  "position_changes_per_lap": 5.517241379310345,
+  "overtake_sample_count": 1157,
+  "compound_degradation": {},
+  "drs_pass_rate": 0.4,
+  "drs_sample_count": 0,
+  "last_updated": "2026-02-26T12:17:14.497531",
+  "sessions_analyzed": [
+    "2023_R22"
+  ]
+}

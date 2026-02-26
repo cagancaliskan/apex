@@ -66,6 +66,16 @@ export interface DriverState {
     predicted_pace: number[];
     predicted_rejoin_position: number;
     rejoin_traffic_severity: number;
+
+    // Status flags
+    in_pit: boolean;
+    retired: boolean;
+    stint_number: number;
+
+    // Physics & ML
+    fuel_remaining_kg: number;
+    fuel_laps_remaining: number;
+    model_confidence: number;
 }
 
 // =============================================================================
@@ -134,6 +144,9 @@ export interface RaceState {
     meeting_key: number;
     session_name: string;
     session_type: string;
+    track_name?: string;
+    country?: string;
+    timestamp?: string;
 
     // Drivers indexed by driver_number
     drivers: Record<number, DriverState>;
@@ -144,13 +157,19 @@ export interface RaceState {
 
     // Status
     track_status?: TrackStatus; // 'GREEN', 'YELLOW', 'SC', etc.
+    flags?: string;
+    safety_car?: boolean;
+    virtual_safety_car?: boolean;
+    red_flag?: boolean;
 
     // Track & Weather
     track_config: TrackConfig | null;
     weather: WeatherData | null;
+    drs_zones?: DRSZone[];
 
     // Messages
     race_control_messages: RaceMessage[];
+    recent_pits?: Array<{ lap: number; driver: number }>;
 }
 
 // =============================================================================

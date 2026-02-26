@@ -1,243 +1,480 @@
 /**
- * Live Dashboard Page
+ * Live Dashboard — v2.1 Professional Race Engineering Interface
  *
- * Compact 2-panel race monitoring view:
- * - Left: Leaderboard + Weather
- * - Right: Track visualization + driver details
+ * 3-column layout: Leaderboard | Track+Telemetry | Strategy Console
+ * State sourced from Zustand store (no local WebSocket).
+ * Alert banner for SC, red flag, PIT_NOW, and undercut threats.
  *
  * @module pages/LiveDashboard
  */
 
-import { useMemo, useState, type FC } from 'react';
-import { Flag, Radio, ChevronDown } from 'lucide-react';
-import DriverTable from '../components/DriverTable';
-import StrategyPanel from '../components/StrategyPanel';
-import TelemetryPanel from '../components/TelemetryPanel';
+import { useState, useEffect, useRef, useMemo, useCallback, type FC } from 'react';
 import TrackMap from '../components/TrackMap';
-import WeatherWidget from '../components/WeatherWidget';
-import type { RaceState, DriverState } from '../types';
+import StrategyPanel from '../components/StrategyPanel';
+import { useRaceStore } from '../store/raceStore';
+import type { DriverState } from '../types';
 
 // =============================================================================
-// Types
+// Constants & Helpers
 // =============================================================================
 
-interface Circuit {
-    year: number;
-    round: number;
-    name: string;
-    country: string;
-}
-
-interface SpeedOption {
-    value: number;
-    label: string;
-}
-
-interface LiveDashboardProps {
-    raceState: RaceState;
-    isPolling: boolean;
-}
-
-interface FlagStatus {
-    label: string;
-    className: string;
-}
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-const CIRCUITS: Circuit[] = [
-    { year: 2023, round: 22, name: 'Abu Dhabi', country: 'UAE' },
-    { year: 2023, round: 6, name: 'Monaco', country: 'Monaco' },
-    { year: 2023, round: 10, name: 'Silverstone', country: 'UK' },
-    { year: 2023, round: 14, name: 'Spa-Francorchamps', country: 'Belgium' },
-    { year: 2023, round: 15, name: 'Monza', country: 'Italy' },
-];
-
-const SPEED_OPTIONS: SpeedOption[] = [
-    { value: 1, label: '1x (Real-time)' },
-    { value: 5, label: '5x' },
-    { value: 10, label: '10x' },
-    { value: 20, label: '20x' },
-    { value: 50, label: '50x' },
-];
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-const formatLapTime = (seconds?: number | null): string => {
-    if (!seconds) return '-';
-    const mins = Math.floor(seconds / 60);
-    const secs = (seconds % 60).toFixed(3);
-    return mins > 0 ? `${mins}:${secs.padStart(6, '0')}` : secs;
+const TYRE_COLORS: Record<string, string> = {
+    SOFT: '#ff0000',
+    MEDIUM: '#ffd700',
+    HARD: '#e8e8e8',
+    INTERMEDIATE: '#39d353',
+    WET: '#0080ff',
 };
 
-const getDriversArray = (drivers: Record<number, DriverState> | DriverState[]): DriverState[] => {
-    return Array.isArray(drivers) ? drivers : Object.values(drivers || {});
+const TYRE_TEXT_COLORS: Record<string, string> = {
+    SOFT: '#ffffff',
+    MEDIUM: '#000000',
+    HARD: '#000000',
+    INTERMEDIATE: '#000000',
+    WET: '#ffffff',
 };
 
+function fmtGap(gap: number | undefined | null): string {
+    if (gap == null) return '—';
+    if (gap === 0) return 'LEADER';
+    return `+${gap.toFixed(3)}`;
+}
+
+function fmtLap(t: number | undefined | null): string {
+    if (!t || t <= 0) return '—';
+    const min = Math.floor(t / 60);
+    const sec = (t % 60).toFixed(3);
+    return min > 0 ? `${min}:${sec.padStart(6, '0')}` : sec;
+}
+
+function getRowUrgencyClass(d: DriverState, currentLap: number): string {
+    if (d.pit_recommendation === 'PIT_NOW') return 'lb-row-pit-now';
+    if (d.undercut_threat) return 'lb-row-threat';
+    if (
+        d.pit_window_min && d.pit_window_min > 0 &&
+        currentLap >= d.pit_window_min - 2 &&
+        currentLap <= (d.pit_window_max ?? (d.pit_window_min + 5))
+    ) return 'lb-row-window';
+    return '';
+}
+
 // =============================================================================
-// Component
+// Alert System Types
 // =============================================================================
 
-const LiveDashboard: FC<LiveDashboardProps> = ({ raceState, isPolling }) => {
-    const [selectedDriver, setSelectedDriver] = useState<DriverState | null>(null);
-    const [selectedCircuit, setSelectedCircuit] = useState<Circuit>(CIRCUITS[0]);
-    const [showCircuitDropdown, setShowCircuitDropdown] = useState(false);
-    const [speedMultiplier, setSpeedMultiplier] = useState(10);
+type AlertType = 'FLAG' | 'SC' | 'PIT_NOW' | 'THREAT';
 
-    const handleSpeedChange = async (speed: number) => {
-        try {
-            await fetch(`/api/simulation/speed/${speed}`, { method: 'POST' });
-            setSpeedMultiplier(speed);
-        } catch (error) {
-            console.error('Failed to set speed:', error);
-        }
-    };
+interface Alert {
+    id: string;
+    type: AlertType;
+    message: string;
+    ts: number;
+}
 
-    const stats = useMemo(() => {
-        if (!raceState?.drivers) return null;
-        const drivers = getDriversArray(raceState.drivers);
-        const lapTimes = drivers.filter((d) => d.last_lap_time && d.last_lap_time > 0).map((d) => d.last_lap_time!);
-        return {
-            leader: drivers.find((d) => d.position === 1),
-            fastestLap: lapTimes.length > 0 ? Math.min(...lapTimes) : null,
+// =============================================================================
+// Main Component
+// =============================================================================
+
+const LiveDashboard: FC = () => {
+    // All data from Zustand store — no local WebSocket
+    const sortedDrivers = useRaceStore(s => s.sortedDrivers);
+    const selectedDriver = useRaceStore(s => s.selectedDriver);
+    const selectDriver = useRaceStore(s => s.selectDriver);
+    const currentLap = useRaceStore(s => s.currentLap);
+    const totalLaps = useRaceStore(s => s.totalLaps);
+    const raceControlMessages = useRaceStore(s => s.raceControlMessages);
+    const safetycar = useRaceStore(s => s.safetycar);
+    const redFlag = useRaceStore(s => s.redFlag);
+    const vsc = useRaceStore(s => s.virtualSafetyCar);
+    const flags = useRaceStore(s => s.flags);
+    const trackConfig = useRaceStore(s => s.trackConfig);
+
+    // Alerts
+    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const alertTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+    const prevFlagsRef = useRef<{ sc: boolean; red: boolean; vsc: boolean; flags: string[] }>({
+        sc: false, red: false, vsc: false, flags: []
+    });
+
+    // Keyboard shortcut: 1-9 select driver by position
+    useEffect(() => {
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.target instanceof HTMLInputElement) return;
+            const n = parseInt(e.key, 10);
+            if (n >= 1 && n <= 9 && sortedDrivers[n - 1]) {
+                selectDriver(sortedDrivers[n - 1].driver_number);
+            }
+            if (e.key === '0' && sortedDrivers[9]) {
+                selectDriver(sortedDrivers[9].driver_number);
+            }
         };
-    }, [raceState]);
+        window.addEventListener('keydown', handleKey);
+        return () => window.removeEventListener('keydown', handleKey);
+    }, [sortedDrivers, selectDriver]);
 
-    const currentSelectedDriver = useMemo(() => {
-        if (!selectedDriver || !raceState?.drivers) return null;
-        const drivers = getDriversArray(raceState.drivers);
-        return drivers.find((d) => d.driver_number === selectedDriver.driver_number) || selectedDriver;
-    }, [selectedDriver, raceState?.drivers]);
+    // Generate alerts when race status changes
+    const addAlert = useCallback((type: AlertType, message: string) => {
+        const id = `${type}-${Date.now()}`;
+        const alert: Alert = { id, type, message, ts: Date.now() };
+        setAlerts(prev => {
+            // Don't duplicate same type within 30s
+            const recent = prev.find(a => a.type === type && Date.now() - a.ts < 30000);
+            if (recent) return prev;
+            return [alert, ...prev].slice(0, 5);
+        });
+        const t = setTimeout(() => {
+            setAlerts(prev => prev.filter(a => a.id !== id));
+            alertTimeouts.current.delete(id);
+        }, 10000);
+        alertTimeouts.current.set(id, t);
+    }, []);
 
-    const getFlagStatus = (): FlagStatus => {
-        const state = raceState as RaceState & { red_flag?: boolean; safety_car?: boolean; virtual_safety_car?: boolean; flags?: string[] };
-        if (state.red_flag) return { label: 'RED FLAG', className: 'red' };
-        if (state.safety_car) return { label: 'SAFETY CAR', className: 'sc' };
-        if (state.virtual_safety_car) return { label: 'VSC', className: 'vsc' };
-        if (state.flags?.includes('YELLOW')) return { label: 'YELLOW', className: 'yellow' };
-        return { label: 'GREEN', className: 'green' };
-    };
+    // Cleanup timeouts on unmount
+    useEffect(() => {
+        return () => { alertTimeouts.current.forEach(t => clearTimeout(t)); };
+    }, []);
 
-    const flagStatus = getFlagStatus();
-    const driversArray = getDriversArray(raceState.drivers);
+    // Watch for flag/SC changes
+    useEffect(() => {
+        const prev = prevFlagsRef.current;
+        if (redFlag && !prev.red) addAlert('FLAG', 'RED FLAG DEPLOYED');
+        if (safetycar && !prev.sc) addAlert('SC', 'SAFETY CAR DEPLOYED');
+        if (vsc && !prev.vsc) addAlert('SC', 'VIRTUAL SAFETY CAR');
+        const hasYellow = flags.some(f => f === 'YELLOW' || f === 'DOUBLE_YELLOW');
+        const prevHasYellow = prev.flags.some(f => f === 'YELLOW' || f === 'DOUBLE_YELLOW');
+        if (hasYellow && !prevHasYellow) addAlert('FLAG', 'YELLOW FLAG');
+        prevFlagsRef.current = { sc: safetycar, red: redFlag, vsc, flags };
+    }, [redFlag, safetycar, vsc, flags, addAlert]);
+
+    // Watch for PIT_NOW / undercut threats
+    useEffect(() => {
+        sortedDrivers.forEach(d => {
+            if (d.pit_recommendation === 'PIT_NOW') {
+                addAlert('PIT_NOW', `${d.name_acronym} — PIT NOW (cliff: ${Math.round((d.cliff_risk || 0) * 100)}%)`);
+            }
+            if (d.undercut_threat) {
+                addAlert('THREAT', `${d.name_acronym} — UNDERCUT THREAT from ${(d.position ?? 0) > 1 ? `P${(d.position ?? 0) - 1}` : 'behind'}`);
+            }
+        });
+    }, [sortedDrivers, addAlert]);
+
+    const dismissAlert = useCallback((id: string) => {
+        const t = alertTimeouts.current.get(id);
+        if (t) { clearTimeout(t); alertTimeouts.current.delete(id); }
+        setAlerts(prev => prev.filter(a => a.id !== id));
+    }, []);
+
+    // Auto-select leader on first load
+    useEffect(() => {
+        if (!selectedDriver && sortedDrivers.length > 0) {
+            selectDriver(sortedDrivers[0].driver_number);
+        }
+    }, [sortedDrivers, selectedDriver, selectDriver]);
+
+    // Sector delta calculation (vs session fastest per sector)
+    const sectorBests = useMemo(() => {
+        const s1 = Math.min(...sortedDrivers.map(d => d.sector_1 || Infinity).filter(v => v < Infinity));
+        const s2 = Math.min(...sortedDrivers.map(d => d.sector_2 || Infinity).filter(v => v < Infinity));
+        const s3 = Math.min(...sortedDrivers.map(d => d.sector_3 || Infinity).filter(v => v < Infinity));
+        return { s1, s2, s3 };
+    }, [sortedDrivers]);
 
     return (
-        <div className="live-dashboard animate-fade-in" style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {/* Header Bar */}
-            <header className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--space-sm) var(--space-md)', background: 'var(--bg-secondary)', borderBottom: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
-                {/* Circuit Selector */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)' }}>
-                    <div style={{ position: 'relative' }}>
-                        <button onClick={() => setShowCircuitDropdown(!showCircuitDropdown)} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-xs) var(--space-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
-                            <div style={{ textAlign: 'left' }}>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 600, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>{selectedCircuit.name}</div>
-                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{selectedCircuit.year} • {selectedCircuit.country}</div>
-                            </div>
-                            <ChevronDown size={14} color="var(--text-muted)" />
-                        </button>
-                        {showCircuitDropdown && (
-                            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-sm)', zIndex: 100, minWidth: '180px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
-                                {CIRCUITS.map((circuit) => (
-                                    <button key={`${circuit.year}-${circuit.round}`} onClick={() => { setSelectedCircuit(circuit); setShowCircuitDropdown(false); }} style={{ display: 'block', width: '100%', padding: 'var(--space-sm)', background: selectedCircuit.round === circuit.round ? 'rgba(0, 212, 190, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-primary)' }}>{circuit.name}</div>
-                                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{circuit.country}</div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Stats */}
-                <div style={{ display: 'flex', gap: 'var(--space-xl)', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Leader</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--accent-cyan)' }}>{stats?.leader?.name_acronym || '-'}</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Fastest Lap</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--accent-magenta)' }}>{formatLapTime(stats?.fastestLap)}</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Lap</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>
-                            <span style={{ color: 'var(--text-primary)' }}>{raceState.current_lap || 0}</span>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>/{raceState.total_laps || '?'}</span>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
+            {/* Alert Banner */}
+            {alerts.length > 0 && (
+                <div className="alert-banner" style={{ padding: '3px 4px', flexShrink: 0 }}>
+                    {alerts.map(a => (
+                        <div key={a.id} className={`alert-row alert-${a.type.toLowerCase()}`}>
+                            <span className="alert-badge">{a.type}</span>
+                            <span className="alert-msg">{a.message}</span>
+                            <button className="alert-dismiss" onClick={() => dismissAlert(a.id)}>×</button>
                         </div>
-                    </div>
+                    ))}
+                </div>
+            )}
+
+            {/* 3-Column Grid */}
+            <div className="dashboard-grid" style={{ flex: 1 }}>
+                {/* Column 1: Leaderboard + Race Control */}
+                <div className="col-leaderboard">
+                    <Leaderboard
+                        drivers={sortedDrivers}
+                        selectedDriver={selectedDriver}
+                        onSelect={selectDriver}
+                        currentLap={currentLap}
+                    />
+                    <RaceControlPanel messages={raceControlMessages} />
                 </div>
 
-                {/* Speed Control */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Speed</span>
-                    <div style={{ display: 'flex', gap: '2px' }}>
-                        {SPEED_OPTIONS.map((option) => (
-                            <button key={option.value} onClick={() => handleSpeedChange(option.value)} style={{ padding: '4px 8px', fontSize: '0.7rem', fontWeight: speedMultiplier === option.value ? 700 : 400, background: speedMultiplier === option.value ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.05)', color: speedMultiplier === option.value ? 'var(--bg-primary)' : 'var(--text-secondary)', border: 'none', borderRadius: 'var(--radius-xs)', cursor: 'pointer', transition: 'all 0.15s ease' }}>
-                                {option.value}x
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Status */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
-                    <div className={`status-badge ${flagStatus.className}`} style={{ padding: '4px 10px', fontSize: '0.7rem' }}>
-                        <Flag size={10} /> {flagStatus.label}
-                    </div>
-                    {isPolling && (
-                        <div className="status-badge green" style={{ padding: '4px 10px', fontSize: '0.7rem', animation: 'pulse 2s infinite' }}>
-                            <Radio size={10} /> LIVE
-                        </div>
-                    )}
-                </div>
-            </header>
-
-            {/* Main 2-Panel Layout */}
-            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '360px 1fr', gap: 'var(--space-md)', padding: 'var(--space-md)', minHeight: 0, overflow: 'hidden' }}>
-                {/* Left Panel */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', minHeight: 0, overflow: 'hidden' }}>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', paddingLeft: 'var(--space-sm)', flexShrink: 0 }}>Leaderboard</div>
-                    <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-                        <DriverTable drivers={driversArray} fastestLap={stats?.fastestLap} onDriverSelect={setSelectedDriver} selectedDriver={selectedDriver} compact />
-                    </div>
-                    <div style={{ flexShrink: 0 }}>
-                        <WeatherWidget weather={raceState.weather} compact />
-                    </div>
-                </div>
-
-                {/* Right Panel */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', minHeight: 0, overflow: 'hidden' }}>
-                    <div style={{ flex: 1, minHeight: '200px', overflow: 'hidden' }}>
+                {/* Column 2: Track Map + Telemetry HUD */}
+                <div className="col-center">
+                    <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', minHeight: 0 }}>
                         <TrackMap
-                            drivers={driversArray}
-                            trackConfig={raceState.track_config}
+                            drivers={sortedDrivers}
+                            trackConfig={trackConfig}
                             selectedDriver={selectedDriver}
-                            onDriverSelect={setSelectedDriver}
-                            trackStatus={raceState.track_status || 'GREEN'}
+                            showDRS={true}
                         />
                     </div>
-                    <div style={{ flexShrink: 0, height: currentSelectedDriver ? '450px' : '50px', transition: 'height 0.2s ease' }}>
-                        {currentSelectedDriver ? (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)', height: '100%' }}>
-                                <TelemetryPanel driver={currentSelectedDriver} compact={false} />
-                                <StrategyPanel drivers={driversArray} selectedDriver={currentSelectedDriver} compact={false} />
-                            </div>
-                        ) : (
-                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 'var(--radius-md)' }}>
-                                Click on a driver to view telemetry and strategy
-                            </div>
-                        )}
+                    <TelemetryHUD driver={selectedDriver} sectorBests={sectorBests} />
+                </div>
+
+                {/* Column 3: Strategy Console */}
+                <div className="col-strategy">
+                    <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'auto' }}>
+                        <StrategyPanel
+                            drivers={sortedDrivers}
+                            selectedDriver={selectedDriver ?? undefined}
+                            compact={false}
+                            currentLap={currentLap}
+                            totalLaps={totalLaps ?? undefined}
+                        />
                     </div>
                 </div>
             </div>
+        </div>
+    );
+};
 
-            {/* Progress Bar */}
-            <div style={{ flexShrink: 0, height: '4px', background: 'var(--bg-tertiary)' }}>
-                <div style={{ height: '100%', width: `${((raceState.current_lap || 0) / (raceState.total_laps || 1)) * 100}%`, background: 'linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta))', transition: 'width 0.5s ease' }} />
+// =============================================================================
+// Leaderboard Sub-Component
+// =============================================================================
+
+interface LeaderboardProps {
+    drivers: DriverState[];
+    selectedDriver: DriverState | null;
+    onSelect: (n: number | null) => void;
+    currentLap: number;
+}
+
+const Leaderboard: FC<LeaderboardProps> = ({ drivers, selectedDriver, onSelect, currentLap }) => {
+    const [showInt, setShowInt] = useState(false);
+
+    return (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', minHeight: 0 }}>
+            {/* Header */}
+            <div style={{ height: '24px', display: 'flex', alignItems: 'center', padding: '0 8px', gap: '6px', background: 'var(--bg-tertiary)', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', flex: 1 }}>Leaderboard</span>
+                <button
+                    onClick={() => setShowInt(v => !v)}
+                    style={{ fontSize: '0.62rem', fontWeight: 600, fontFamily: 'var(--font-mono)', color: 'var(--color-info)', background: 'rgba(88,166,255,0.1)', border: '1px solid rgba(88,166,255,0.2)', borderRadius: '2px', padding: '1px 6px', cursor: 'pointer', letterSpacing: '0.04em' }}
+                >
+                    {showInt ? 'INT' : 'GAP'}
+                </button>
+            </div>
+
+            {/* Column headers */}
+            <div style={{ height: '20px', display: 'grid', gridTemplateColumns: '22px 5px 44px 1fr 54px 28px 8px', gap: '4px', alignItems: 'center', padding: '0 6px', borderBottom: '1px solid rgba(255,255,255,0.04)', flexShrink: 0 }}>
+                {['P', '', 'Driver', showInt ? 'INT' : 'GAP', 'Tyre', 'Lap', ''].map((h, i) => (
+                    <div key={i} style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', textAlign: i === 3 ? 'right' : 'left', fontFamily: 'var(--font-mono)' }}>{h}</div>
+                ))}
+            </div>
+
+            {/* Rows */}
+            <div style={{ flex: 1, overflow: 'auto' }}>
+                {drivers.map(d => {
+                    const isSelected = selectedDriver?.driver_number === d.driver_number;
+                    const teamColor = d.team_colour ? `#${d.team_colour}` : '#666';
+                    const compound = d.compound || 'MEDIUM';
+                    const tyreColor = TYRE_COLORS[compound] ?? '#fff';
+                    const tyreTxtColor = TYRE_TEXT_COLORS[compound] ?? '#000';
+                    const urgencyClass = getRowUrgencyClass(d, currentLap);
+                    const gapVal = showInt ? d.gap_to_ahead : d.gap_to_leader;
+
+                    return (
+                        <div
+                            key={d.driver_number}
+                            onClick={() => onSelect(d.driver_number)}
+                            className={urgencyClass}
+                            style={{
+                                height: 'var(--row-height)',
+                                display: 'grid',
+                                gridTemplateColumns: '22px 5px 44px 1fr 54px 28px 8px',
+                                gap: '4px',
+                                alignItems: 'center',
+                                padding: '0 6px',
+                                cursor: 'pointer',
+                                background: isSelected ? 'rgba(88,166,255,0.08)' : 'transparent',
+                                borderLeft: isSelected ? '2px solid var(--color-info)' : '2px solid transparent',
+                                borderBottom: '1px solid rgba(255,255,255,0.025)',
+                                transition: 'background 80ms',
+                            }}
+                        >
+                            {/* Position */}
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 700, color: (d.position ?? 99) <= 3 ? 'var(--text-primary)' : 'var(--text-secondary)', textAlign: 'center' }}>
+                                {d.position || '—'}
+                            </div>
+
+                            {/* Team color bar */}
+                            <div style={{ width: '3px', height: '16px', background: teamColor, borderRadius: '1px' }} />
+
+                            {/* Driver name */}
+                            <div style={{ fontWeight: 600, fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {d.name_acronym || d.driver_number}
+                            </div>
+
+                            {/* Gap */}
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: gapVal === 0 || gapVal == null ? 'var(--text-muted)' : 'var(--text-secondary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                {d.position === 1 ? '—' : fmtGap(gapVal)}
+                            </div>
+
+                            {/* Tyre badge + age */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: tyreColor, color: tyreTxtColor, fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    {compound[0]}
+                                </div>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                                    {d.tyre_age ?? d.lap_in_stint ?? 0}
+                                </span>
+                            </div>
+
+                            {/* Current lap */}
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-tertiary)', textAlign: 'center' }}>
+                                {d.current_lap || 0}
+                            </div>
+
+                            {/* In-pit dot */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {d.in_pit && <div className="in-pit-dot" />}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+// =============================================================================
+// Race Control Panel
+// =============================================================================
+
+interface RaceControlProps {
+    messages: Array<{ message: string; flag?: string | null; lap_number?: number | null }>;
+}
+
+const RaceControlPanel: FC<RaceControlProps> = ({ messages }) => (
+    <div style={{ height: '108px', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', flexShrink: 0 }}>
+        <div style={{ height: '22px', display: 'flex', alignItems: 'center', padding: '0 8px', background: 'var(--bg-tertiary)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Race Control</span>
+        </div>
+        <div style={{ overflow: 'auto', height: 'calc(100% - 22px)', padding: '4px 8px' }}>
+            {messages && messages.length > 0 ? (
+                [...messages].reverse().slice(0, 8).map((msg, i) => (
+                    <div key={i} style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.4, padding: '1px 0', borderBottom: i < 7 ? '1px solid rgba(255,255,255,0.025)' : 'none' }}>
+                        {msg.lap_number != null && (
+                            <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginRight: '6px', fontSize: '0.65rem' }}>
+                                L{msg.lap_number}
+                            </span>
+                        )}
+                        {msg.message}
+                    </div>
+                ))
+            ) : (
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', padding: '4px 0' }}>No messages</div>
+            )}
+        </div>
+    </div>
+);
+
+// =============================================================================
+// Telemetry HUD Strip
+// =============================================================================
+
+interface TelemetryHUDProps {
+    driver: DriverState | null;
+    sectorBests: { s1: number; s2: number; s3: number };
+}
+
+const TelemetryHUD: FC<TelemetryHUDProps> = ({ driver, sectorBests }) => {
+    if (!driver) return (
+        <div style={{ height: '56px', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }} />
+    );
+
+    const thr = Math.min(100, Math.max(0, (driver.throttle || 0) * 100));
+    const brk = Math.min(100, Math.max(0, (driver.brake || 0) * 100));
+    const drsActive = [10, 12, 14].includes(driver.drs || 0);
+    const drsAvail = driver.drs === 8;
+
+    const sectorDelta = (val: number | null | undefined, best: number): { delta: string; cls: string } => {
+        if (!val || !isFinite(best)) return { delta: '—', cls: 'no-data' };
+        const diff = val - best;
+        if (Math.abs(diff) < 0.001) return { delta: fmtLap(val), cls: 'faster' };
+        return {
+            delta: `${diff > 0 ? '+' : ''}${diff.toFixed(3)}`,
+            cls: diff < 0 ? 'faster' : diff < 0.3 ? 'slower' : 'much-slower'
+        };
+    };
+
+    const s1 = sectorDelta(driver.sector_1, sectorBests.s1);
+    const s2 = sectorDelta(driver.sector_2, sectorBests.s2);
+    const s3 = sectorDelta(driver.sector_3, sectorBests.s3);
+
+    return (
+        <div style={{ height: '56px', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', padding: '0 10px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '14px', overflow: 'hidden' }}>
+            {/* Driver name */}
+            <div style={{ fontWeight: 600, fontSize: '0.78rem', color: 'var(--text-secondary)', flexShrink: 0, fontFamily: 'var(--font-mono)' }}>
+                {driver.name_acronym}
+            </div>
+
+            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+
+            {/* Speed */}
+            <div className="speed-readout" style={{ flexShrink: 0 }}>
+                <span className="speed-value" style={{ fontSize: '1.3rem' }}>{Math.round(driver.speed || 0)}</span>
+                <span className="speed-unit">km/h</span>
+            </div>
+
+            {/* Gear */}
+            <div style={{ flexShrink: 0, textAlign: 'center' }}>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>G</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1rem', color: 'var(--color-info)', lineHeight: 1 }}>
+                    {driver.gear || '—'}
+                </div>
+            </div>
+
+            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+
+            {/* Throttle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0 }}>THR</span>
+                <div className="h-bar-track" style={{ flex: 1 }}>
+                    <div className="h-bar-fill throttle" style={{ width: `${thr}%` }} />
+                </div>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', flexShrink: 0, minWidth: '26px', textAlign: 'right' }}>{Math.round(thr)}%</span>
+            </div>
+
+            {/* Brake */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0 }}>BRK</span>
+                <div className="h-bar-track" style={{ flex: 1 }}>
+                    <div className="h-bar-fill brake" style={{ width: `${brk}%` }} />
+                </div>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', flexShrink: 0, minWidth: '26px', textAlign: 'right' }}>{Math.round(brk)}%</span>
+            </div>
+
+            {/* DRS */}
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: drsActive ? 'var(--status-green)' : drsAvail ? 'var(--status-amber)' : 'var(--text-muted)' }} />
+                <span style={{ fontSize: '0.6rem', color: drsActive ? 'var(--status-green)' : drsAvail ? 'var(--status-amber)' : 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                    {drsActive ? 'DRS' : drsAvail ? 'AVAIL' : 'DRS'}
+                </span>
+            </div>
+
+            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+
+            {/* Sector deltas */}
+            <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                {[['S1', s1], ['S2', s2], ['S3', s3]].map(([label, sec]) => {
+                    const { delta, cls } = sec as { delta: string; cls: string };
+                    return (
+                        <div key={label as string} style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label as string}</div>
+                            <div className={`sector-delta ${cls}`} style={{ fontSize: '0.68rem' }}>{delta}</div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

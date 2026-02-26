@@ -56,8 +56,8 @@ function formatDegSlope(slope: number | undefined): DegradationDisplay {
     const text = `${(slope * 1000).toFixed(0)}ms`;
     let color = 'var(--status-green)';
 
-    if (slope > 0.05) color = 'var(--status-yellow)';
-    if (slope > 0.08) color = 'var(--accent-orange)';
+    if (slope > 0.05) color = 'var(--status-amber)';
+    if (slope > 0.08) color = 'var(--color-orange)';
     if (slope > 0.10) color = 'var(--status-red)';
 
     return { text, color };
@@ -75,7 +75,7 @@ function formatCliffRisk(risk: number | undefined): CliffRiskDisplay | null {
     const width = Math.min(100, Math.round(risk * 100));
     let color = 'var(--status-green)';
 
-    if (risk > 0.5) color = 'var(--status-yellow)';
+    if (risk > 0.5) color = 'var(--status-amber)';
     if (risk > 0.8) color = 'var(--status-red)';
 
     return { width, color };
@@ -245,7 +245,7 @@ const DriverRow: FC<DriverRowProps> = ({ driver, index, fastestLapTime, isSelect
             </td>
             <td className="gap-cell">
                 {driver.position === 1 ? (
-                    <span style={{ color: 'var(--accent-cyan)' }}>LEADER</span>
+                    <span style={{ color: 'var(--color-info)' }}>LEADER</span>
                 ) : (
                     formatGap(driver.gap_to_leader)
                 )}
@@ -259,7 +259,7 @@ const DriverRow: FC<DriverRowProps> = ({ driver, index, fastestLapTime, isSelect
                     <span className="tyre-age">L{driver.lap_in_stint || driver.tyre_age || 0}</span>
                 </div>
             </td>
-            <td style={{ fontFamily: 'var(--font-display)', fontSize: '0.8rem', color: deg.color }}>{deg.text}</td>
+            <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: deg.color }}>{deg.text}</td>
             <td className="lap-time-cell" style={{ opacity: 0.8 }}>
                 -
             </td>
@@ -345,7 +345,7 @@ const CompactTable: FC<CompactTableProps> = ({ drivers, selectedDriver, onDriver
                                                 backgroundColor: `#${driver.team_colour || 'FFFFFF'}`,
                                             }}
                                         />
-                                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.8rem', fontWeight: 500 }}>
+                                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 500 }}>
                                             {driver.name_acronym || `#${driver.driver_number}`}
                                         </span>
                                     </div>
@@ -355,7 +355,7 @@ const CompactTable: FC<CompactTableProps> = ({ drivers, selectedDriver, onDriver
                                         fontSize: '0.75rem',
                                         color:
                                             driver.position === 1
-                                                ? 'var(--accent-cyan)'
+                                                ? 'var(--color-info)'
                                                 : driver.position === 0
                                                     ? 'var(--text-muted)'
                                                     : 'var(--text-secondary)',
@@ -366,8 +366,8 @@ const CompactTable: FC<CompactTableProps> = ({ drivers, selectedDriver, onDriver
                                 <td
                                     style={{
                                         fontSize: '0.75rem',
-                                        fontFamily: 'var(--font-display)',
-                                        color: driver.speed > 300 ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                                        fontFamily: 'var(--font-mono)',
+                                        color: driver.speed > 300 ? 'var(--color-info)' : 'var(--text-secondary)',
                                     }}
                                 >
                                     {driver.speed ? Math.round(driver.speed) : '-'}

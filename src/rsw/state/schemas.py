@@ -81,6 +81,10 @@ class DriverState(BaseModel):
     x: float | None = None
     y: float | None = None
 
+    # Fuel load
+    fuel_remaining_kg: float = 0.0
+    fuel_laps_remaining: int = 0
+
     # Last update timestamp
     last_update: datetime | None = None
 

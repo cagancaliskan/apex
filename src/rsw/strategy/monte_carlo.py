@@ -55,6 +55,66 @@ class RaceScenario:
     rain_probability: float = 0.0
 
 
+# Historical average SC rates per circuit (fraction of races with ≥1 SC)
+CIRCUIT_SC_RATES: dict[str, float] = {
+    "monaco": 0.45,
+    "jeddah": 0.40,
+    "baku": 0.42,
+    "singapore": 0.38,
+    "albert_park": 0.35,
+    "montreal": 0.35,
+    "interlagos": 0.33,
+    "spa": 0.30,
+    "silverstone": 0.28,
+    "monza": 0.28,
+    "cota": 0.25,
+    "bahrain": 0.22,
+    "suzuka": 0.25,
+    "hungaroring": 0.18,
+    "barcelona": 0.20,
+    "spielberg": 0.22,
+    "zandvoort": 0.25,
+    "yas_marina": 0.20,
+}
+
+
+def get_circuit_sc_probability(
+    circuit_key: str | None = None,
+    current_lap: int = 1,
+    total_laps: int = 50,
+    is_wet: bool = False,
+) -> float:
+    """
+    Get lap-dependent SC probability for a circuit.
+
+    Higher on lap 1-3 (start incidents), spikes in wet weather,
+    and uses circuit-specific historical base rates.
+
+    Returns per-lap probability suitable for use in sampling.
+    """
+    # Base rate from circuit history or global average
+    base = CIRCUIT_SC_RATES.get((circuit_key or "").lower(), 0.25)
+
+    # Convert race-level probability to per-lap probability
+    # P(SC on any lap) = 1 - (1 - p_lap)^n → p_lap ≈ 1 - (1-base)^(1/n)
+    if total_laps > 0:
+        per_lap = 1.0 - (1.0 - base) ** (1.0 / total_laps)
+    else:
+        per_lap = 0.005
+
+    # Lap-dependent modifiers
+    if current_lap <= 3:
+        per_lap *= 3.0  # Start incidents
+    elif current_lap <= 5:
+        per_lap *= 1.5
+
+    # Wet weather increases SC significantly
+    if is_wet:
+        per_lap *= 2.5
+
+    return min(0.15, per_lap)  # Cap at 15% per lap
+
+
 def sample_safety_car(
     remaining_laps: int,
     base_probability: float = 0.3,
@@ -153,7 +213,7 @@ def simulate_single_race(
         time = 0.0
         c_deg = deg
 
-        # Random pit lap for competitor
+        # Random pit lap for competitor — use informed window if available
         c_pit_lap = (
             random.randint(remaining_laps // 3, remaining_laps * 2 // 3)
             if remaining_laps > 15

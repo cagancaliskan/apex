@@ -150,3 +150,52 @@ def format_strategy_summary(rec: StrategyRecommendation) -> dict:
         },
         "pit_to": rec.pit_decision.compound_to if rec.pit_decision else None,
     }
+
+
+def format_explainability_payload(
+    rec: StrategyRecommendation,
+    driver_number: int,
+    current_lap: int,
+    total_laps: int,
+    current_position: int,
+    deg_slope: float,
+    cliff_risk: float,
+    current_pace: float,
+    tyre_age: int,
+    compound: str,
+    pit_loss: float,
+    gap_to_ahead: float | None = None,
+    gap_to_behind: float | None = None,
+    safety_car: bool = False,
+    cliff_age: int | None = None,
+) -> dict:
+    """
+    Generate complete explainability payload for the frontend.
+
+    Combines strategy summary with sensitivity analysis and factor ranking.
+    """
+    from .sensitivity import SensitivityAnalyzer
+
+    analyzer = SensitivityAnalyzer()
+    sensitivity_result = analyzer.analyze(
+        driver_number=driver_number,
+        current_lap=current_lap,
+        total_laps=total_laps,
+        current_position=current_position,
+        deg_slope=deg_slope,
+        cliff_risk=cliff_risk,
+        current_pace=current_pace,
+        tyre_age=tyre_age,
+        compound=compound,
+        pit_loss=pit_loss,
+        gap_to_ahead=gap_to_ahead,
+        gap_to_behind=gap_to_behind,
+        safety_car=safety_car,
+        cliff_age=cliff_age,
+    )
+
+    return {
+        "strategy": format_strategy_summary(rec),
+        "explanation": explain_recommendation(rec),
+        **sensitivity_result.to_dict(),
+    }

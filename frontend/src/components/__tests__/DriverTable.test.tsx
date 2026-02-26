@@ -54,6 +54,12 @@ const mockDriver = (overrides: Partial<DriverState> = {}): DriverState => ({
     predicted_pace: [],
     predicted_rejoin_position: 0,
     rejoin_traffic_severity: 0.0,
+    in_pit: false,
+    retired: false,
+    stint_number: 1,
+    fuel_remaining_kg: 50,
+    fuel_laps_remaining: 29,
+    model_confidence: 0.7,
     ...overrides,
 });
 

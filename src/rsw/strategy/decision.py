@@ -70,6 +70,9 @@ def evaluate_strategy(
     ahead_deg: float = 0.05,
     behind_deg: float = 0.05,
     safety_car: bool = False,
+    cliff_age: int | None = None,
+    rain_expected: bool = False,
+    rain_laps_away: int | None = None,
 ) -> StrategyRecommendation:
     """
     Evaluate strategy and generate recommendation.
@@ -90,6 +93,9 @@ def evaluate_strategy(
         ahead_deg: Car ahead's degradation
         behind_deg: Car behind's degradation
         safety_car: Is safety car out
+        cliff_age: Lap where cliff is expected
+        rain_expected: Is rain forecast during remaining laps
+        rain_laps_away: Estimated laps until rain arrives
 
     Returns:
         StrategyRecommendation
@@ -106,6 +112,7 @@ def evaluate_strategy(
         tyre_age=tyre_age,
         compound=compound,
         cliff_risk=cliff_risk,
+        cliff_age=cliff_age,
     )
 
     # Check if we should pit now
@@ -143,11 +150,32 @@ def evaluate_strategy(
             pit_loss=pit_loss,
         )
 
+    # --- Weather integration ---
+    # If rain is expected and we're on slicks, recommend early pit for inters
+    weather_override = False
+    if rain_expected and compound.upper() not in ("INTERMEDIATE", "WET"):
+        if rain_laps_away is not None and rain_laps_away <= 5:
+            # Rain imminent — pit now for intermediates
+            weather_override = True
+            should_pit = True
+            pit_confidence = 0.90
+            pit_reason = f"Rain expected in ~{rain_laps_away} laps — switch to intermediates"
+        elif rain_laps_away is not None and rain_laps_away <= 10:
+            # Rain approaching — strengthen pit recommendation
+            if not should_pit:
+                should_pit = True
+                pit_confidence = 0.70
+                pit_reason = f"Rain forecast in ~{rain_laps_away} laps — consider early pit"
+
     # Determine recommendation type
     if safety_car and window.min_lap <= current_lap <= window.max_lap:
         rec_type = RecommendationType.PIT_NOW
         confidence = 0.95
         reason = "Safety car - free pit stop opportunity"
+    elif weather_override:
+        rec_type = RecommendationType.PIT_NOW
+        confidence = pit_confidence
+        reason = pit_reason
     elif should_pit:
         if pit_confidence > 0.7:
             rec_type = RecommendationType.PIT_NOW
@@ -167,8 +195,10 @@ def evaluate_strategy(
     # Build pit decision if pitting
     pit_decision = None
     if rec_type in (RecommendationType.PIT_NOW, RecommendationType.CONSIDER_PIT):
-        # Recommend compound based on remaining laps
-        if remaining_laps > 30:
+        # Recommend compound based on conditions
+        if weather_override or (rain_expected and rain_laps_away and rain_laps_away <= 5):
+            new_compound = "INTERMEDIATE"
+        elif remaining_laps > 30:
             new_compound = "MEDIUM" if compound == "SOFT" else "HARD"
         elif remaining_laps > 15:
             new_compound = "MEDIUM"
@@ -189,6 +219,8 @@ def evaluate_strategy(
         alternatives.append(f"Pit on lap {window.ideal_lap} for optimal timing")
     elif rec_type == RecommendationType.PIT_NOW:
         alternatives.append(f"Extend stint to lap {window.max_lap} if needed")
+    if rain_expected and not weather_override:
+        alternatives.append("Monitor weather — rain may change strategy")
 
     return StrategyRecommendation(
         driver_number=driver_number,

@@ -63,3 +63,6 @@ logs/
 
 # FastF1 cache
 ff1_cache/
+
+# Claude AI agent files
+.claude/

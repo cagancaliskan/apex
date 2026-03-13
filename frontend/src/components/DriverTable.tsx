@@ -215,7 +215,7 @@ const DriverRow: FC<DriverRowProps> = ({ driver, index, fastestLapTime, isSelect
     };
 
     return (
-        <tr onClick={() => onSelect?.(driver)} style={rowStyle} className={isSelected ? 'selected' : ''}>
+        <tr onClick={() => onSelect?.(driver)} style={rowStyle}>
             <td className={styles.positionCell}>{driver.position}</td>
             <td>
                 <div className={styles.driverCell}>

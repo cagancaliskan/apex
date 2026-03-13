@@ -89,7 +89,7 @@
 }
 
 .telemetryCell {
-  /* base cell for telemetry columns */
+    /* Semantic hook for telemetry column cells — no visual properties; used for specificity targeting */
 }
 
 .miniDrs {

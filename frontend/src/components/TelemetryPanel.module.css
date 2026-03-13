@@ -17,6 +17,8 @@
   50% { filter: brightness(1.2); }
 }
 
+/* Note: speedReadout/hBar classes are intentionally duplicated from LiveDashboard.module.css.
+   Each component owns its own copy — no shared module to avoid adding scope creep. */
 /* Speed readout */
 .speedReadout {
   display: flex;

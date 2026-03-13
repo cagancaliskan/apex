@@ -10,15 +10,6 @@
   height: auto;
 }
 
-.trackMap .carMarker {
-  cursor: pointer;
-  transition: transform 0.1s ease;
-  will-change: transform;
-}
-
-.trackMap .carMarker:hover {
-  transform: scale(1.15);
-}
 
 @media (max-width: 1200px) {
   .trackMap { min-width: 240px; }

@@ -74,6 +74,15 @@ interface RaceStore {
     // Sessions list
     availableSessions: Session[];
 
+    // Recent pit stops
+    recentPits: Array<{
+        driver_number: number;
+        lap_number: number;
+        pit_duration: number | null;
+        compound: string | null;
+        timestamp: string;
+    }>;
+
     // Alerts
     alerts: Alert[];
     addAlert: (type: AlertType, message: string) => void;
@@ -120,6 +129,13 @@ const initialState = {
     isSimulationRunning: false,
     availableSessions: [],
     alerts: [] as Alert[],
+    recentPits: [] as Array<{
+        driver_number: number;
+        lap_number: number;
+        pit_duration: number | null;
+        compound: string | null;
+        timestamp: string;
+    }>,
 };
 
 // =============================================================================
@@ -157,6 +173,7 @@ export const useRaceStore = create<RaceStore>()(
                 if (state.track_status !== undefined) updates.trackStatus = state.track_status as string;
                 if (state.race_control_messages !== undefined) updates.raceControlMessages = state.race_control_messages;
                 if (state.track_config !== undefined) updates.trackConfig = state.track_config as TrackConfig | null;
+                if (state.recent_pits !== undefined) updates.recentPits = state.recent_pits ?? [];
 
                 if (state.drivers) {
                     // Backend sends drivers as an array; convert to Record keyed by driver_number

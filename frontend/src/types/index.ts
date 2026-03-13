@@ -169,7 +169,13 @@ export interface RaceState {
 
     // Messages
     race_control_messages: RaceMessage[];
-    recent_pits?: Array<{ lap: number; driver: number }>;
+    recent_pits?: Array<{
+        driver_number: number;
+        lap_number: number;
+        pit_duration: number | null;
+        compound: string | null;
+        timestamp: string;
+    }>;
 }
 
 // =============================================================================

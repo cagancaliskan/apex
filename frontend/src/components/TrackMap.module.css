@@ -1,0 +1,29 @@
+/* TrackMap component-scoped styles */
+
+.trackMap {
+  min-width: 280px;
+  overflow: hidden;
+}
+
+.trackMap svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.trackMap .carMarker {
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  will-change: transform;
+}
+
+.trackMap .carMarker:hover {
+  transform: scale(1.15);
+}
+
+@media (max-width: 1200px) {
+  .trackMap { min-width: 240px; }
+}
+
+@media (max-width: 900px) {
+  .trackMap svg { max-height: 200px; }
+}

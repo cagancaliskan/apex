@@ -826,11 +826,6 @@ h4 { font-size: 1rem; }
   overflow: hidden;
 }
 
-/* Alert banner spans all 3 columns */
-.dashboard-grid .alert-banner-row {
-  grid-column: 1 / -1;
-}
-
 /* Dashboard columns */
 .col-leaderboard {
   display: flex;

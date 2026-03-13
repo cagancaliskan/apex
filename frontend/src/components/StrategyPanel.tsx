@@ -13,6 +13,7 @@ import type { DriverState } from '../types';
 import ExplainabilityPanel from './ExplainabilityPanel';
 import PitRejoinVisualizer from './PitRejoinVisualizer';
 import { useRaceStore } from '../store/raceStore';
+import styles from './StrategyPanel.module.css';
 
 // =============================================================================
 // Types
@@ -79,8 +80,8 @@ const TYRE_TEXT: Record<string, string> = {
 // =============================================================================
 
 const Section: FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-    <div className="strategy-section">
-        <div className="strategy-section-label">{label}</div>
+    <div className={styles.strategySection}>
+        <div className={styles.sectionLabel}>{label}</div>
         {children}
     </div>
 );

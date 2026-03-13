@@ -1,0 +1,19 @@
+/* StrategyPanel component-scoped styles */
+
+.strategySection {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.strategySection:last-child {
+  border-bottom: none;
+}
+
+.sectionLabel {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}

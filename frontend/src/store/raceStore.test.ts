@@ -38,4 +38,8 @@ describe('raceStore — alert slice', () => {
         useRaceStore.getState().reset();
         expect(useRaceStore.getState().alerts).toHaveLength(0);
     });
+
+    // Note: the 5-alert cap (slice(0, 5)) cannot be easily tested synchronously
+    // because there are only 4 AlertType values and deduplication within 30s
+    // prevents adding more than 4 alerts in a single test run without mocking Date.now.
 });

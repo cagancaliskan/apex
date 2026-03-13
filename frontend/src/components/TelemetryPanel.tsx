@@ -10,6 +10,7 @@
 
 import type { FC } from 'react';
 import type { DriverState } from '../types';
+import styles from './TelemetryPanel.module.css';
 
 // =============================================================================
 // Types
@@ -39,7 +40,7 @@ const DRSIndicator: FC<DRSIndicatorProps> = ({ status, size = 'medium' }) => {
     const label = isActive ? 'DRS' : isAvailable ? 'AVAIL' : 'DRS';
 
     return (
-        <div className="drs-indicator" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <div className={styles.drsIndicator} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <div style={{ width: dotSize, height: dotSize, borderRadius: '50%', background: color }} />
             <span style={{ fontSize: textSize, color, fontWeight: 600, letterSpacing: '0.05em' }}>{label}</span>
         </div>
@@ -58,8 +59,8 @@ const HBar: FC<HBarProps> = ({ value, color, label }) => {
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, minWidth: '26px', letterSpacing: '0.04em' }}>{label}</span>
-            <div className="h-bar-track" style={{ flex: 1 }}>
-                <div className="h-bar-fill" style={{ width: `${pct}%`, background: color }} />
+            <div className={styles.hBarTrack} style={{ flex: 1 }}>
+                <div className={styles.hBarFill} style={{ width: `${pct}%`, background: color }} />
             </div>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', minWidth: '32px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                 {Math.round(pct)}%
@@ -75,7 +76,7 @@ const HBar: FC<HBarProps> = ({ value, color, label }) => {
 const TelemetryPanel: FC<TelemetryPanelProps> = ({ driver, compact = false }) => {
     if (!driver) {
         return (
-            <div className="telemetry-panel card" style={{ padding: 'var(--space-md)', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            <div className={`${styles.telemetryPanel} card`} style={{ padding: 'var(--space-md)', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                 Select a driver to view telemetry
             </div>
         );
@@ -104,7 +105,7 @@ const TelemetryPanel: FC<TelemetryPanelProps> = ({ driver, compact = false }) =>
     }
 
     return (
-        <div className="telemetry-panel card" style={{ padding: 'var(--space-md)' }}>
+        <div className={`${styles.telemetryPanel} card`} style={{ padding: 'var(--space-md)' }}>
             {/* Driver header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div style={{ width: 3, height: 22, background: teamColor, borderRadius: 2, flexShrink: 0 }} />
@@ -117,9 +118,9 @@ const TelemetryPanel: FC<TelemetryPanelProps> = ({ driver, compact = false }) =>
 
             {/* Speed + Gear row */}
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: '20px', marginBottom: '12px' }}>
-                <div className="speed-readout">
-                    <span className="speed-value">{Math.round(speed)}</span>
-                    <span className="speed-unit">km/h</span>
+                <div className={styles.speedReadout}>
+                    <span className={styles.speedValue}>{Math.round(speed)}</span>
+                    <span className={styles.speedUnit}>km/h</span>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gear</div>

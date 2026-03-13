@@ -9,6 +9,7 @@
 
 import { useMemo, type FC } from 'react';
 import type { DriverState } from '../types';
+import styles from './TelemetryChart.module.css';
 
 // =============================================================================
 // Types
@@ -131,7 +132,7 @@ const Chart: FC<ChartProps> = ({ data, xKey, yKey, label, unit, color, height = 
     }, [yMin, yMax, height]);
 
     return (
-        <div className="telemetry-chart" style={{ marginBottom: 'var(--space-sm)' }}>
+        <div className={styles.telemetryChart} style={{ marginBottom: 'var(--space-sm)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>{label}</span>
                 <span style={{ fontSize: '0.7rem', color: color, fontFamily: 'var(--font-display)' }}>
@@ -161,7 +162,7 @@ const ComparisonChart: FC<ComparisonChartProps> = ({ driver1Data, driver2Data, x
     const path2 = useMemo(() => generatePath(driver2Data, xKey, yKey, width, height, yMin, yMax, padding), [driver2Data, xKey, yKey, height, yMin, yMax]);
 
     return (
-        <div className="comparison-chart" style={{ marginBottom: 'var(--space-sm)' }}>
+        <div className={styles.comparisonChart} style={{ marginBottom: 'var(--space-sm)' }}>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: 4, display: 'block' }}>{label}</span>
             <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
                 <rect x={padding.left} y={padding.top} width={width - padding.left - padding.right} height={height - padding.top - padding.bottom} fill="rgba(0,0,0,0.2)" rx={4} />
@@ -180,7 +181,7 @@ const ThrottleBrakeChart: FC<ThrottleBrakeChartProps> = ({ data, height = 60 }) 
     const brakePath = useMemo(() => generatePath(data, 'distance', 'brake', width, height, 0, 100, padding), [data, height]);
 
     return (
-        <div className="throttle-brake-chart">
+        <div className={styles.throttleBrakeChart}>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: 4, display: 'block' }}>Throttle / Brake</span>
             <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
                 <rect x={padding.left} y={padding.top} width={width - padding.left - padding.right} height={height - padding.top - padding.bottom} fill="rgba(0,0,0,0.2)" rx={4} />
@@ -216,14 +217,14 @@ const TelemetryChart: FC<TelemetryChartProps> = ({
 
     if (!driver && displayData.length === 0) {
         return (
-            <div className="telemetry-chart-panel card" style={{ padding: 'var(--space-lg)', textAlign: 'center' }}>
+            <div className={`${styles.telemetryChartPanel} card`} style={{ padding: 'var(--space-lg)', textAlign: 'center' }}>
                 <span className="text-muted" style={{ fontSize: '0.75rem' }}>Select a driver to view telemetry</span>
             </div>
         );
     }
 
     return (
-        <div className="telemetry-chart-panel card card-glow">
+        <div className={`${styles.telemetryChartPanel} card card-glow`}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)', paddingBottom: 'var(--space-sm)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
                     <div style={{ width: 4, height: 20, backgroundColor: driverColor, borderRadius: 2 }} />

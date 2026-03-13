@@ -1,0 +1,30 @@
+/* TelemetryChart component-scoped styles */
+
+.telemetryChartPanel {
+  min-width: 320px;
+}
+
+.telemetryChart {
+  /* wrapper for each individual chart */
+}
+
+.telemetryChart svg {
+  display: block;
+  width: 100%;
+}
+
+.telemetryChart path {
+  vector-effect: non-scaling-stroke;
+}
+
+.comparisonChart {
+  /* wrapper for comparison view */
+}
+
+.throttleBrakeChart {
+  /* wrapper for throttle/brake overlay chart */
+}
+
+@media (max-width: 1200px) {
+  .telemetryChartPanel { min-width: 280px; }
+}

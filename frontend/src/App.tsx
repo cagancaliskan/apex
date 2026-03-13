@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, type FC } from 'react';
+import styles from './App.module.css';
 import LiveDashboard from './pages/LiveDashboard';
 import ReplayPage from './pages/ReplayPage';
 import BacktestPage from './pages/BacktestPage';
@@ -201,7 +202,7 @@ const App: FC = () => {
     return (
         <div className="app-container">
             {/* Status Bar */}
-            <div className="status-bar">
+            <div className={styles.statusBar}>
                 <span className={`connection-dot ${connectionStatus}`} />
                 <span className="status-sep">│</span>
                 <span className="status-item primary">{displayName}</span>
@@ -274,33 +275,33 @@ const App: FC = () => {
             </div>
 
             {/* Tab Bar */}
-            <nav className="tab-bar">
-                <button className={`tab-btn${currentPage === 'live' ? ' active' : ''}`} onClick={() => setCurrentPage('live')}>
+            <nav className={styles.tabBar}>
+                <button className={`${styles.tabBtn}${currentPage === 'live' ? ` ${styles.tabBtnActive}` : ''}`} onClick={() => setCurrentPage('live')}>
                     Live
                 </button>
-                <button className={`tab-btn${currentPage === 'replay' ? ' active' : ''}`} onClick={() => setCurrentPage('replay')}>
+                <button className={`${styles.tabBtn}${currentPage === 'replay' ? ` ${styles.tabBtnActive}` : ''}`} onClick={() => setCurrentPage('replay')}>
                     Replay
                 </button>
-                <button className={`tab-btn${currentPage === 'backtest' ? ' active' : ''}`} onClick={() => setCurrentPage('backtest')}>
+                <button className={`${styles.tabBtn}${currentPage === 'backtest' ? ` ${styles.tabBtnActive}` : ''}`} onClick={() => setCurrentPage('backtest')}>
                     Backtest
                 </button>
             </nav>
 
             {/* Alert Strip */}
             {alerts.length > 0 && (
-                <div className="alert-strip">
+                <div className={styles.alertStrip}>
                     {alerts.map(a => (
-                        <div key={a.id} className={`alert-row alert-${a.type.toLowerCase()}`}>
-                            <span className="alert-badge">{a.type}</span>
-                            <span className="alert-msg">{a.message}</span>
-                            <button className="alert-dismiss" onClick={() => dismissAlert(a.id)}>×</button>
+                        <div key={a.id} className={styles.alertRow} data-alert-type={a.type.toLowerCase()}>
+                            <span className={styles.alertBadge}>{a.type}</span>
+                            <span className={styles.alertMsg}>{a.message}</span>
+                            <button className={styles.alertDismiss} onClick={() => dismissAlert(a.id)}>×</button>
                         </div>
                     ))}
                 </div>
             )}
 
             {/* Main Content */}
-            <main className="main-content">
+            <main className={styles.mainContent}>
                 {currentPage === 'replay' ? (
                     <ReplayPage />
                 ) : currentPage === 'backtest' ? (
@@ -320,8 +321,8 @@ const App: FC = () => {
             {/* Session Drawer */}
             {drawerOpen && (
                 <>
-                    <div className="session-drawer-overlay" onClick={() => setDrawerOpen(false)} />
-                    <div className="session-drawer">
+                    <div className={styles.sessionDrawerOverlay} onClick={() => setDrawerOpen(false)} />
+                    <div className={styles.sessionDrawer}>
                         <div className="session-drawer-header">
                             <span>Sessions</span>
                             <button onClick={() => setDrawerOpen(false)}>×</button>

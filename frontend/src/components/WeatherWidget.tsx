@@ -9,6 +9,7 @@
 
 import { useMemo, type FC } from 'react';
 import styles from './WeatherWidget.module.css';
+// WeatherWidget uses the global 'card' class from index.css for base card appearance
 
 // =============================================================================
 // Types

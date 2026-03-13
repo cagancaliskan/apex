@@ -8,6 +8,7 @@
  */
 
 import { useMemo, useState, useRef, useCallback, type FC, type MouseEvent } from 'react';
+import styles from './RaceProgressBar.module.css';
 
 // =============================================================================
 // Types
@@ -138,7 +139,7 @@ const RaceProgressBar: FC<RaceProgressBarProps> = ({
     const lapMarkers = useMemo(() => !showLapMarkers || totalLaps === 0 ? [] : Array.from({ length: totalLaps }, (_, i) => ({ lap: i + 1, position: ((i + 1) / totalLaps) * 100 })), [showLapMarkers, totalLaps]);
 
     return (
-        <div className="race-progress-bar-container" style={{ padding: '24px 16px 8px' }}>
+        <div className={styles.raceProgressBarContainer} style={{ padding: '24px 16px 8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Race Progress</span>
                 <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-display)', color: 'var(--text-secondary)' }}>
@@ -147,7 +148,7 @@ const RaceProgressBar: FC<RaceProgressBarProps> = ({
                 </span>
             </div>
 
-            <div ref={barRef} className="race-progress-bar" style={{ position: 'relative', height: 20, backgroundColor: 'var(--bg-tertiary)', borderRadius: 10, overflow: 'visible', cursor: onSeek ? 'pointer' : 'default' }} onMouseMove={handleMouseMove} onMouseDown={(e) => { setIsDragging(true); handleSeek(e); }} onMouseUp={() => setIsDragging(false)} onMouseLeave={() => { setHoveredPosition(null); setIsDragging(false); }}>
+            <div ref={barRef} className={styles.raceProgressBar} style={{ position: 'relative', height: 20, backgroundColor: 'var(--bg-tertiary)', borderRadius: 10, overflow: 'visible', cursor: onSeek ? 'pointer' : 'default' }} onMouseMove={handleMouseMove} onMouseDown={(e) => { setIsDragging(true); handleSeek(e); }} onMouseUp={() => setIsDragging(false)} onMouseLeave={() => { setHoveredPosition(null); setIsDragging(false); }}>
                 {lapMarkers.map(({ lap, position }) => <LapMarker key={lap} position={position} lapNumber={lap} totalLaps={totalLaps} />)}
                 {flagPeriods.map((period, index) => <FlagPeriod key={index} {...period} />)}
                 <div className="progress-fill" style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${progress}%`, background: 'linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta))', borderRadius: 10, transition: isDragging ? 'none' : 'width 0.3s ease', zIndex: 2 }} />

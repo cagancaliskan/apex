@@ -13,6 +13,43 @@
     white-space: nowrap;
     overflow: hidden;
     z-index: 100;
+    height: var(--status-bar-height);
+}
+
+/* Status bar child elements */
+.statusSep {
+    color: var(--text-muted);
+    opacity: 0.4;
+    flex-shrink: 0;
+}
+
+.statusItem {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.statusItemPrimary {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.statusSpacer {
+    flex: 1;
+}
+
+.menuBtn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0 4px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.menuBtn:hover {
+    color: var(--text-primary);
 }
 
 /* Tab bar — page navigation */
@@ -67,6 +104,7 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    flex-shrink: 0;
 }
 
 .alertRow {
@@ -80,6 +118,22 @@
     border-left: 3px solid transparent;
 }
 
+.alertRow[data-alert-type="flag"],
+.alertRow[data-alert-type="sc"] {
+    background: rgba(210, 153, 34, 0.12);
+    border-left: 3px solid var(--status-amber);
+}
+
+.alertRow[data-alert-type="pit_now"] {
+    background: rgba(225, 6, 0, 0.12);
+    border-left: 3px solid var(--color-accent);
+}
+
+.alertRow[data-alert-type="threat"] {
+    background: rgba(255, 107, 0, 0.10);
+    border-left: 3px solid var(--status-amber);
+}
+
 .alertBadge {
     display: inline-flex;
     align-items: center;
@@ -89,8 +143,8 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    background: currentColor;
-    color: var(--bg-primary);
+    background: var(--color-accent);
+    color: #fff;
     flex-shrink: 0;
 }
 
@@ -137,6 +191,8 @@
     flex-direction: column;
     animation: slideInLeft 0.15s ease;
     overflow: hidden;
+    padding: 12px;
+    gap: 12px;
 }
 
 @keyframes slideInLeft {

@@ -15,6 +15,7 @@
 
 import { useRef, useEffect, useMemo, useCallback, useState, type FC, type CSSProperties } from 'react';
 import type { DriverState, TrackConfig, TrackBounds, DRSZone, TrackPoint, TrackStatus } from '../types';
+import styles from './TrackMap.module.css';
 
 // =============================================================================
 // Types
@@ -295,7 +296,7 @@ const TrackMap: FC<TrackMapProps> = ({
         return (
             <div
                 ref={containerRef}
-                className="track-map card"
+                className={`${styles.trackMap} card`}
                 style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading track geometry...</div>
@@ -308,7 +309,7 @@ const TrackMap: FC<TrackMapProps> = ({
         return (
             <div
                 ref={containerRef}
-                className="track-map card"
+                className={`${styles.trackMap} card`}
                 style={{
                     height: '100%',
                     display: 'flex',
@@ -348,7 +349,7 @@ const TrackMap: FC<TrackMapProps> = ({
     };
 
     return (
-        <div ref={containerRef} className="track-map card" style={containerStyle}>
+        <div ref={containerRef} className={`${styles.trackMap} card`} style={containerStyle}>
             {/* Header */}
             <div style={headerStyle}>
                 <span

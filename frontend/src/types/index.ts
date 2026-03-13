@@ -51,21 +51,21 @@ export interface DriverState {
     stint_start_lap: number;
 
     // Strategy metrics
-    deg_slope: number;
-    cliff_risk: number;
-    pit_window_min: number;
-    pit_window_max: number;
-    pit_window_ideal: number;
+    deg_slope: number | null;
+    cliff_risk: number | null;
+    pit_window_min: number | null;
+    pit_window_max: number | null;
+    pit_window_ideal: number | null;
     pit_recommendation: string;
-    pit_confidence: number;
+    pit_confidence: number | null;
     pit_reason: string;
     undercut_threat: boolean;
     overcut_opportunity: boolean;
 
     // Physics Predictions
     predicted_pace: number[];
-    predicted_rejoin_position: number;
-    rejoin_traffic_severity: number;
+    predicted_rejoin_position: number | null;
+    rejoin_traffic_severity: number | null;
 
     // Status flags
     in_pit: boolean;
@@ -73,9 +73,9 @@ export interface DriverState {
     stint_number: number;
 
     // Physics & ML
-    fuel_remaining_kg: number;
-    fuel_laps_remaining: number;
-    model_confidence: number;
+    fuel_remaining_kg: number | null;
+    fuel_laps_remaining: number | null;
+    model_confidence: number | null;
 }
 
 // =============================================================================
@@ -169,7 +169,13 @@ export interface RaceState {
 
     // Messages
     race_control_messages: RaceMessage[];
-    recent_pits?: Array<{ lap: number; driver: number }>;
+    recent_pits?: Array<{
+        driver_number: number;
+        lap_number: number;
+        pit_duration: number | null;
+        compound: string | null;
+        timestamp: string;
+    }>;
 }
 
 // =============================================================================

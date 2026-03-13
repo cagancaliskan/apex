@@ -11,6 +11,9 @@
 import { useMemo, useState, type FC } from 'react';
 import type { DriverState } from '../types';
 import ExplainabilityPanel from './ExplainabilityPanel';
+import PitRejoinVisualizer from './PitRejoinVisualizer';
+import { useRaceStore } from '../store/raceStore';
+import styles from './StrategyPanel.module.css';
 
 // =============================================================================
 // Types
@@ -40,7 +43,7 @@ interface RecommendationStyle {
 function getRecStyle(rec: RecommendationType | undefined): RecommendationStyle {
     switch (rec) {
         case 'PIT_NOW':
-            return { bg: 'rgba(248, 81, 73, 0.12)', border: 'var(--status-red)', text: 'PIT NOW', color: 'var(--status-red)' };
+            return { bg: 'rgba(225, 6, 0, 0.12)', border: 'var(--color-accent)', text: 'PIT NOW', color: 'var(--color-accent)' };
         case 'CONSIDER_PIT':
             return { bg: 'rgba(210, 153, 34, 0.12)', border: 'var(--status-amber)', text: 'CONSIDER PIT', color: 'var(--status-amber)' };
         case 'EXTEND_STINT':
@@ -59,7 +62,7 @@ function getDegColor(slope: number | undefined): string {
 
 function getCliffColor(risk: number | undefined): string {
     if (!risk) return 'var(--status-green)';
-    if (risk > 0.7) return 'var(--status-red)';
+    if (risk > 0.8) return 'var(--color-accent)';
     if (risk > 0.4) return 'var(--status-amber)';
     return 'var(--status-green)';
 }
@@ -77,8 +80,8 @@ const TYRE_TEXT: Record<string, string> = {
 // =============================================================================
 
 const Section: FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-    <div className="strategy-section">
-        <div className="strategy-section-label">{label}</div>
+    <div className={styles.strategySection}>
+        <div className={styles.sectionLabel}>{label}</div>
         {children}
     </div>
 );
@@ -99,8 +102,8 @@ const CompactStrategy: FC<{ driver: DriverState }> = ({ driver }) => {
                 <span style={{ fontWeight: 700, color: rec.color, fontSize: '0.8rem' }}>{rec.text}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', fontSize: '0.68rem', fontFamily: 'var(--font-mono)' }}>
-                <div><span style={{ color: 'var(--text-muted)' }}>Deg </span><span style={{ color: getDegColor(driver.deg_slope) }}>{((driver.deg_slope || 0) * 1000).toFixed(0)}ms</span></div>
-                <div><span style={{ color: 'var(--text-muted)' }}>Cliff </span><span style={{ color: getCliffColor(driver.cliff_risk) }}>{Math.round((driver.cliff_risk || 0) * 100)}%</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Deg </span><span style={{ color: getDegColor(driver.deg_slope ?? undefined) }}>{((driver.deg_slope || 0) * 1000).toFixed(0)}ms</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Cliff </span><span style={{ color: getCliffColor(driver.cliff_risk ?? undefined) }}>{Math.round((driver.cliff_risk || 0) * 100)}%</span></div>
                 <div><span style={{ color: 'var(--text-muted)' }}>Win </span><span>L{driver.pit_window_ideal || '—'}</span></div>
                 <div><span style={{ color: 'var(--text-muted)' }}>Fuel </span><span>{(driver.fuel_remaining_kg || 0).toFixed(1)}kg</span></div>
             </div>
@@ -113,6 +116,11 @@ const CompactStrategy: FC<{ driver: DriverState }> = ({ driver }) => {
 // =============================================================================
 
 const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compact = false, currentLap = 0, totalLaps }) => {
+    const sortedDrivers = useRaceStore(s => s.sortedDrivers);
+    const recentPits = useRaceStore(s => s.recentPits);
+    const storeCurrentLap = useRaceStore(s => s.currentLap);
+    const effectiveLap = currentLap || storeCurrentLap;
+
     const driver = useMemo((): DriverState | null => {
         if (!drivers || drivers.length === 0) return null;
         if (selectedDriver) {
@@ -141,14 +149,14 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
 
     // Pit window bar positioning (% of totalLaps)
     const lapTotal = totalLaps || 60;
-    const winMin = driver.pit_window_min || 0;
-    const winMax = driver.pit_window_max || 0;
-    const winIdeal = driver.pit_window_ideal || 0;
-    const hasPitWindow = winMin > 0 && winMax > 0;
+    const winMin = driver.pit_window_min ?? 0;
+    const winMax = driver.pit_window_max ?? null;
+    const winIdeal = driver.pit_window_ideal ?? null;
+    const hasPitWindow = driver.pit_window_min != null && driver.pit_window_min > 0;
     const minPct = hasPitWindow ? Math.max(0, Math.min(100, (winMin / lapTotal) * 100)) : 0;
-    const maxPct = hasPitWindow ? Math.max(0, Math.min(100, (winMax / lapTotal) * 100)) : 0;
-    const idealPct = hasPitWindow ? Math.max(0, Math.min(100, (winIdeal / lapTotal) * 100)) : 0;
-    const currentPct = Math.max(0, Math.min(100, (currentLap / lapTotal) * 100));
+    const maxPct = hasPitWindow && winMax != null ? Math.max(0, Math.min(100, (winMax / lapTotal) * 100)) : minPct;
+    const idealPct = hasPitWindow && winIdeal != null ? Math.max(0, Math.min(100, (winIdeal / lapTotal) * 100)) : minPct;
+    const currentPct = Math.max(0, Math.min(100, (effectiveLap / lapTotal) * 100));
 
     // 5-lap predicted pace sparkline (simple inline SVG)
     const pace = driver.predicted_pace || [];
@@ -184,7 +192,18 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                 {/* Recommendation */}
                 <Section label="Recommendation">
                     <div style={{ padding: '6px 8px', background: rec.bg, borderLeft: `3px solid ${rec.border}`, borderRadius: '2px', marginBottom: '4px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: rec.color, letterSpacing: '0.04em' }}>{rec.text}</div>
+                        <div style={{
+                            fontWeight: 700,
+                            fontSize: driver.pit_recommendation === 'PIT_NOW' ? '0.7rem' : '0.9rem',
+                            letterSpacing: driver.pit_recommendation === 'PIT_NOW' ? '0.08em' : '0.04em',
+                            fontFamily: driver.pit_recommendation === 'PIT_NOW' ? "'Orbitron', sans-serif" : 'inherit',
+                            textTransform: 'uppercase' as const,
+                            padding: driver.pit_recommendation === 'PIT_NOW' ? '2px 6px' : undefined,
+                            borderRadius: driver.pit_recommendation === 'PIT_NOW' ? 'var(--radius-sm)' : undefined,
+                            backgroundColor: driver.pit_recommendation === 'PIT_NOW' ? 'var(--color-accent)' : undefined,
+                            color: driver.pit_recommendation === 'PIT_NOW' ? '#fff' : rec.color,
+                            display: 'inline-block',
+                        }}>{rec.text}</div>
                         {driver.pit_reason && (
                             <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{driver.pit_reason}</div>
                         )}
@@ -225,20 +244,20 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                     {hasPitWindow ? (
                         <>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>MIN L{winMin}</span>
-                                <span style={{ color: 'var(--color-info)', fontWeight: 700 }}>IDEAL L{winIdeal}</span>
-                                <span style={{ color: 'var(--text-muted)' }}>MAX L{winMax}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>L{winMin}</span>
+                                <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>IDEAL L{winIdeal}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>L{winMax ?? winIdeal ?? '?'}</span>
                             </div>
                             <div style={{ position: 'relative', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'visible' }}>
                                 {/* Window range */}
                                 <div style={{ position: 'absolute', top: 0, left: `${minPct}%`, width: `${maxPct - minPct}%`, height: '100%', background: 'rgba(88,166,255,0.2)', borderRadius: '4px' }} />
                                 {/* Ideal marker */}
-                                <div style={{ position: 'absolute', top: '-1px', left: `${idealPct}%`, width: '2px', height: '10px', background: 'var(--color-info)', transform: 'translateX(-50%)', borderRadius: '1px' }} />
+                                <div style={{ position: 'absolute', top: '-1px', left: `${idealPct}%`, width: '2px', height: '10px', background: 'var(--color-accent)', transform: 'translateX(-50%)', borderRadius: '1px' }} />
                                 {/* Current lap */}
                                 <div style={{ position: 'absolute', top: '-2px', left: `${currentPct}%`, width: '3px', height: '12px', background: 'var(--text-secondary)', transform: 'translateX(-50%)', borderRadius: '1px' }} />
                             </div>
                             <div style={{ marginTop: '4px', fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                                L{currentLap} of {lapTotal} — {currentLap < winMin ? `Opens in ${winMin - currentLap}L` : currentLap <= winMax ? 'WINDOW OPEN' : 'Window closed'}
+                                {winIdeal != null ? `Ideal: L${winIdeal}` : ''}
                             </div>
                         </>
                     ) : (
@@ -269,7 +288,7 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                         <div>
                             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginBottom: '2px' }}>DEG RATE</div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 700, color: getDegColor(driver.deg_slope) }}>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 700, color: getDegColor(driver.deg_slope ?? undefined) }}>
                                 {((driver.deg_slope || 0) * 1000).toFixed(0)} ms/L
                             </div>
                         </div>
@@ -277,11 +296,23 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginBottom: '2px' }}>CLIFF RISK</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
-                                    <div style={{ height: '100%', width: `${Math.round((driver.cliff_risk || 0) * 100)}%`, background: getCliffColor(driver.cliff_risk), borderRadius: '2px' }} />
+                                    <div style={{ height: '100%', width: `${Math.round((driver.cliff_risk || 0) * 100)}%`, background: getCliffColor(driver.cliff_risk ?? undefined), borderRadius: '2px' }} />
                                 </div>
-                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: getCliffColor(driver.cliff_risk) }}>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: getCliffColor(driver.cliff_risk ?? undefined) }}>
                                     {Math.round((driver.cliff_risk || 0) * 100)}%
                                 </span>
+                                {(driver.cliff_risk ?? 0) > 0.8 && (
+                                    <span style={{
+                                        fontFamily: "'Orbitron', sans-serif",
+                                        fontSize: '0.65rem',
+                                        fontWeight: 700,
+                                        color: 'var(--color-accent)',
+                                        letterSpacing: '0.1em',
+                                        marginLeft: '6px',
+                                    }}>
+                                        CLIFF
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -324,21 +355,42 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                     </div>
                 </Section>
 
-                {/* Rejoin */}
-                {(driver.predicted_rejoin_position || 0) > 0 && (
-                    <Section label="Predicted Rejoin">
-                        <div style={{ display: 'flex', gap: '16px', fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
-                            <div>
-                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '2px' }}>POSITION</div>
-                                <div style={{ fontWeight: 700 }}>P{driver.predicted_rejoin_position}</div>
+                {/* Rejoin Visualizer — shown when driver is in pit window or pitting */}
+                {((effectiveLap >= (driver.pit_window_min ?? 0) &&
+                   effectiveLap <= (driver.pit_window_max ?? 0) &&
+                   (driver.pit_window_min ?? 0) > 0) ||
+                  driver.in_pit === true) && (
+                    <PitRejoinVisualizer
+                        driver={driver}
+                        allDrivers={sortedDrivers}
+                    />
+                )}
+
+                {/* Pit History Strip */}
+                {recentPits.length > 0 && (
+                    <Section label="RECENT PITS">
+                        {recentPits.slice(0, 3).map((pit) => (
+                            <div key={`${pit.driver_number}-${pit.lap_number}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', padding: '2px 0', color: 'var(--text-secondary)' }}>
+                                <span style={{ color: 'var(--text-primary)', minWidth: '28px' }}>#{pit.driver_number}</span>
+                                <span>L{pit.lap_number}</span>
+                                {pit.compound && (
+                                    <span style={{
+                                        width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                                        display: 'inline-block',
+                                        background: pit.compound === 'SOFT' ? 'var(--tyre-soft)'
+                                            : pit.compound === 'MEDIUM' ? 'var(--tyre-medium)'
+                                            : pit.compound === 'HARD' ? 'var(--tyre-hard)'
+                                            : pit.compound === 'INTERMEDIATE' ? 'var(--tyre-inter)'
+                                            : pit.compound === 'WET' ? 'var(--tyre-wet)'
+                                            : 'var(--text-muted)',
+                                    }} />
+                                )}
+                                {pit.compound && <span style={{ fontSize: '0.7rem', textTransform: 'uppercase' as const }}>{pit.compound.slice(0, 1)}</span>}
+                                {pit.pit_duration != null && (
+                                    <span style={{ color: 'var(--text-muted)', marginLeft: 'auto' }}>{pit.pit_duration.toFixed(1)}s</span>
+                                )}
                             </div>
-                            <div>
-                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '2px' }}>TRAFFIC</div>
-                                <div style={{ color: (driver.rejoin_traffic_severity || 0) > 0.6 ? 'var(--status-red)' : (driver.rejoin_traffic_severity || 0) > 0.3 ? 'var(--status-amber)' : 'var(--status-green)' }}>
-                                    {(driver.rejoin_traffic_severity || 0) > 0.6 ? 'HIGH' : (driver.rejoin_traffic_severity || 0) > 0.3 ? 'MED' : 'LOW'}
-                                </div>
-                            </div>
-                        </div>
+                        ))}
                     </Section>
                 )}
             </div>

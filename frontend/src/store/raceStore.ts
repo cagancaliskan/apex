@@ -18,6 +18,19 @@ import type {
 } from '../types';
 
 // =============================================================================
+// Alert Types
+// =============================================================================
+
+export type AlertType = 'FLAG' | 'SC' | 'PIT_NOW' | 'THREAT';
+
+export interface Alert {
+    id: string;
+    type: AlertType;
+    message: string;
+    ts: number;
+}
+
+// =============================================================================
 // Store State Interface
 // =============================================================================
 
@@ -61,6 +74,20 @@ interface RaceStore {
     // Sessions list
     availableSessions: Session[];
 
+    // Recent pit stops
+    recentPits: Array<{
+        driver_number: number;
+        lap_number: number;
+        pit_duration: number | null;
+        compound: string | null;
+        timestamp: string;
+    }>;
+
+    // Alerts
+    alerts: Alert[];
+    addAlert: (type: AlertType, message: string) => void;
+    dismissAlert: (id: string) => void;
+
     // Actions
     setConnected: (connected: boolean) => void;
     setConnectionError: (error: string | null) => void;
@@ -101,6 +128,14 @@ const initialState = {
     simulationSpeed: 1 as SimulationSpeed,
     isSimulationRunning: false,
     availableSessions: [],
+    alerts: [] as Alert[],
+    recentPits: [] as Array<{
+        driver_number: number;
+        lap_number: number;
+        pit_duration: number | null;
+        compound: string | null;
+        timestamp: string;
+    }>,
 };
 
 // =============================================================================
@@ -138,6 +173,7 @@ export const useRaceStore = create<RaceStore>()(
                 if (state.track_status !== undefined) updates.trackStatus = state.track_status as string;
                 if (state.race_control_messages !== undefined) updates.raceControlMessages = state.race_control_messages;
                 if (state.track_config !== undefined) updates.trackConfig = state.track_config as TrackConfig | null;
+                if (state.recent_pits !== undefined) updates.recentPits = state.recent_pits ?? [];
 
                 if (state.drivers) {
                     // Backend sends drivers as an array; convert to Record keyed by driver_number
@@ -190,6 +226,22 @@ export const useRaceStore = create<RaceStore>()(
 
             // Sessions
             setSessions: (sessions) => set({ availableSessions: sessions }),
+
+            // Alert actions
+            addAlert: (type, message) => {
+                const now = Date.now();
+                const id = `${type}-${now}`;
+                set(state => {
+                    const recent = state.alerts.find(a => a.type === type && now - a.ts < 30000);
+                    if (recent) return {};
+                    const newAlert: Alert = { id, type, message, ts: now };
+                    return { alerts: [newAlert, ...state.alerts].slice(0, 5) };
+                });
+            },
+
+            dismissAlert: (id) => {
+                set(state => ({ alerts: state.alerts.filter(a => a.id !== id) }));
+            },
 
             // Reset
             reset: () => set(initialState),

@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, type FC } from 'react';
+import styles from './App.module.css';
 import LiveDashboard from './pages/LiveDashboard';
 import ReplayPage from './pages/ReplayPage';
 import BacktestPage from './pages/BacktestPage';
@@ -71,6 +72,8 @@ const App: FC = () => {
     const updateState = useRaceStore(s => s.updateState);
     const setConnected = useRaceStore(s => s.setConnected);
     const setSimulationRunning = useRaceStore(s => s.setSimulationRunning);
+    const alerts = useRaceStore(s => s.alerts);
+    const dismissAlert = useRaceStore(s => s.dismissAlert);
 
     // Display values from store
     const trackName = useRaceStore(s => s.trackName);
@@ -199,46 +202,46 @@ const App: FC = () => {
     return (
         <div className="app-container">
             {/* Status Bar */}
-            <div className="status-bar">
+            <div className={styles.statusBar}>
                 <span className={`connection-dot ${connectionStatus}`} />
-                <span className="status-sep">│</span>
-                <span className="status-item primary">{displayName}</span>
+                <span className={styles.statusSep}>│</span>
+                <span className={styles.statusItemPrimary}>{displayName}</span>
                 {sessionLabel && (
                     <>
-                        <span className="status-sep">│</span>
-                        <span className="status-item">{sessionLabel}</span>
+                        <span className={styles.statusSep}>│</span>
+                        <span className={styles.statusItem}>{sessionLabel}</span>
                     </>
                 )}
                 {currentLap > 0 && (
                     <>
-                        <span className="status-sep">│</span>
-                        <span className="status-item">
+                        <span className={styles.statusSep}>│</span>
+                        <span className={styles.statusItem}>
                             LAP <span style={{ color: 'var(--color-info)', fontWeight: 700 }}>{currentLap}</span>
                             <span style={{ color: 'var(--text-muted)' }}>/{totalLaps ?? '—'}</span>
                         </span>
                     </>
                 )}
-                <span className="status-sep">│</span>
-                <span className="status-item">
+                <span className={styles.statusSep}>│</span>
+                <span className={styles.statusItem}>
                     <span className={`flag-dot ${flagClass}`} />
                     {flagLabel}
                 </span>
                 {weather && (
                     <>
-                        <span className="status-sep">│</span>
-                        <span className="status-item">
+                        <span className={styles.statusSep}>│</span>
+                        <span className={styles.statusItem}>
                             {Math.round(weather.air_temp ?? 0)}°C
                             <span style={{ color: 'var(--text-muted)', marginLeft: '4px' }}>{Math.round(weather.humidity ?? 0)}%H</span>
                             {weather.is_raining && <span style={{ color: 'var(--color-info)', marginLeft: '4px' }}>Rain</span>}
                         </span>
                     </>
                 )}
-                <span className="status-spacer" />
+                <span className={styles.statusSpacer} />
 
                 {/* Speed Controls */}
                 {isPolling && (
                     <>
-                        <span className="status-sep">│</span>
+                        <span className={styles.statusSep}>│</span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                             <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '2px' }}>Speed</span>
                             {[1, 2, 5, 10, 20].map(s => (
@@ -266,26 +269,39 @@ const App: FC = () => {
                     </>
                 )}
 
-                <button className="menu-btn" onClick={() => setDrawerOpen(true)} title="Sessions">
+                <button className={styles.menuBtn} onClick={() => setDrawerOpen(true)} title="Sessions">
                     ≡
                 </button>
             </div>
 
             {/* Tab Bar */}
-            <nav className="tab-bar">
-                <button className={`tab-btn${currentPage === 'live' ? ' active' : ''}`} onClick={() => setCurrentPage('live')}>
+            <nav className={styles.tabBar}>
+                <button className={`${styles.tabBtn}${currentPage === 'live' ? ` ${styles.tabBtnActive}` : ''}`} onClick={() => setCurrentPage('live')}>
                     Live
                 </button>
-                <button className={`tab-btn${currentPage === 'replay' ? ' active' : ''}`} onClick={() => setCurrentPage('replay')}>
+                <button className={`${styles.tabBtn}${currentPage === 'replay' ? ` ${styles.tabBtnActive}` : ''}`} onClick={() => setCurrentPage('replay')}>
                     Replay
                 </button>
-                <button className={`tab-btn${currentPage === 'backtest' ? ' active' : ''}`} onClick={() => setCurrentPage('backtest')}>
+                <button className={`${styles.tabBtn}${currentPage === 'backtest' ? ` ${styles.tabBtnActive}` : ''}`} onClick={() => setCurrentPage('backtest')}>
                     Backtest
                 </button>
             </nav>
 
+            {/* Alert Strip */}
+            {alerts.length > 0 && (
+                <div className={styles.alertStrip}>
+                    {alerts.map(a => (
+                        <div key={a.id} className={styles.alertRow} data-alert-type={a.type.toLowerCase()}>
+                            <span className={styles.alertBadge}>{a.type}</span>
+                            <span className={styles.alertMsg}>{a.message}</span>
+                            <button className={styles.alertDismiss} onClick={() => dismissAlert(a.id)}>×</button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Main Content */}
-            <main className="main-content">
+            <main className={styles.mainContent}>
                 {currentPage === 'replay' ? (
                     <ReplayPage />
                 ) : currentPage === 'backtest' ? (
@@ -305,8 +321,8 @@ const App: FC = () => {
             {/* Session Drawer */}
             {drawerOpen && (
                 <>
-                    <div className="session-drawer-overlay" onClick={() => setDrawerOpen(false)} />
-                    <div className="session-drawer">
+                    <div className={styles.sessionDrawerOverlay} onClick={() => setDrawerOpen(false)} />
+                    <div className={styles.sessionDrawer}>
                         <div className="session-drawer-header">
                             <span>Sessions</span>
                             <button onClick={() => setDrawerOpen(false)}>×</button>

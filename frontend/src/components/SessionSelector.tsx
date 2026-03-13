@@ -7,6 +7,7 @@
  */
 
 import type { FC } from 'react';
+import styles from './SessionSelector.module.css';
 
 // =============================================================================
 // Types
@@ -55,15 +56,15 @@ const SessionSelector: FC<SessionSelectorProps> = ({ sessions, selectedSession, 
     }
 
     return (
-        <div className="session-selector">
+        <div className={styles.sessionSelector}>
             {sortedSessions.slice(0, 10).map((session) => (
                 <div
                     key={session.session_key}
-                    className={`session-option ${selectedSession?.session_key === session.session_key ? 'active' : ''}`}
+                    className={`${styles.sessionOption} ${selectedSession?.session_key === session.session_key ? styles.active : ''}`}
                     onClick={() => onSelect(session)}
                 >
-                    <div className="session-name">{session.circuit}</div>
-                    <div className="session-details">
+                    <div className={styles.sessionName}>{session.circuit}</div>
+                    <div className={styles.sessionDetails}>
                         {session.country} • {new Date(session.date).toLocaleDateString()}
                     </div>
                 </div>

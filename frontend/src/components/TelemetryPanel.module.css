@@ -1,0 +1,67 @@
+/* TelemetryPanel component-scoped styles */
+
+.telemetryPanel {
+  min-width: 320px;
+}
+
+.drsIndicator {
+  /* base container — actual state colors applied inline */
+}
+
+.drsIndicator.active {
+  animation: drsPulse 0.8s ease-in-out infinite;
+}
+
+@keyframes drsPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+}
+
+/* Note: speedReadout/hBar classes are intentionally duplicated from LiveDashboard.module.css.
+   Each component owns its own copy — no shared module to avoid adding scope creep. */
+/* Speed readout */
+.speedReadout {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.speedValue {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.speedUnit {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Horizontal telemetry bars */
+.hBarTrack {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.hBarFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 80ms linear;
+}
+
+.hBarFill.throttle {
+  background: var(--status-green);
+}
+
+.hBarFill.brake {
+  background: var(--status-red);
+}

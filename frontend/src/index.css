@@ -4,15 +4,20 @@
 
 /* CSS Variables - Design System (v7 professional ATLAS/TCDS inspired) */
 :root {
-  /* Background colors */
-  --bg-primary: #0d1117;
-  --bg-secondary: #161b22;
-  --bg-tertiary: #1c2128;
-  --bg-card: #161b22;
-  --bg-card-hover: #1c2128;
+  /* Background colors — deeper blacks */
+  --bg-primary: #08090b;
+  --bg-secondary: #0f1117;
+  --bg-tertiary: #161b22;
+  --bg-card: #0f1117;
+  --bg-card-hover: #161b22;
+
+  /* NEW: F1 red accent — for PIT_NOW badges, CLIFF label, primary interactive */
+  --color-accent: #e10600;
+
+  /* Info/blue — demoted to informational only */
+  --color-info: #3b82f6;
 
   /* Status & semantic colors (professional palette) */
-  --color-info: #58a6ff;
   --color-purple: #a371f7;
   --status-green: #3fb950;
   --status-amber: #d29922;
@@ -30,10 +35,13 @@
   --font-display: var(--font-sans);
 
   /* Text colors */
-  --text-primary: #ffffff;
-  --text-secondary: #8b949e;
+  --text-primary: #f0f0f0;
+  --text-secondary: #6b7280;
   --text-tertiary: #6e7681;
   --text-muted: #484f58;
+
+  /* NEW: border color — replaces rgba(255,255,255,0.06) literals throughout */
+  --border-color: #1f2937;
 
   /* Tyre compound colors (unchanged from F1 spec) */
   --tyre-soft: #ff0000;
@@ -42,15 +50,15 @@
   --tyre-inter: #39d353;
   --tyre-wet: #0080ff;
 
-  /* Layout dimensions */
+  /* Layout dimensions — density improvements */
   --sidebar-width: 48px;
   --topbar-height: 44px;
-  --status-bar-height: 32px;
-  --tab-bar-height: 28px;
+  --status-bar-height: 28px;   /* was 32px */
+  --tab-bar-height: 24px;      /* was 28px */
   --panel-header: 32px;
-  --row-height: 28px;
-  --leaderboard-width: 320px;
-  --strategy-width: 360px;
+  --row-height: 26px;          /* was 28px */
+  --leaderboard-width: 300px;  /* was 320px */
+  --strategy-width: 340px;     /* was 360px */
 
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -106,9 +114,8 @@ body {
   overflow: hidden;
 }
 
-/* Stub classes — referenced in legacy components, kept harmless */
-.card-glow { /* no glow in v7 */ }
-.text-gradient { color: var(--color-info); }
+/* Stub class — referenced in MetricCard and TelemetryChart */
+.card-glow { /* no visual glow in v7 */ }
 
 /* ============================================================================
    Layout Components
@@ -117,64 +124,9 @@ body {
 /* New app shell: status bar + tab bar + content */
 .app-container {
   display: grid;
-  grid-template-rows: var(--status-bar-height) var(--tab-bar-height) 1fr;
+  grid-template-rows: var(--status-bar-height) var(--tab-bar-height) auto 1fr;
   height: 100vh;
   overflow: hidden;
-}
-
-/* Status bar — single-line dense session info */
-.status-bar {
-  background: var(--bg-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  gap: 12px;
-  font-size: 0.78rem;
-  font-family: var(--font-mono);
-  white-space: nowrap;
-  overflow: hidden;
-  z-index: 100;
-}
-
-.status-bar .status-sep {
-  color: rgba(255, 255, 255, 0.15);
-  flex-shrink: 0;
-}
-
-.status-bar .status-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-.status-bar .status-item.primary {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.status-bar .status-spacer {
-  flex: 1;
-}
-
-.status-bar .menu-btn {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  font-size: 1rem;
-  line-height: 1;
-  transition: color var(--transition-fast), background var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.status-bar .menu-btn:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Flag indicator dot */
@@ -190,83 +142,12 @@ body {
 .flag-dot.sc { background: var(--status-amber); }
 .flag-dot.vsc { background: var(--status-amber); }
 
-/* Tab bar — page navigation */
-.tab-bar {
-  background: var(--bg-primary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  align-items: stretch;
-  padding: 0 12px;
-  gap: 2px;
-  z-index: 90;
-}
-
-.tab-btn {
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  padding: 0 14px;
-  font-family: var(--font-sans);
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  transition: color var(--transition-fast), border-color var(--transition-fast);
-  margin-bottom: -1px;
-}
-
-.tab-btn:hover {
-  color: var(--text-secondary);
-}
-
-.tab-btn.active {
-  color: var(--color-info);
-  border-bottom-color: var(--color-info);
-}
-
-/* Main content area */
-.main-content {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* Session drawer — slide-in overlay from left */
-.session-drawer-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 200;
-}
-
-.session-drawer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 280px;
-  background: var(--bg-secondary);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 201;
-  display: flex;
-  flex-direction: column;
-  animation: slideInLeft 0.15s ease;
-  overflow: hidden;
-}
-
-@keyframes slideInLeft {
-  from { transform: translateX(-100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
 .session-drawer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-color);
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -293,7 +174,7 @@ body {
 
 .session-drawer-active {
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-color);
   background: rgba(88, 166, 255, 0.06);
   flex-shrink: 0;
 }
@@ -314,7 +195,7 @@ body {
   display: flex;
   gap: 6px;
   padding: 8px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
@@ -333,80 +214,7 @@ body {
   padding: 6px 12px 4px;
 }
 
-/* Keep legacy sidebar classes for any remaining usage */
-.sidebar {
-  width: var(--sidebar-width);
-  background: var(--bg-secondary);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  z-index: 100;
-  padding: var(--space-sm);
-  gap: var(--space-md);
-}
-
-.sidebar-icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: color var(--transition-fast);
-  border-radius: var(--radius-sm);
-}
-
-.sidebar-icon:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.topbar {
-  height: var(--topbar-height);
-  background: var(--bg-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-md);
-  gap: var(--space-lg);
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
-
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  margin-left: auto;
-}
-
-.topbar-label {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-}
-
-.topbar-value {
-  font-family: var(--font-mono);
-  font-size: 0.92rem;
-  color: var(--text-primary);
-  font-weight: 600;
-}
+/* sidebar, topbar, topbar-left/right — used only by Sidebar.tsx and TopBar.tsx which are not imported in active pages; orphaned classes removed */
 
 /* ============================================================================
    Cards & Containers
@@ -414,7 +222,7 @@ body {
 
 .card {
   background: var(--bg-card);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   transition: background var(--transition-fast);
@@ -422,13 +230,6 @@ body {
 
 .card:hover {
   background: var(--bg-card-hover);
-}
-
-.card-glass {
-  background: rgba(22, 27, 34, 0.8);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* ============================================================================
@@ -452,135 +253,11 @@ h2 { font-size: 1.5rem; }
 h3 { font-size: 1.25rem; }
 h4 { font-size: 1rem; }
 
-.text-mono {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
+/* Metric Cards — migrated to MetricCard.module.css */
 
 /* ============================================================================
-   Metric Cards
+   Driver Table (Leaderboard) — migrated to DriverTable.module.css
    ============================================================================ */
-
-.metric-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  padding: var(--space-lg);
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.metric-card .label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.metric-card .value {
-  font-family: var(--font-mono);
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1;
-}
-
-.metric-card .value.info { color: var(--color-info); }
-.metric-card .value.green { color: var(--status-green); }
-.metric-card .value.amber { color: var(--status-amber); }
-.metric-card .value.red { color: var(--status-red); }
-
-.metric-card .delta {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.metric-card .delta.positive { color: var(--status-green); }
-.metric-card .delta.negative { color: var(--status-red); }
-
-/* ============================================================================
-   Driver Table (Leaderboard)
-   ============================================================================ */
-
-.driver-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 0.85rem;
-}
-
-.driver-table th {
-  padding: var(--space-sm);
-  text-align: left;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  position: sticky;
-  top: var(--topbar-height);
-  background: var(--bg-card);
-  z-index: 10;
-}
-
-.driver-table td {
-  padding: var(--space-sm);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  transition: background var(--transition-fast);
-}
-
-.driver-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.driver-table .position-cell {
-  width: 28px;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 0.9rem;
-  text-align: center;
-}
-
-.driver-table .driver-cell {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 120px;
-}
-
-.driver-table .team-color {
-  width: 4px;
-  height: 24px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.driver-table .driver-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.driver-table .driver-team {
-  font-size: 0.7rem;
-  color: var(--text-tertiary);
-}
-
-.driver-table .gap-cell {
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.driver-table .lap-time-cell {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.driver-table .lap-time-cell.best { color: var(--color-purple); }
-.driver-table .lap-time-cell.personal-best { color: var(--status-green); }
 
 /* Tyre compound badge */
 .tyre-badge {
@@ -693,119 +370,8 @@ h4 { font-size: 1rem; }
   color: var(--text-primary);
 }
 
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-}
-
-/* ============================================================================
-   Session Selector
-   ============================================================================ */
-
-.session-selector {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.session-option {
-  padding: var(--space-md);
-  background: var(--bg-tertiary);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.session-option:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--color-info);
-}
-
-.session-option.active {
-  border-color: var(--color-info);
-}
-
-.session-option .session-name {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.session-option .session-details {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  margin-top: var(--space-xs);
-}
-
-/* ============================================================================
-   Header
-   ============================================================================ */
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-lg);
-  background: var(--bg-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  margin-bottom: var(--space-xl);
-  border-radius: var(--radius-lg);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-lg);
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.session-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.session-info .circuit {
-  font-family: var(--font-sans);
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.session-info .session-type {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.lap-counter {
-  font-family: var(--font-mono);
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.lap-counter .current { color: var(--color-info); }
-.lap-counter .total { color: var(--text-tertiary); }
-
-/* ============================================================================
-   Grid Layouts
-   ============================================================================ */
-
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-md);
-  margin-bottom: var(--space-xl);
-}
+/* Session Selector — migrated to SessionSelector.module.css */
+/* btn-ghost, header, header-left/right, session-info, lap-counter, metrics-grid — orphaned, removed */
 
 /* 3-column professional dashboard layout */
 .dashboard-grid {
@@ -818,38 +384,9 @@ h4 { font-size: 1rem; }
   overflow: hidden;
 }
 
-/* Alert banner spans all 3 columns */
-.dashboard-grid .alert-banner-row {
-  grid-column: 1 / -1;
-}
-
-/* Dashboard columns */
-.col-leaderboard {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow: hidden;
-}
-
-.col-center {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow: hidden;
-}
-
-.col-strategy {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
 @media (max-width: 1400px) {
   .dashboard-grid {
     grid-template-columns: var(--leaderboard-width) 1fr;
-  }
-  .col-strategy {
-    display: none;
   }
 }
 
@@ -857,249 +394,18 @@ h4 { font-size: 1rem; }
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
-  .col-leaderboard {
-    display: none;
-  }
 }
 
-/* ============================================================================
-   Alert Banner
-   ============================================================================ */
-
-.alert-banner {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.alert-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 10px;
-  font-size: 0.78rem;
-  font-family: var(--font-mono);
-  border-radius: var(--radius-sm);
-  border-left: 3px solid transparent;
-}
-
-.alert-row.alert-flag,
-.alert-row.alert-sc {
-  background: rgba(210, 153, 34, 0.12);
-  border-left-color: var(--status-amber);
-  color: var(--status-amber);
-}
-
-.alert-row.alert-pit_now {
-  background: rgba(248, 81, 73, 0.12);
-  border-left-color: var(--status-red);
-  color: var(--status-red);
-}
-
-.alert-row.alert-threat {
-  background: rgba(255, 107, 0, 0.12);
-  border-left-color: var(--color-orange);
-  color: var(--color-orange);
-}
-
-.alert-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  border-radius: 2px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: currentColor;
-  color: var(--bg-primary);
-  flex-shrink: 0;
-}
-
-.alert-row .alert-msg {
-  flex: 1;
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-.alert-row .alert-dismiss {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0 4px;
-  font-size: 0.9rem;
-  line-height: 1;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.alert-row .alert-dismiss:hover {
-  color: var(--text-primary);
-}
-
-/* ============================================================================
-   Data Cells & Telemetry Typography
-   ============================================================================ */
-
-.data-cell {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.78rem;
-  text-align: right;
-  color: var(--text-secondary);
-}
-
-/* Small tyre badge (20px for compact leaderboard) */
-.tyre-badge-sm {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-full);
-  font-size: 0.6rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.tyre-badge-sm.soft { background: var(--tyre-soft); color: white; }
-.tyre-badge-sm.medium { background: var(--tyre-medium); color: black; }
-.tyre-badge-sm.hard { background: var(--tyre-hard); color: black; }
-.tyre-badge-sm.intermediate { background: var(--tyre-inter); color: black; }
-.tyre-badge-sm.wet { background: var(--tyre-wet); color: white; }
-
-/* Pit window bar */
-.pit-window-bar {
-  position: relative;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.pit-window-bar .pit-range {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  background: rgba(88, 166, 255, 0.25);
-  border-radius: 3px;
-}
-
-.pit-window-bar .pit-ideal {
-  position: absolute;
-  top: 0;
-  width: 2px;
-  height: 100%;
-  background: var(--color-info);
-}
-
-/* Speed readout (large number, replaces arc gauge) */
-.speed-readout {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.speed-readout .speed-value {
-  font-family: var(--font-mono);
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.speed-readout .speed-unit {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-/* Horizontal telemetry bars (replaces vertical bars) */
-.h-bar-track {
-  flex: 1;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.h-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 80ms linear;
-}
-
-.h-bar-fill.throttle { background: var(--status-green); }
-.h-bar-fill.brake { background: var(--status-red); }
-
-/* Sector delta in telemetry HUD */
-.sector-delta {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.sector-delta.faster { color: var(--status-green); }
-.sector-delta.slower { color: var(--status-amber); }
-.sector-delta.much-slower { color: var(--status-red); }
-.sector-delta.no-data { color: var(--text-muted); }
-
-/* Leaderboard row borders for urgency states */
-.lb-row-pit-now { border-left: 3px solid var(--status-red) !important; }
-.lb-row-window { border-left: 3px solid var(--status-amber) !important; }
-.lb-row-threat { border-left: 3px solid var(--color-orange) !important; }
-
-/* In-pit indicator dot */
-.in-pit-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.6);
-  flex-shrink: 0;
-}
-
-/* Strategy console sections */
-.strategy-section {
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.strategy-section:last-child {
-  border-bottom: none;
-}
-
-.strategy-section-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
+/* data-cell, tyre-badge-sm, pit-window-bar — orphaned, removed */
+/* Speed readout, h-bar, sector-delta, lb-row, in-pit-dot migrated to LiveDashboard.module.css */
+/* Strategy console sections — migrated to StrategyPanel.module.css */
 
 /* ============================================================================
    Animations (minimal, professional)
    ============================================================================ */
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.animate-fade-in { animation: fadeIn 0.2s ease forwards; }
-.animate-slide-in { animation: slideIn 0.2s ease forwards; }
+/* @keyframes slideIn and .animate-slide-in — orphaned, removed */
+/* .animate-fade-in migrated to ReplayPage.module.css */
 
 /* ============================================================================
    Scrollbar
@@ -1133,155 +439,5 @@ h4 { font-size: 1rem; }
 .mb-lg { margin-bottom: var(--space-lg); }
 .mb-xl { margin-bottom: var(--space-xl); }
 
-/* ============================================================================
-   Telemetry Panel
-   ============================================================================ */
-
-.telemetry-panel {
-  min-width: 320px;
-}
-
-.telemetry-panel .speed-gauge { flex-shrink: 0; }
-.telemetry-panel .gear-indicator { min-width: 60px; }
-.telemetry-panel .vertical-bar { flex-shrink: 0; }
-
-.drs-indicator.active {
-  animation: drs-pulse 0.8s ease-in-out infinite;
-}
-
-@keyframes drs-pulse {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.2); }
-}
-
-/* Mini telemetry (for driver table rows) */
-.mini-telemetry {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.mini-speed {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-  min-width: 48px;
-}
-
-.mini-gear {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-info);
-  min-width: 20px;
-  text-align: center;
-}
-
-.mini-drs {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.mini-drs.off { background: var(--text-muted); }
-.mini-drs.available { background: var(--status-amber); }
-.mini-drs.active { background: var(--status-green); }
-
-/* Mini throttle/brake bars */
-.mini-bars {
-  display: flex;
-  gap: 2px;
-  height: 16px;
-}
-
-.mini-bar {
-  width: 5px;
-  height: 100%;
-  background: var(--bg-tertiary);
-  border-radius: 2px;
-  overflow: hidden;
-  position: relative;
-}
-
-.mini-bar-fill {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  transition: height 0.1s ease;
-  border-radius: 2px;
-}
-
-.mini-bar-fill.throttle { background: var(--status-green); }
-.mini-bar-fill.brake { background: var(--status-red); }
-
-/* ============================================================================
-   Track Map
-   ============================================================================ */
-
-.track-map {
-  min-width: 280px;
-  overflow: hidden;
-}
-
-.track-map svg {
-  max-width: 100%;
-  height: auto;
-}
-
-.track-map .car-marker {
-  cursor: pointer;
-  transition: transform 0.1s ease;
-  will-change: transform;
-}
-
-.track-map .car-marker:hover { transform: scale(1.15); }
-
-/* ============================================================================
-   Telemetry Charts
-   ============================================================================ */
-
-.telemetry-chart-panel { min-width: 320px; }
-.telemetry-chart svg { display: block; width: 100%; }
-.telemetry-chart path { vector-effect: non-scaling-stroke; }
-
-/* ============================================================================
-   Race Progress Bar
-   ============================================================================ */
-
-.race-progress-bar-container {
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.race-progress-bar {
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-/* ============================================================================
-   Weather Widget
-   ============================================================================ */
-
-.weather-widget { min-width: 200px; }
-.weather-widget-compact { font-size: 0.85rem; }
-.weather-widget .temperature-display { transition: color 0.3s ease; }
-.weather-sunny { color: var(--status-amber); }
-.weather-cloudy { color: var(--text-secondary); }
-.weather-rain { color: var(--color-info); }
-
-/* ============================================================================
-   Responsive Adjustments
-   ============================================================================ */
-
-@media (max-width: 1200px) {
-  .track-map { min-width: 240px; }
-  .telemetry-chart-panel { min-width: 280px; }
-}
-
-@media (max-width: 900px) {
-  .track-map svg { max-height: 200px; }
-  .dashboard-grid { grid-template-columns: 1fr; }
-}
+/* Component-specific classes migrated to their respective .module.css files:
+   TelemetryPanel, DriverTable, TrackMap, TelemetryChart, RaceProgressBar, WeatherWidget */

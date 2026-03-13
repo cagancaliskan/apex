@@ -1,0 +1,201 @@
+/* App Shell — co-located CSS Module for App.tsx */
+
+/* Status bar — single-line dense session info */
+.statusBar {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 12px;
+    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    overflow: hidden;
+    z-index: 100;
+    height: var(--status-bar-height);
+}
+
+/* Status bar child elements */
+.statusSep {
+    color: var(--text-muted);
+    opacity: 0.4;
+    flex-shrink: 0;
+}
+
+.statusItem {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.statusItemPrimary {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.statusSpacer {
+    flex: 1;
+}
+
+.menuBtn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0 4px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.menuBtn:hover {
+    color: var(--text-primary);
+}
+
+/* Tab bar — page navigation */
+.tabBar {
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: stretch;
+    padding: 0 12px;
+    gap: 2px;
+    z-index: 90;
+}
+
+.tabBtn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 0 14px;
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: color var(--transition-fast), border-color var(--transition-fast);
+    margin-bottom: -1px;
+}
+
+.tabBtn:hover {
+    color: var(--text-secondary);
+}
+
+.tabBtnActive {
+    color: var(--color-info);
+    border-bottom-color: var(--color-info);
+}
+
+/* Main content area */
+.mainContent {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Alert strip */
+.alertStrip {
+    background: rgba(225, 6, 0, 0.08);
+    border-bottom: 1px solid var(--border-color);
+    padding: 2px 4px;
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.alertRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid transparent;
+}
+
+.alertRow[data-alert-type="flag"],
+.alertRow[data-alert-type="sc"] {
+    background: rgba(210, 153, 34, 0.12);
+    border-left: 3px solid var(--status-amber);
+}
+
+.alertRow[data-alert-type="pit_now"] {
+    background: rgba(225, 6, 0, 0.12);
+    border-left: 3px solid var(--color-accent);
+}
+
+.alertRow[data-alert-type="threat"] {
+    background: rgba(255, 107, 0, 0.10);
+    border-left: 3px solid var(--status-amber);
+}
+
+.alertBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--color-accent);
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.alertMsg {
+    flex: 1;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.alertDismiss {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0 4px;
+    font-size: 0.9rem;
+    line-height: 1;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.alertDismiss:hover {
+    color: var(--text-primary);
+}
+
+/* Session drawer — slide-in overlay from left */
+.sessionDrawerOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 200;
+}
+
+.sessionDrawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    z-index: 201;
+    display: flex;
+    flex-direction: column;
+    animation: slideInLeft 0.15s ease;
+    overflow: hidden;
+    padding: 12px;
+    gap: 12px;
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}

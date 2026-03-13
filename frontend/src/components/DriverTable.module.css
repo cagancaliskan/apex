@@ -1,0 +1,134 @@
+/* DriverTable component-scoped styles */
+
+.driverTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.85rem;
+}
+
+.driverTable th {
+  padding: var(--space-sm);
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: sticky;
+  top: var(--topbar-height);
+  background: var(--bg-card);
+  z-index: 10;
+}
+
+.driverTable td {
+  padding: var(--space-sm);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  transition: background var(--transition-fast);
+}
+
+.driverTable tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.positionCell {
+  width: 28px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.driverCell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 120px;
+}
+
+.teamColor {
+  width: 4px;
+  height: 24px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.driverName {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.driverTeam {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.gapCell {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.lapTimeCell {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.lapTimeCell.best { color: var(--color-purple); }
+.lapTimeCell.personalBest { color: var(--status-green); }
+
+.speedCell {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.gearCell {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.telemetryCell {
+    /* Semantic hook for telemetry column cells — no visual properties; used for specificity targeting */
+}
+
+.miniDrs {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.miniDrs.off { background: var(--text-muted); }
+.miniDrs.available { background: var(--status-amber); }
+.miniDrs.active { background: var(--status-green); }
+
+.miniBars {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+}
+
+.miniBar {
+  width: 5px;
+  height: 100%;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.miniBarFill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  transition: height 0.1s ease;
+  border-radius: 2px;
+}
+
+.miniBarFill.throttle { background: var(--status-green); }
+.miniBarFill.brake { background: var(--status-red); }
+
+/* Compact variant — no extra overrides needed beyond the base table rules */
+.compact { /* inherits .driverTable */ }

@@ -1,0 +1,41 @@
+.metricCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.value {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.value.info { color: var(--color-info); }
+.value.green { color: var(--status-green); }
+.value.amber { color: var(--status-amber); }
+.value.red { color: var(--status-red); }
+.value.cyan { color: var(--accent-cyan); }
+.value.orange { color: var(--accent-orange); }
+.value.purple { color: var(--accent-purple); }
+
+.delta {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.delta.positive { color: var(--status-green); }
+.delta.negative { color: var(--status-red); }

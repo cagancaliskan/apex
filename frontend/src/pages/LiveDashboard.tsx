@@ -8,11 +8,13 @@
  * @module pages/LiveDashboard
  */
 
-import { useState, useEffect, useRef, useMemo, useCallback, type FC } from 'react';
+import { useState, useEffect, useMemo, type FC } from 'react';
 import TrackMap from '../components/TrackMap';
 import StrategyPanel from '../components/StrategyPanel';
 import { useRaceStore } from '../store/raceStore';
+import { useAlerts } from '../hooks';
 import type { DriverState } from '../types';
+import styles from './LiveDashboard.module.css';
 
 // =============================================================================
 // Constants & Helpers
@@ -47,28 +49,15 @@ function fmtLap(t: number | undefined | null): string {
     return min > 0 ? `${min}:${sec.padStart(6, '0')}` : sec;
 }
 
-function getRowUrgencyClass(d: DriverState, currentLap: number): string {
-    if (d.pit_recommendation === 'PIT_NOW') return 'lb-row-pit-now';
-    if (d.undercut_threat) return 'lb-row-threat';
+function getRowUrgencyClass(d: DriverState, currentLap: number, s: typeof styles): string {
+    if (d.pit_recommendation === 'PIT_NOW') return s.lbRowPitNow;
+    if (d.undercut_threat) return s.lbRowThreat;
     if (
         d.pit_window_min && d.pit_window_min > 0 &&
         currentLap >= d.pit_window_min - 2 &&
         currentLap <= (d.pit_window_max ?? (d.pit_window_min + 5))
-    ) return 'lb-row-window';
+    ) return s.lbRowWindow;
     return '';
-}
-
-// =============================================================================
-// Alert System Types
-// =============================================================================
-
-type AlertType = 'FLAG' | 'SC' | 'PIT_NOW' | 'THREAT';
-
-interface Alert {
-    id: string;
-    type: AlertType;
-    message: string;
-    ts: number;
 }
 
 // =============================================================================
@@ -83,18 +72,10 @@ const LiveDashboard: FC = () => {
     const currentLap = useRaceStore(s => s.currentLap);
     const totalLaps = useRaceStore(s => s.totalLaps);
     const raceControlMessages = useRaceStore(s => s.raceControlMessages);
-    const safetycar = useRaceStore(s => s.safetycar);
-    const redFlag = useRaceStore(s => s.redFlag);
-    const vsc = useRaceStore(s => s.virtualSafetyCar);
-    const flags = useRaceStore(s => s.flags);
     const trackConfig = useRaceStore(s => s.trackConfig);
 
-    // Alerts
-    const [alerts, setAlerts] = useState<Alert[]>([]);
-    const alertTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-    const prevFlagsRef = useRef<{ sc: boolean; red: boolean; vsc: boolean; flags: string[] }>({
-        sc: false, red: false, vsc: false, flags: []
-    });
+    // Alert generation (state lives in raceStore, strip rendered in App.tsx)
+    useAlerts();
 
     // Keyboard shortcut: 1-9 select driver by position
     useEffect(() => {
@@ -111,58 +92,6 @@ const LiveDashboard: FC = () => {
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
     }, [sortedDrivers, selectDriver]);
-
-    // Generate alerts when race status changes
-    const addAlert = useCallback((type: AlertType, message: string) => {
-        const id = `${type}-${Date.now()}`;
-        const alert: Alert = { id, type, message, ts: Date.now() };
-        setAlerts(prev => {
-            // Don't duplicate same type within 30s
-            const recent = prev.find(a => a.type === type && Date.now() - a.ts < 30000);
-            if (recent) return prev;
-            return [alert, ...prev].slice(0, 5);
-        });
-        const t = setTimeout(() => {
-            setAlerts(prev => prev.filter(a => a.id !== id));
-            alertTimeouts.current.delete(id);
-        }, 10000);
-        alertTimeouts.current.set(id, t);
-    }, []);
-
-    // Cleanup timeouts on unmount
-    useEffect(() => {
-        return () => { alertTimeouts.current.forEach(t => clearTimeout(t)); };
-    }, []);
-
-    // Watch for flag/SC changes
-    useEffect(() => {
-        const prev = prevFlagsRef.current;
-        if (redFlag && !prev.red) addAlert('FLAG', 'RED FLAG DEPLOYED');
-        if (safetycar && !prev.sc) addAlert('SC', 'SAFETY CAR DEPLOYED');
-        if (vsc && !prev.vsc) addAlert('SC', 'VIRTUAL SAFETY CAR');
-        const hasYellow = flags.some(f => f === 'YELLOW' || f === 'DOUBLE_YELLOW');
-        const prevHasYellow = prev.flags.some(f => f === 'YELLOW' || f === 'DOUBLE_YELLOW');
-        if (hasYellow && !prevHasYellow) addAlert('FLAG', 'YELLOW FLAG');
-        prevFlagsRef.current = { sc: safetycar, red: redFlag, vsc, flags };
-    }, [redFlag, safetycar, vsc, flags, addAlert]);
-
-    // Watch for PIT_NOW / undercut threats
-    useEffect(() => {
-        sortedDrivers.forEach(d => {
-            if (d.pit_recommendation === 'PIT_NOW') {
-                addAlert('PIT_NOW', `${d.name_acronym} — PIT NOW (cliff: ${Math.round((d.cliff_risk || 0) * 100)}%)`);
-            }
-            if (d.undercut_threat) {
-                addAlert('THREAT', `${d.name_acronym} — UNDERCUT THREAT from ${(d.position ?? 0) > 1 ? `P${(d.position ?? 0) - 1}` : 'behind'}`);
-            }
-        });
-    }, [sortedDrivers, addAlert]);
-
-    const dismissAlert = useCallback((id: string) => {
-        const t = alertTimeouts.current.get(id);
-        if (t) { clearTimeout(t); alertTimeouts.current.delete(id); }
-        setAlerts(prev => prev.filter(a => a.id !== id));
-    }, []);
 
     // Auto-select leader on first load
     useEffect(() => {
@@ -181,23 +110,10 @@ const LiveDashboard: FC = () => {
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
-            {/* Alert Banner */}
-            {alerts.length > 0 && (
-                <div className="alert-banner" style={{ padding: '3px 4px', flexShrink: 0 }}>
-                    {alerts.map(a => (
-                        <div key={a.id} className={`alert-row alert-${a.type.toLowerCase()}`}>
-                            <span className="alert-badge">{a.type}</span>
-                            <span className="alert-msg">{a.message}</span>
-                            <button className="alert-dismiss" onClick={() => dismissAlert(a.id)}>×</button>
-                        </div>
-                    ))}
-                </div>
-            )}
-
             {/* 3-Column Grid */}
             <div className="dashboard-grid" style={{ flex: 1 }}>
                 {/* Column 1: Leaderboard + Race Control */}
-                <div className="col-leaderboard">
+                <div className={styles.colLeaderboard}>
                     <Leaderboard
                         drivers={sortedDrivers}
                         selectedDriver={selectedDriver}
@@ -208,7 +124,7 @@ const LiveDashboard: FC = () => {
                 </div>
 
                 {/* Column 2: Track Map + Telemetry HUD */}
-                <div className="col-center">
+                <div className={styles.colCenter}>
                     <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', minHeight: 0 }}>
                         <TrackMap
                             drivers={sortedDrivers}
@@ -221,7 +137,7 @@ const LiveDashboard: FC = () => {
                 </div>
 
                 {/* Column 3: Strategy Console */}
-                <div className="col-strategy">
+                <div className={styles.colStrategy}>
                     <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'auto' }}>
                         <StrategyPanel
                             drivers={sortedDrivers}
@@ -279,7 +195,7 @@ const Leaderboard: FC<LeaderboardProps> = ({ drivers, selectedDriver, onSelect, 
                     const compound = d.compound || 'MEDIUM';
                     const tyreColor = TYRE_COLORS[compound] ?? '#fff';
                     const tyreTxtColor = TYRE_TEXT_COLORS[compound] ?? '#000';
-                    const urgencyClass = getRowUrgencyClass(d, currentLap);
+                    const urgencyClass = getRowUrgencyClass(d, currentLap, styles);
                     const gapVal = showInt ? d.gap_to_ahead : d.gap_to_leader;
 
                     return (
@@ -334,9 +250,15 @@ const Leaderboard: FC<LeaderboardProps> = ({ drivers, selectedDriver, onSelect, 
                                 {d.current_lap || 0}
                             </div>
 
-                            {/* In-pit dot */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {d.in_pit && <div className="in-pit-dot" />}
+                            {/* Status: in-pit dot + undercut/overcut icons */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+                                {d.in_pit && <div className={styles.inPitDot} />}
+                                {d.undercut_threat && (
+                                    <span title="Undercut threat" style={{ color: 'var(--status-amber)', fontSize: '0.75rem' }}>⬇</span>
+                                )}
+                                {d.overcut_opportunity && (
+                                    <span title="Overcut opportunity" style={{ color: 'var(--status-green)', fontSize: '0.75rem' }}>⬆</span>
+                                )}
                             </div>
                         </div>
                     );
@@ -398,12 +320,12 @@ const TelemetryHUD: FC<TelemetryHUDProps> = ({ driver, sectorBests }) => {
     const drsAvail = driver.drs === 8;
 
     const sectorDelta = (val: number | null | undefined, best: number): { delta: string; cls: string } => {
-        if (!val || !isFinite(best)) return { delta: '—', cls: 'no-data' };
+        if (!val || !isFinite(best)) return { delta: '—', cls: styles.noData };
         const diff = val - best;
-        if (Math.abs(diff) < 0.001) return { delta: fmtLap(val), cls: 'faster' };
+        if (Math.abs(diff) < 0.001) return { delta: fmtLap(val), cls: styles.faster };
         return {
             delta: `${diff > 0 ? '+' : ''}${diff.toFixed(3)}`,
-            cls: diff < 0 ? 'faster' : diff < 0.3 ? 'slower' : 'much-slower'
+            cls: diff < 0 ? styles.faster : diff < 0.3 ? styles.slower : styles.muchSlower
         };
     };
 
@@ -421,9 +343,9 @@ const TelemetryHUD: FC<TelemetryHUDProps> = ({ driver, sectorBests }) => {
             <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
 
             {/* Speed */}
-            <div className="speed-readout" style={{ flexShrink: 0 }}>
-                <span className="speed-value" style={{ fontSize: '1.3rem' }}>{Math.round(driver.speed || 0)}</span>
-                <span className="speed-unit">km/h</span>
+            <div className={styles.speedReadout} style={{ flexShrink: 0 }}>
+                <span className={styles.speedValue} style={{ fontSize: '1.3rem' }}>{Math.round(driver.speed || 0)}</span>
+                <span className={styles.speedUnit}>km/h</span>
             </div>
 
             {/* Gear */}
@@ -439,8 +361,8 @@ const TelemetryHUD: FC<TelemetryHUDProps> = ({ driver, sectorBests }) => {
             {/* Throttle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0 }}>THR</span>
-                <div className="h-bar-track" style={{ flex: 1 }}>
-                    <div className="h-bar-fill throttle" style={{ width: `${thr}%` }} />
+                <div className={styles.hBarTrack} style={{ flex: 1 }}>
+                    <div className={`${styles.hBarFill} ${styles.throttle}`} style={{ width: `${thr}%` }} />
                 </div>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', flexShrink: 0, minWidth: '26px', textAlign: 'right' }}>{Math.round(thr)}%</span>
             </div>
@@ -448,8 +370,8 @@ const TelemetryHUD: FC<TelemetryHUDProps> = ({ driver, sectorBests }) => {
             {/* Brake */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0 }}>BRK</span>
-                <div className="h-bar-track" style={{ flex: 1 }}>
-                    <div className="h-bar-fill brake" style={{ width: `${brk}%` }} />
+                <div className={styles.hBarTrack} style={{ flex: 1 }}>
+                    <div className={`${styles.hBarFill} ${styles.brake}`} style={{ width: `${brk}%` }} />
                 </div>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', flexShrink: 0, minWidth: '26px', textAlign: 'right' }}>{Math.round(brk)}%</span>
             </div>
@@ -471,7 +393,7 @@ const TelemetryHUD: FC<TelemetryHUDProps> = ({ driver, sectorBests }) => {
                     return (
                         <div key={label as string} style={{ textAlign: 'center' }}>
                             <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label as string}</div>
-                            <div className={`sector-delta ${cls}`} style={{ fontSize: '0.68rem' }}>{delta}</div>
+                            <div className={`${styles.sectorDelta} ${cls}`} style={{ fontSize: '0.68rem' }}>{delta}</div>
                         </div>
                     );
                 })}

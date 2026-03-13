@@ -101,8 +101,8 @@ const CompactStrategy: FC<{ driver: DriverState }> = ({ driver }) => {
                 <span style={{ fontWeight: 700, color: rec.color, fontSize: '0.8rem' }}>{rec.text}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', fontSize: '0.68rem', fontFamily: 'var(--font-mono)' }}>
-                <div><span style={{ color: 'var(--text-muted)' }}>Deg </span><span style={{ color: getDegColor(driver.deg_slope) }}>{((driver.deg_slope || 0) * 1000).toFixed(0)}ms</span></div>
-                <div><span style={{ color: 'var(--text-muted)' }}>Cliff </span><span style={{ color: getCliffColor(driver.cliff_risk) }}>{Math.round((driver.cliff_risk || 0) * 100)}%</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Deg </span><span style={{ color: getDegColor(driver.deg_slope ?? undefined) }}>{((driver.deg_slope || 0) * 1000).toFixed(0)}ms</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Cliff </span><span style={{ color: getCliffColor(driver.cliff_risk ?? undefined) }}>{Math.round((driver.cliff_risk || 0) * 100)}%</span></div>
                 <div><span style={{ color: 'var(--text-muted)' }}>Win </span><span>L{driver.pit_window_ideal || '—'}</span></div>
                 <div><span style={{ color: 'var(--text-muted)' }}>Fuel </span><span>{(driver.fuel_remaining_kg || 0).toFixed(1)}kg</span></div>
             </div>
@@ -117,6 +117,8 @@ const CompactStrategy: FC<{ driver: DriverState }> = ({ driver }) => {
 const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compact = false, currentLap = 0, totalLaps }) => {
     const sortedDrivers = useRaceStore(s => s.sortedDrivers);
     const recentPits = useRaceStore(s => s.recentPits);
+    const storeCurrentLap = useRaceStore(s => s.currentLap);
+    const effectiveLap = currentLap || storeCurrentLap;
 
     const driver = useMemo((): DriverState | null => {
         if (!drivers || drivers.length === 0) return null;
@@ -153,7 +155,7 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
     const minPct = hasPitWindow ? Math.max(0, Math.min(100, (winMin / lapTotal) * 100)) : 0;
     const maxPct = hasPitWindow && winMax != null ? Math.max(0, Math.min(100, (winMax / lapTotal) * 100)) : minPct;
     const idealPct = hasPitWindow && winIdeal != null ? Math.max(0, Math.min(100, (winIdeal / lapTotal) * 100)) : minPct;
-    const currentPct = Math.max(0, Math.min(100, (currentLap / lapTotal) * 100));
+    const currentPct = Math.max(0, Math.min(100, (effectiveLap / lapTotal) * 100));
 
     // 5-lap predicted pace sparkline (simple inline SVG)
     const pace = driver.predicted_pace || [];
@@ -243,7 +245,7 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>
                                 <span style={{ color: 'var(--text-muted)' }}>L{winMin}</span>
                                 <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>IDEAL L{winIdeal}</span>
-                                <span style={{ color: 'var(--text-muted)' }}>L{winMax ?? winIdeal}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>L{winMax ?? winIdeal ?? '?'}</span>
                             </div>
                             <div style={{ position: 'relative', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'visible' }}>
                                 {/* Window range */}
@@ -285,7 +287,7 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                         <div>
                             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginBottom: '2px' }}>DEG RATE</div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 700, color: getDegColor(driver.deg_slope) }}>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 700, color: getDegColor(driver.deg_slope ?? undefined) }}>
                                 {((driver.deg_slope || 0) * 1000).toFixed(0)} ms/L
                             </div>
                         </div>
@@ -293,9 +295,9 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginBottom: '2px' }}>CLIFF RISK</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
-                                    <div style={{ height: '100%', width: `${Math.round((driver.cliff_risk || 0) * 100)}%`, background: getCliffColor(driver.cliff_risk), borderRadius: '2px' }} />
+                                    <div style={{ height: '100%', width: `${Math.round((driver.cliff_risk || 0) * 100)}%`, background: getCliffColor(driver.cliff_risk ?? undefined), borderRadius: '2px' }} />
                                 </div>
-                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: getCliffColor(driver.cliff_risk) }}>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: getCliffColor(driver.cliff_risk ?? undefined) }}>
                                     {Math.round((driver.cliff_risk || 0) * 100)}%
                                 </span>
                                 {(driver.cliff_risk ?? 0) > 0.8 && (
@@ -353,23 +355,21 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                 </Section>
 
                 {/* Rejoin Visualizer — shown when driver is in pit window or pitting */}
-                {((currentLap >= (driver.pit_window_min ?? 0) &&
-                   currentLap <= (driver.pit_window_max ?? 0) &&
+                {((effectiveLap >= (driver.pit_window_min ?? 0) &&
+                   effectiveLap <= (driver.pit_window_max ?? 0) &&
                    (driver.pit_window_min ?? 0) > 0) ||
                   driver.in_pit === true) && (
-                    <Section label="Pit Rejoin">
-                        <PitRejoinVisualizer
-                            driver={driver}
-                            allDrivers={sortedDrivers}
-                        />
-                    </Section>
+                    <PitRejoinVisualizer
+                        driver={driver}
+                        allDrivers={sortedDrivers}
+                    />
                 )}
 
                 {/* Pit History Strip */}
                 {recentPits.length > 0 && (
                     <Section label="RECENT PITS">
-                        {recentPits.slice(0, 3).map((pit, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', padding: '2px 0', color: 'var(--text-secondary)' }}>
+                        {recentPits.slice(0, 3).map((pit) => (
+                            <div key={`${pit.driver_number}-${pit.lap_number}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', padding: '2px 0', color: 'var(--text-secondary)' }}>
                                 <span style={{ color: 'var(--text-primary)', minWidth: '28px' }}>#{pit.driver_number}</span>
                                 <span>L{pit.lap_number}</span>
                                 {pit.compound && (

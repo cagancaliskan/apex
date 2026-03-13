@@ -203,8 +203,8 @@ interface DriverRowProps {
 const DriverRow: FC<DriverRowProps> = ({ driver, index, fastestLapTime, isSelected, onSelect }) => {
     const isPersonalBest = driver.last_lap_time && driver.best_lap_time && driver.last_lap_time === driver.best_lap_time;
     const isFastestLap = driver.last_lap_time === fastestLapTime;
-    const deg = formatDegSlope(driver.deg_slope);
-    const cliff = formatCliffRisk(driver.cliff_risk);
+    const deg = formatDegSlope(driver.deg_slope ?? undefined);
+    const cliff = formatCliffRisk(driver.cliff_risk ?? undefined);
     const drsState = getDrsState(driver.drs || 0);
 
     const rowStyle: CSSProperties = {

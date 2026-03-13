@@ -14,6 +14,7 @@ import StrategyPanel from '../components/StrategyPanel';
 import { useRaceStore } from '../store/raceStore';
 import { useAlerts } from '../hooks';
 import type { DriverState } from '../types';
+import styles from './LiveDashboard.module.css';
 
 // =============================================================================
 // Constants & Helpers
@@ -48,14 +49,14 @@ function fmtLap(t: number | undefined | null): string {
     return min > 0 ? `${min}:${sec.padStart(6, '0')}` : sec;
 }
 
-function getRowUrgencyClass(d: DriverState, currentLap: number): string {
-    if (d.pit_recommendation === 'PIT_NOW') return 'lb-row-pit-now';
-    if (d.undercut_threat) return 'lb-row-threat';
+function getRowUrgencyClass(d: DriverState, currentLap: number, s: typeof styles): string {
+    if (d.pit_recommendation === 'PIT_NOW') return s.lbRowPitNow;
+    if (d.undercut_threat) return s.lbRowThreat;
     if (
         d.pit_window_min && d.pit_window_min > 0 &&
         currentLap >= d.pit_window_min - 2 &&
         currentLap <= (d.pit_window_max ?? (d.pit_window_min + 5))
-    ) return 'lb-row-window';
+    ) return s.lbRowWindow;
     return '';
 }
 
@@ -112,7 +113,7 @@ const LiveDashboard: FC = () => {
             {/* 3-Column Grid */}
             <div className="dashboard-grid" style={{ flex: 1 }}>
                 {/* Column 1: Leaderboard + Race Control */}
-                <div className="col-leaderboard">
+                <div className={styles.colLeaderboard}>
                     <Leaderboard
                         drivers={sortedDrivers}
                         selectedDriver={selectedDriver}
@@ -123,7 +124,7 @@ const LiveDashboard: FC = () => {
                 </div>
 
                 {/* Column 2: Track Map + Telemetry HUD */}
-                <div className="col-center">
+                <div className={styles.colCenter}>
                     <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', minHeight: 0 }}>
                         <TrackMap
                             drivers={sortedDrivers}
@@ -136,7 +137,7 @@ const LiveDashboard: FC = () => {
                 </div>
 
                 {/* Column 3: Strategy Console */}
-                <div className="col-strategy">
+                <div className={styles.colStrategy}>
                     <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'auto' }}>
                         <StrategyPanel
                             drivers={sortedDrivers}
@@ -194,7 +195,7 @@ const Leaderboard: FC<LeaderboardProps> = ({ drivers, selectedDriver, onSelect, 
                     const compound = d.compound || 'MEDIUM';
                     const tyreColor = TYRE_COLORS[compound] ?? '#fff';
                     const tyreTxtColor = TYRE_TEXT_COLORS[compound] ?? '#000';
-                    const urgencyClass = getRowUrgencyClass(d, currentLap);
+                    const urgencyClass = getRowUrgencyClass(d, currentLap, styles);
                     const gapVal = showInt ? d.gap_to_ahead : d.gap_to_leader;
 
                     return (
@@ -251,7 +252,7 @@ const Leaderboard: FC<LeaderboardProps> = ({ drivers, selectedDriver, onSelect, 
 
                             {/* Status: in-pit dot + undercut/overcut icons */}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
-                                {d.in_pit && <div className="in-pit-dot" />}
+                                {d.in_pit && <div className={styles.inPitDot} />}
                                 {d.undercut_threat && (
                                     <span title="Undercut threat" style={{ color: 'var(--status-amber)', fontSize: '0.75rem' }}>⬇</span>
                                 )}
@@ -319,12 +320,12 @@ const TelemetryHUD: FC<TelemetryHUDProps> = ({ driver, sectorBests }) => {
     const drsAvail = driver.drs === 8;
 
     const sectorDelta = (val: number | null | undefined, best: number): { delta: string; cls: string } => {
-        if (!val || !isFinite(best)) return { delta: '—', cls: 'no-data' };
+        if (!val || !isFinite(best)) return { delta: '—', cls: styles.noData };
         const diff = val - best;
-        if (Math.abs(diff) < 0.001) return { delta: fmtLap(val), cls: 'faster' };
+        if (Math.abs(diff) < 0.001) return { delta: fmtLap(val), cls: styles.faster };
         return {
             delta: `${diff > 0 ? '+' : ''}${diff.toFixed(3)}`,
-            cls: diff < 0 ? 'faster' : diff < 0.3 ? 'slower' : 'much-slower'
+            cls: diff < 0 ? styles.faster : diff < 0.3 ? styles.slower : styles.muchSlower
         };
     };
 
@@ -342,9 +343,9 @@ const TelemetryHUD: FC<TelemetryHUDProps> = ({ driver, sectorBests }) => {
             <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
 
             {/* Speed */}
-            <div className="speed-readout" style={{ flexShrink: 0 }}>
-                <span className="speed-value" style={{ fontSize: '1.3rem' }}>{Math.round(driver.speed || 0)}</span>
-                <span className="speed-unit">km/h</span>
+            <div className={styles.speedReadout} style={{ flexShrink: 0 }}>
+                <span className={styles.speedValue} style={{ fontSize: '1.3rem' }}>{Math.round(driver.speed || 0)}</span>
+                <span className={styles.speedUnit}>km/h</span>
             </div>
 
             {/* Gear */}
@@ -360,8 +361,8 @@ const TelemetryHUD: FC<TelemetryHUDProps> = ({ driver, sectorBests }) => {
             {/* Throttle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0 }}>THR</span>
-                <div className="h-bar-track" style={{ flex: 1 }}>
-                    <div className="h-bar-fill throttle" style={{ width: `${thr}%` }} />
+                <div className={styles.hBarTrack} style={{ flex: 1 }}>
+                    <div className={`${styles.hBarFill} ${styles.throttle}`} style={{ width: `${thr}%` }} />
                 </div>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', flexShrink: 0, minWidth: '26px', textAlign: 'right' }}>{Math.round(thr)}%</span>
             </div>
@@ -369,8 +370,8 @@ const TelemetryHUD: FC<TelemetryHUDProps> = ({ driver, sectorBests }) => {
             {/* Brake */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0 }}>BRK</span>
-                <div className="h-bar-track" style={{ flex: 1 }}>
-                    <div className="h-bar-fill brake" style={{ width: `${brk}%` }} />
+                <div className={styles.hBarTrack} style={{ flex: 1 }}>
+                    <div className={`${styles.hBarFill} ${styles.brake}`} style={{ width: `${brk}%` }} />
                 </div>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', flexShrink: 0, minWidth: '26px', textAlign: 'right' }}>{Math.round(brk)}%</span>
             </div>
@@ -392,7 +393,7 @@ const TelemetryHUD: FC<TelemetryHUDProps> = ({ driver, sectorBests }) => {
                     return (
                         <div key={label as string} style={{ textAlign: 'center' }}>
                             <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label as string}</div>
-                            <div className={`sector-delta ${cls}`} style={{ fontSize: '0.68rem' }}>{delta}</div>
+                            <div className={`${styles.sectorDelta} ${cls}`} style={{ fontSize: '0.68rem' }}>{delta}</div>
                         </div>
                     );
                 })}

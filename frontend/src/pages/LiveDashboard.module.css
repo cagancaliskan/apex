@@ -1,0 +1,128 @@
+/* Dashboard columns — migrated from index.css */
+.colLeaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.colCenter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.colStrategy {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 1400px) {
+  .colStrategy {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .colLeaderboard {
+    display: none;
+  }
+}
+
+/* Leaderboard row urgency states */
+.lbRowPitNow {
+  background: rgba(225, 6, 0, 0.12);
+  border-left: 2px solid var(--color-accent);
+}
+
+.lbRowWindow {
+  border-left: 3px solid var(--status-amber) !important;
+}
+
+.lbRowThreat {
+  border-left: 3px solid var(--color-orange) !important;
+}
+
+/* In-pit indicator dot */
+.inPitDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+}
+
+/* Speed readout */
+.speedReadout {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.speedValue {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.speedUnit {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Horizontal telemetry bars */
+.hBarTrack {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.hBarFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 80ms linear;
+}
+
+.hBarFill.throttle {
+  background: var(--status-green);
+}
+
+.hBarFill.brake {
+  background: var(--status-red);
+}
+
+/* Sector delta */
+.sectorDelta {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sectorDelta.faster {
+  color: var(--status-green);
+}
+
+.sectorDelta.slower {
+  color: var(--status-amber);
+}
+
+.sectorDelta.muchSlower {
+  color: var(--status-red);
+}
+
+.sectorDelta.noData {
+  color: var(--text-muted);
+}

@@ -700,42 +700,15 @@ h4 { font-size: 1rem; }
   overflow: hidden;
 }
 
-/* Dashboard columns */
-.col-leaderboard {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow: hidden;
-}
-
-.col-center {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow: hidden;
-}
-
-.col-strategy {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
 @media (max-width: 1400px) {
   .dashboard-grid {
     grid-template-columns: var(--leaderboard-width) 1fr;
-  }
-  .col-strategy {
-    display: none;
   }
 }
 
 @media (max-width: 900px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
-  }
-  .col-leaderboard {
-    display: none;
   }
 }
 
@@ -795,79 +768,7 @@ h4 { font-size: 1rem; }
   background: var(--color-info);
 }
 
-/* Speed readout (large number, replaces arc gauge) */
-.speed-readout {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.speed-readout .speed-value {
-  font-family: var(--font-mono);
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.speed-readout .speed-unit {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-/* Horizontal telemetry bars (replaces vertical bars) */
-.h-bar-track {
-  flex: 1;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.h-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 80ms linear;
-}
-
-.h-bar-fill.throttle { background: var(--status-green); }
-.h-bar-fill.brake { background: var(--status-red); }
-
-/* Sector delta in telemetry HUD */
-.sector-delta {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.sector-delta.faster { color: var(--status-green); }
-.sector-delta.slower { color: var(--status-amber); }
-.sector-delta.much-slower { color: var(--status-red); }
-.sector-delta.no-data { color: var(--text-muted); }
-
-/* Leaderboard row borders for urgency states */
-.lb-row-pit-now {
-    background: rgba(225, 6, 0, 0.12);
-    border-left: 2px solid var(--color-accent);
-}
-.lb-row-window { border-left: 3px solid var(--status-amber) !important; }
-.lb-row-threat { border-left: 3px solid var(--color-orange) !important; }
-
-/* In-pit indicator dot */
-.in-pit-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.6);
-  flex-shrink: 0;
-}
+/* Speed readout, h-bar, sector-delta, lb-row, in-pit-dot migrated to LiveDashboard.module.css */
 
 /* Strategy console sections */
 .strategy-section {
@@ -902,7 +803,7 @@ h4 { font-size: 1rem; }
   to { opacity: 1; transform: translateX(0); }
 }
 
-.animate-fade-in { animation: fadeIn 0.2s ease forwards; }
+/* .animate-fade-in migrated to ReplayPage.module.css */
 .animate-slide-in { animation: slideIn 0.2s ease forwards; }
 
 /* ============================================================================

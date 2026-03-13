@@ -220,10 +220,12 @@ def apply_pits(state: RaceState, pits: list[PitData]) -> RaceState:
     recent_pits = list(state.recent_pits)
 
     for pit in pits:
+        driver_state = state.drivers.get(pit.driver_number)
         pit_record = {
             "driver_number": pit.driver_number,
             "lap_number": pit.lap_number,
             "pit_duration": pit.pit_duration,
+            "compound": driver_state.compound if driver_state else None,
             "timestamp": pit.timestamp.isoformat(),
         }
         # Check if this pit is already recorded

@@ -7,6 +7,7 @@
  */
 
 import type { FC, ComponentType } from 'react';
+import styles from './MetricCard.module.css';
 
 // =============================================================================
 // Types
@@ -36,14 +37,14 @@ interface MetricCardProps {
  */
 const MetricCard: FC<MetricCardProps> = ({ label, value, delta, deltaType, color = 'cyan', icon: Icon }) => {
     return (
-        <div className="metric-card card-glow">
+        <div className={`${styles.metricCard} card-glow`}>
             <div className="flex items-center justify-between">
-                <span className="label">{label}</span>
+                <span className={styles.label}>{label}</span>
                 {Icon && <Icon size={18} style={{ color: `var(--accent-${color})`, opacity: 0.7 }} />}
             </div>
-            <div className={`value ${color}`}>{value}</div>
+            <div className={`${styles.value} ${styles[color] ?? ''}`}>{value}</div>
             {delta && (
-                <div className={`delta ${deltaType}`}>
+                <div className={`${styles.delta} ${deltaType ? styles[deltaType] : ''}`}>
                     {deltaType === 'positive' ? '↑' : '↓'} {delta}
                 </div>
             )}

@@ -125,7 +125,7 @@ body {
 /* New app shell: status bar + tab bar + content */
 .app-container {
   display: grid;
-  grid-template-rows: var(--status-bar-height) var(--tab-bar-height) 1fr;
+  grid-template-rows: var(--status-bar-height) var(--tab-bar-height) auto 1fr;
   height: 100vh;
   overflow: hidden;
 }
@@ -874,6 +874,17 @@ h4 { font-size: 1rem; }
    Alert Banner
    ============================================================================ */
 
+.alert-strip {
+  background: rgba(225, 6, 0, 0.08);
+  border-bottom: 1px solid var(--border-color);
+  padding: 2px 4px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Legacy alias — keeps old .alert-banner class working if referenced elsewhere */
 .alert-banner {
   display: flex;
   flex-direction: column;

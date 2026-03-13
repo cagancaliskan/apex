@@ -71,6 +71,8 @@ const App: FC = () => {
     const updateState = useRaceStore(s => s.updateState);
     const setConnected = useRaceStore(s => s.setConnected);
     const setSimulationRunning = useRaceStore(s => s.setSimulationRunning);
+    const alerts = useRaceStore(s => s.alerts);
+    const dismissAlert = useRaceStore(s => s.dismissAlert);
 
     // Display values from store
     const trackName = useRaceStore(s => s.trackName);
@@ -283,6 +285,19 @@ const App: FC = () => {
                     Backtest
                 </button>
             </nav>
+
+            {/* Alert Strip */}
+            {alerts.length > 0 && (
+                <div className="alert-strip">
+                    {alerts.map(a => (
+                        <div key={a.id} className={`alert-row alert-${a.type.toLowerCase()}`}>
+                            <span className="alert-badge">{a.type}</span>
+                            <span className="alert-msg">{a.message}</span>
+                            <button className="alert-dismiss" onClick={() => dismissAlert(a.id)}>×</button>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Main Content */}
             <main className="main-content">

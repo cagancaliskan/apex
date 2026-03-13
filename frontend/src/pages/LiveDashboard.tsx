@@ -8,10 +8,11 @@
  * @module pages/LiveDashboard
  */
 
-import { useState, useEffect, useRef, useMemo, useCallback, type FC } from 'react';
+import { useState, useEffect, useMemo, type FC } from 'react';
 import TrackMap from '../components/TrackMap';
 import StrategyPanel from '../components/StrategyPanel';
 import { useRaceStore } from '../store/raceStore';
+import { useAlerts } from '../hooks';
 import type { DriverState } from '../types';
 
 // =============================================================================
@@ -59,19 +60,6 @@ function getRowUrgencyClass(d: DriverState, currentLap: number): string {
 }
 
 // =============================================================================
-// Alert System Types
-// =============================================================================
-
-type AlertType = 'FLAG' | 'SC' | 'PIT_NOW' | 'THREAT';
-
-interface Alert {
-    id: string;
-    type: AlertType;
-    message: string;
-    ts: number;
-}
-
-// =============================================================================
 // Main Component
 // =============================================================================
 
@@ -83,18 +71,10 @@ const LiveDashboard: FC = () => {
     const currentLap = useRaceStore(s => s.currentLap);
     const totalLaps = useRaceStore(s => s.totalLaps);
     const raceControlMessages = useRaceStore(s => s.raceControlMessages);
-    const safetycar = useRaceStore(s => s.safetycar);
-    const redFlag = useRaceStore(s => s.redFlag);
-    const vsc = useRaceStore(s => s.virtualSafetyCar);
-    const flags = useRaceStore(s => s.flags);
     const trackConfig = useRaceStore(s => s.trackConfig);
 
-    // Alerts
-    const [alerts, setAlerts] = useState<Alert[]>([]);
-    const alertTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-    const prevFlagsRef = useRef<{ sc: boolean; red: boolean; vsc: boolean; flags: string[] }>({
-        sc: false, red: false, vsc: false, flags: []
-    });
+    // Alert generation (state lives in raceStore, strip rendered in App.tsx)
+    useAlerts();
 
     // Keyboard shortcut: 1-9 select driver by position
     useEffect(() => {
@@ -111,58 +91,6 @@ const LiveDashboard: FC = () => {
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
     }, [sortedDrivers, selectDriver]);
-
-    // Generate alerts when race status changes
-    const addAlert = useCallback((type: AlertType, message: string) => {
-        const id = `${type}-${Date.now()}`;
-        const alert: Alert = { id, type, message, ts: Date.now() };
-        setAlerts(prev => {
-            // Don't duplicate same type within 30s
-            const recent = prev.find(a => a.type === type && Date.now() - a.ts < 30000);
-            if (recent) return prev;
-            return [alert, ...prev].slice(0, 5);
-        });
-        const t = setTimeout(() => {
-            setAlerts(prev => prev.filter(a => a.id !== id));
-            alertTimeouts.current.delete(id);
-        }, 10000);
-        alertTimeouts.current.set(id, t);
-    }, []);
-
-    // Cleanup timeouts on unmount
-    useEffect(() => {
-        return () => { alertTimeouts.current.forEach(t => clearTimeout(t)); };
-    }, []);
-
-    // Watch for flag/SC changes
-    useEffect(() => {
-        const prev = prevFlagsRef.current;
-        if (redFlag && !prev.red) addAlert('FLAG', 'RED FLAG DEPLOYED');
-        if (safetycar && !prev.sc) addAlert('SC', 'SAFETY CAR DEPLOYED');
-        if (vsc && !prev.vsc) addAlert('SC', 'VIRTUAL SAFETY CAR');
-        const hasYellow = flags.some(f => f === 'YELLOW' || f === 'DOUBLE_YELLOW');
-        const prevHasYellow = prev.flags.some(f => f === 'YELLOW' || f === 'DOUBLE_YELLOW');
-        if (hasYellow && !prevHasYellow) addAlert('FLAG', 'YELLOW FLAG');
-        prevFlagsRef.current = { sc: safetycar, red: redFlag, vsc, flags };
-    }, [redFlag, safetycar, vsc, flags, addAlert]);
-
-    // Watch for PIT_NOW / undercut threats
-    useEffect(() => {
-        sortedDrivers.forEach(d => {
-            if (d.pit_recommendation === 'PIT_NOW') {
-                addAlert('PIT_NOW', `${d.name_acronym} — PIT NOW (cliff: ${Math.round((d.cliff_risk || 0) * 100)}%)`);
-            }
-            if (d.undercut_threat) {
-                addAlert('THREAT', `${d.name_acronym} — UNDERCUT THREAT from ${(d.position ?? 0) > 1 ? `P${(d.position ?? 0) - 1}` : 'behind'}`);
-            }
-        });
-    }, [sortedDrivers, addAlert]);
-
-    const dismissAlert = useCallback((id: string) => {
-        const t = alertTimeouts.current.get(id);
-        if (t) { clearTimeout(t); alertTimeouts.current.delete(id); }
-        setAlerts(prev => prev.filter(a => a.id !== id));
-    }, []);
 
     // Auto-select leader on first load
     useEffect(() => {
@@ -181,19 +109,6 @@ const LiveDashboard: FC = () => {
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
-            {/* Alert Banner */}
-            {alerts.length > 0 && (
-                <div className="alert-banner" style={{ padding: '3px 4px', flexShrink: 0 }}>
-                    {alerts.map(a => (
-                        <div key={a.id} className={`alert-row alert-${a.type.toLowerCase()}`}>
-                            <span className="alert-badge">{a.type}</span>
-                            <span className="alert-msg">{a.message}</span>
-                            <button className="alert-dismiss" onClick={() => dismissAlert(a.id)}>×</button>
-                        </div>
-                    ))}
-                </div>
-            )}
-
             {/* 3-Column Grid */}
             <div className="dashboard-grid" style={{ flex: 1 }}>
                 {/* Column 1: Leaderboard + Race Control */}

@@ -9,6 +9,7 @@
 
 import { useState, useEffect, type FC, type MouseEvent } from 'react';
 import { Play, Pause, Square, SkipBack, FastForward } from 'lucide-react';
+import styles from './ReplayPage.module.css';
 import DriverTable from '../components/DriverTable';
 import StrategyPanel from '../components/StrategyPanel';
 import TelemetryPanel from '../components/TelemetryPanel';
@@ -106,7 +107,7 @@ const ReplayPage: FC = () => {
     const handleMouseLeave = (e: MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; };
 
     return (
-        <div className="animate-fade-in" style={{ padding: 'var(--space-lg)' }}>
+        <div className={styles.animateFadeIn} style={{ padding: 'var(--space-lg)' }}>
             <header style={{ marginBottom: 'var(--space-xl)' }}>
                 <h1 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', marginBottom: 'var(--space-sm)' }}>🔄 Race Replay</h1>
                 <p className="text-muted">Play back cached race sessions for analysis</p>

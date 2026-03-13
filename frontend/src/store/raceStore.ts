@@ -18,6 +18,19 @@ import type {
 } from '../types';
 
 // =============================================================================
+// Alert Types
+// =============================================================================
+
+export type AlertType = 'FLAG' | 'SC' | 'PIT_NOW' | 'THREAT';
+
+export interface Alert {
+    id: string;
+    type: AlertType;
+    message: string;
+    ts: number;
+}
+
+// =============================================================================
 // Store State Interface
 // =============================================================================
 
@@ -61,6 +74,11 @@ interface RaceStore {
     // Sessions list
     availableSessions: Session[];
 
+    // Alerts
+    alerts: Alert[];
+    addAlert: (type: AlertType, message: string) => void;
+    dismissAlert: (id: string) => void;
+
     // Actions
     setConnected: (connected: boolean) => void;
     setConnectionError: (error: string | null) => void;
@@ -101,6 +119,7 @@ const initialState = {
     simulationSpeed: 1 as SimulationSpeed,
     isSimulationRunning: false,
     availableSessions: [],
+    alerts: [] as Alert[],
 };
 
 // =============================================================================
@@ -190,6 +209,22 @@ export const useRaceStore = create<RaceStore>()(
 
             // Sessions
             setSessions: (sessions) => set({ availableSessions: sessions }),
+
+            // Alert actions
+            addAlert: (type, message) => {
+                const now = Date.now();
+                const id = `${type}-${now}`;
+                set(state => {
+                    const recent = state.alerts.find(a => a.type === type && now - a.ts < 30000);
+                    if (recent) return {};
+                    const newAlert: Alert = { id, type, message, ts: now };
+                    return { alerts: [newAlert, ...state.alerts].slice(0, 5) };
+                });
+            },
+
+            dismissAlert: (id) => {
+                set(state => ({ alerts: state.alerts.filter(a => a.id !== id) }));
+            },
 
             // Reset
             reset: () => set(initialState),

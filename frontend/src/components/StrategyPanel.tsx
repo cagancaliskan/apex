@@ -146,13 +146,13 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
 
     // Pit window bar positioning (% of totalLaps)
     const lapTotal = totalLaps || 60;
-    const winMin = driver.pit_window_min || 0;
-    const winMax = driver.pit_window_max || 0;
-    const winIdeal = driver.pit_window_ideal || 0;
-    const hasPitWindow = winMin > 0 && winMax > 0;
+    const winMin = driver.pit_window_min ?? 0;
+    const winMax = driver.pit_window_max ?? null;
+    const winIdeal = driver.pit_window_ideal ?? null;
+    const hasPitWindow = driver.pit_window_min != null && driver.pit_window_min > 0;
     const minPct = hasPitWindow ? Math.max(0, Math.min(100, (winMin / lapTotal) * 100)) : 0;
-    const maxPct = hasPitWindow ? Math.max(0, Math.min(100, (winMax / lapTotal) * 100)) : 0;
-    const idealPct = hasPitWindow ? Math.max(0, Math.min(100, (winIdeal / lapTotal) * 100)) : 0;
+    const maxPct = hasPitWindow && winMax != null ? Math.max(0, Math.min(100, (winMax / lapTotal) * 100)) : minPct;
+    const idealPct = hasPitWindow && winIdeal != null ? Math.max(0, Math.min(100, (winIdeal / lapTotal) * 100)) : minPct;
     const currentPct = Math.max(0, Math.min(100, (currentLap / lapTotal) * 100));
 
     // 5-lap predicted pace sparkline (simple inline SVG)
@@ -241,20 +241,20 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                     {hasPitWindow ? (
                         <>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>MIN L{winMin}</span>
-                                <span style={{ color: 'var(--color-info)', fontWeight: 700 }}>IDEAL L{winIdeal}</span>
-                                <span style={{ color: 'var(--text-muted)' }}>MAX L{winMax}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>L{winMin}</span>
+                                <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>IDEAL L{winIdeal}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>L{winMax ?? winIdeal}</span>
                             </div>
                             <div style={{ position: 'relative', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'visible' }}>
                                 {/* Window range */}
                                 <div style={{ position: 'absolute', top: 0, left: `${minPct}%`, width: `${maxPct - minPct}%`, height: '100%', background: 'rgba(88,166,255,0.2)', borderRadius: '4px' }} />
                                 {/* Ideal marker */}
-                                <div style={{ position: 'absolute', top: '-1px', left: `${idealPct}%`, width: '2px', height: '10px', background: 'var(--color-info)', transform: 'translateX(-50%)', borderRadius: '1px' }} />
+                                <div style={{ position: 'absolute', top: '-1px', left: `${idealPct}%`, width: '2px', height: '10px', background: 'var(--color-accent)', transform: 'translateX(-50%)', borderRadius: '1px' }} />
                                 {/* Current lap */}
                                 <div style={{ position: 'absolute', top: '-2px', left: `${currentPct}%`, width: '3px', height: '12px', background: 'var(--text-secondary)', transform: 'translateX(-50%)', borderRadius: '1px' }} />
                             </div>
                             <div style={{ marginTop: '4px', fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                                L{currentLap} of {lapTotal} — {currentLap < winMin ? `Opens in ${winMin - currentLap}L` : currentLap <= winMax ? 'WINDOW OPEN' : 'Window closed'}
+                                {winIdeal != null ? `Ideal: L${winIdeal}` : ''}
                             </div>
                         </>
                     ) : (
@@ -367,7 +367,7 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
 
                 {/* Pit History Strip */}
                 {recentPits.length > 0 && (
-                    <Section label="Recent Pits">
+                    <Section label="RECENT PITS">
                         {recentPits.slice(0, 3).map((pit, i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', padding: '2px 0', color: 'var(--text-secondary)' }}>
                                 <span style={{ color: 'var(--text-primary)', minWidth: '28px' }}>#{pit.driver_number}</span>

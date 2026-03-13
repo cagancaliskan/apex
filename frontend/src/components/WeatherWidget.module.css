@@ -1,0 +1,7 @@
+.weatherWidget {
+  min-width: 200px;
+}
+
+.weatherWidgetCompact {
+  font-size: 0.85rem;
+}

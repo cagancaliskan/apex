@@ -8,6 +8,7 @@
  */
 
 import { useMemo, type FC } from 'react';
+import styles from './WeatherWidget.module.css';
 
 // =============================================================================
 // Types
@@ -160,7 +161,7 @@ const WeatherWidget: FC<WeatherWidgetProps> = ({ weather, compact = false }) => 
 
     if (!hasWeatherData) {
         return (
-            <div className="weather-widget card" style={{ padding: 'var(--space-md)', textAlign: 'center' }}>
+            <div className={`${styles.weatherWidget} card`} style={{ padding: 'var(--space-md)', textAlign: 'center' }}>
                 <span className="text-muted" style={{ fontSize: '0.75rem' }}>Weather data unavailable</span>
             </div>
         );
@@ -179,7 +180,7 @@ const WeatherWidget: FC<WeatherWidgetProps> = ({ weather, compact = false }) => 
 
     if (compact) {
         return (
-            <div className="weather-widget-compact" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', padding: 'var(--space-sm) var(--space-md)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
+            <div className={styles.weatherWidgetCompact} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', padding: 'var(--space-sm) var(--space-md)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
                 <WeatherIcon condition={condition} size={20} />
                 <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem' }}>{air_temp !== undefined ? `${Math.round(air_temp)}°C` : '-'}</span>
                 <RainIndicator isRaining={is_raining} rainfall={rainfall} />
@@ -188,7 +189,7 @@ const WeatherWidget: FC<WeatherWidgetProps> = ({ weather, compact = false }) => 
     }
 
     return (
-        <div className="weather-widget card">
+        <div className={`${styles.weatherWidget} card`}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)', paddingBottom: 'var(--space-sm)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Weather</span>
                 <WeatherIcon condition={condition} size={24} />

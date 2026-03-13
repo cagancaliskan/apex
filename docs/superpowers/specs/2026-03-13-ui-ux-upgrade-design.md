@@ -116,11 +116,38 @@ Replace the inline "Predicted Rejoin" block in `StrategyPanel.tsx` (lines 327–
 **`recent_pits` — pit history strip:**
 Add a micro pit history strip at the bottom of `StrategyPanel` showing the last 2–3 pit stops.
 
-- `recent_pits` is on `RaceState` but **not currently in `raceStore.ts`**. Add to `raceStore.ts`:
-  - `recentPits: Array<{ lap: number; driver: number }>` to the `RaceStore` interface
-  - `recentPits: []` to `initialState` (required for `reset()` to work correctly)
-  - map it in `updateState` action: `recentPits: state.recent_pits ?? []`
-- Display: compact rows, driver number and lap only (e.g. `#44  L32`). No compound or duration — those fields don't exist in the type.
+- `recent_pits` is on `RaceState` but **not currently in `raceStore.ts`**, and its type is incomplete. This requires both a backend and frontend change:
+
+**Backend (`src/rsw/state/reducers.py` — `apply_pits` function):**
+Add compound to the `pit_record` dict by looking up the driver's current compound from state at pit time:
+```python
+pit_record = {
+    "driver_number": pit.driver_number,
+    "lap_number": pit.lap_number,
+    "pit_duration": pit.pit_duration,
+    "compound": state.drivers.get(str(pit.driver_number), None) and state.drivers[str(pit.driver_number)].compound,
+    "timestamp": pit.timestamp.isoformat(),
+}
+```
+
+**Frontend (`src/types/index.ts`):**
+Update `recent_pits` type from `Array<{ lap: number; driver: number }>` to:
+```ts
+recent_pits?: Array<{
+    driver_number: number;
+    lap_number: number;
+    pit_duration: number | null;
+    compound: string | null;
+    timestamp: string;
+}>;
+```
+
+**Frontend (`src/store/raceStore.ts`):**
+- Add `recentPits: Array<{ driver_number: number; lap_number: number; pit_duration: number | null; compound: string | null; timestamp: string }>` to `RaceStore` interface
+- Add `recentPits: []` to `initialState`
+- Map in `updateState`: `recentPits: state.recent_pits ?? []`
+
+**Display:** Compact rows showing driver number, lap, compound (color-coded tyre dot using existing tyre CSS colors), and pit duration in seconds (e.g. `#44  L32  🔴 SOFT  23.4s`).
 
 ### TelemetryPanel (standalone — `src/components/TelemetryPanel.tsx`)
 
@@ -189,7 +216,7 @@ Global `index.css` shrinks to shared concerns only. `--border-color` replaces al
 ## 7. Out of Scope
 
 - Backend changes (all new data is already being sent)
-- Extending `recent_pits` type with compound/duration (backend change required)
+- ~~Extending `recent_pits` type with compound/duration~~ — moved into scope (see Section 4)
 - New pages or routes
 - Responsive/mobile layout
 - Animation system

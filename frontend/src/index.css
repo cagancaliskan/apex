@@ -383,86 +383,8 @@ h4 { font-size: 1rem; }
 .metric-card .delta.negative { color: var(--status-red); }
 
 /* ============================================================================
-   Driver Table (Leaderboard)
+   Driver Table (Leaderboard) — migrated to DriverTable.module.css
    ============================================================================ */
-
-.driver-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 0.85rem;
-}
-
-.driver-table th {
-  padding: var(--space-sm);
-  text-align: left;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  position: sticky;
-  top: var(--topbar-height);
-  background: var(--bg-card);
-  z-index: 10;
-}
-
-.driver-table td {
-  padding: var(--space-sm);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  transition: background var(--transition-fast);
-}
-
-.driver-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.driver-table .position-cell {
-  width: 28px;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 0.9rem;
-  text-align: center;
-}
-
-.driver-table .driver-cell {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 120px;
-}
-
-.driver-table .team-color {
-  width: 4px;
-  height: 24px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.driver-table .driver-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.driver-table .driver-team {
-  font-size: 0.7rem;
-  color: var(--text-tertiary);
-}
-
-.driver-table .gap-cell {
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.driver-table .lap-time-cell {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.driver-table .lap-time-cell.best { color: var(--color-purple); }
-.driver-table .lap-time-cell.personal-best { color: var(--status-green); }
 
 /* Tyre compound badge */
 .tyre-badge {
@@ -770,24 +692,7 @@ h4 { font-size: 1rem; }
 
 /* Speed readout, h-bar, sector-delta, lb-row, in-pit-dot migrated to LiveDashboard.module.css */
 
-/* Strategy console sections */
-.strategy-section {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.strategy-section:last-child {
-  border-bottom: none;
-}
-
-.strategy-section-label {
-  font-size: 10px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-}
+/* Strategy console sections — migrated to StrategyPanel.module.css */
 
 /* ============================================================================
    Animations (minimal, professional)
@@ -837,115 +742,13 @@ h4 { font-size: 1rem; }
    Telemetry Panel
    ============================================================================ */
 
-.telemetry-panel {
-  min-width: 320px;
-}
+/* .telemetry-panel, .drs-indicator migrated to TelemetryPanel.module.css */
 
-.telemetry-panel .speed-gauge { flex-shrink: 0; }
-.telemetry-panel .gear-indicator { min-width: 60px; }
-.telemetry-panel .vertical-bar { flex-shrink: 0; }
+/* Mini telemetry classes migrated to DriverTable.module.css */
 
-.drs-indicator.active {
-  animation: drs-pulse 0.8s ease-in-out infinite;
-}
+/* Track Map — migrated to TrackMap.module.css */
 
-@keyframes drs-pulse {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.2); }
-}
-
-/* Mini telemetry (for driver table rows) */
-.mini-telemetry {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.mini-speed {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-  min-width: 48px;
-}
-
-.mini-gear {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-info);
-  min-width: 20px;
-  text-align: center;
-}
-
-.mini-drs {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.mini-drs.off { background: var(--text-muted); }
-.mini-drs.available { background: var(--status-amber); }
-.mini-drs.active { background: var(--status-green); }
-
-/* Mini throttle/brake bars */
-.mini-bars {
-  display: flex;
-  gap: 2px;
-  height: 16px;
-}
-
-.mini-bar {
-  width: 5px;
-  height: 100%;
-  background: var(--bg-tertiary);
-  border-radius: 2px;
-  overflow: hidden;
-  position: relative;
-}
-
-.mini-bar-fill {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  transition: height 0.1s ease;
-  border-radius: 2px;
-}
-
-.mini-bar-fill.throttle { background: var(--status-green); }
-.mini-bar-fill.brake { background: var(--status-red); }
-
-/* ============================================================================
-   Track Map
-   ============================================================================ */
-
-.track-map {
-  min-width: 280px;
-  overflow: hidden;
-}
-
-.track-map svg {
-  max-width: 100%;
-  height: auto;
-}
-
-.track-map .car-marker {
-  cursor: pointer;
-  transition: transform 0.1s ease;
-  will-change: transform;
-}
-
-.track-map .car-marker:hover { transform: scale(1.15); }
-
-/* ============================================================================
-   Telemetry Charts
-   ============================================================================ */
-
-.telemetry-chart-panel { min-width: 320px; }
-.telemetry-chart svg { display: block; width: 100%; }
-.telemetry-chart path { vector-effect: non-scaling-stroke; }
+/* Telemetry Charts — migrated to TelemetryChart.module.css */
 
 /* ============================================================================
    Race Progress Bar
@@ -977,11 +780,11 @@ h4 { font-size: 1rem; }
    ============================================================================ */
 
 @media (max-width: 1200px) {
-  .track-map { min-width: 240px; }
-  .telemetry-chart-panel { min-width: 280px; }
+  /* .track-map responsive rule migrated to TrackMap.module.css */
+  /* .telemetry-chart-panel responsive rule migrated to TelemetryChart.module.css */
 }
 
 @media (max-width: 900px) {
-  .track-map svg { max-height: 200px; }
+  /* .track-map svg responsive rule migrated to TrackMap.module.css */
   .dashboard-grid { grid-template-columns: 1fr; }
 }

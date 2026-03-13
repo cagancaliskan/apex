@@ -10,6 +10,7 @@
 import { useMemo, type FC, type CSSProperties } from 'react';
 import type { DriverState } from '../types';
 import { formatLapTime, formatGap, getTyreLabel, getTyreClass } from '../utils';
+import styles from './DriverTable.module.css';
 
 // =============================================================================
 // Types
@@ -150,7 +151,7 @@ const DriverTable: FC<DriverTableProps> = ({
     return (
         <div className="card" style={{ overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
-                <table className="driver-table">
+                <table className={styles.driverTable}>
                     <thead>
                         <tr>
                             <th style={{ width: '50px' }}>Pos</th>
@@ -215,42 +216,42 @@ const DriverRow: FC<DriverRowProps> = ({ driver, index, fastestLapTime, isSelect
 
     return (
         <tr onClick={() => onSelect?.(driver)} style={rowStyle} className={isSelected ? 'selected' : ''}>
-            <td className="position-cell">{driver.position}</td>
+            <td className={styles.positionCell}>{driver.position}</td>
             <td>
-                <div className="driver-cell">
-                    <div className="team-color" style={{ backgroundColor: `#${driver.team_colour || 'FFFFFF'}` }} />
+                <div className={styles.driverCell}>
+                    <div className={styles.teamColor} style={{ backgroundColor: `#${driver.team_colour || 'FFFFFF'}` }} />
                     <div>
-                        <div className="driver-name">{driver.name_acronym || `#${driver.driver_number}`}</div>
-                        <div className="driver-team">{driver.team_name || 'Unknown'}</div>
+                        <div className={styles.driverName}>{driver.name_acronym || `#${driver.driver_number}`}</div>
+                        <div className={styles.driverTeam}>{driver.team_name || 'Unknown'}</div>
                     </div>
                 </div>
             </td>
-            <td className="speed-cell telemetry-cell">{driver.speed ? `${Math.round(driver.speed)}` : '-'}</td>
-            <td className="gear-cell telemetry-cell">{driver.gear !== undefined ? `G${driver.gear}` : '-'}</td>
-            <td className="telemetry-cell">
-                <div className={`mini-drs ${drsState}`} title={`DRS ${drsState.charAt(0).toUpperCase() + drsState.slice(1)}`} />
+            <td className={`${styles.speedCell} ${styles.telemetryCell}`}>{driver.speed ? `${Math.round(driver.speed)}` : '-'}</td>
+            <td className={`${styles.gearCell} ${styles.telemetryCell}`}>{driver.gear !== undefined ? `G${driver.gear}` : '-'}</td>
+            <td className={styles.telemetryCell}>
+                <div className={`${styles.miniDrs} ${styles[drsState]}`} title={`DRS ${drsState.charAt(0).toUpperCase() + drsState.slice(1)}`} />
             </td>
-            <td className="telemetry-cell">
-                <div className="mini-bars">
-                    <div className="mini-bar">
-                        <div className="mini-bar-fill throttle" style={{ height: `${driver.throttle || 0}%` }} />
+            <td className={styles.telemetryCell}>
+                <div className={styles.miniBars}>
+                    <div className={styles.miniBar}>
+                        <div className={`${styles.miniBarFill} ${styles.throttle}`} style={{ height: `${driver.throttle || 0}%` }} />
                     </div>
-                    <div className="mini-bar">
+                    <div className={styles.miniBar}>
                         <div
-                            className="mini-bar-fill brake"
+                            className={`${styles.miniBarFill} ${styles.brake}`}
                             style={{ height: `${driver.brake > 1 ? driver.brake : (driver.brake || 0) * 100}%` }}
                         />
                     </div>
                 </div>
             </td>
-            <td className="gap-cell">
+            <td className={styles.gapCell}>
                 {driver.position === 1 ? (
                     <span style={{ color: 'var(--color-info)' }}>LEADER</span>
                 ) : (
                     formatGap(driver.gap_to_leader)
                 )}
             </td>
-            <td className={`lap-time-cell ${isFastestLap ? 'best' : isPersonalBest ? 'personal-best' : ''}`}>
+            <td className={`${styles.lapTimeCell}${isFastestLap ? ' ' + styles.best : isPersonalBest ? ' ' + styles.personalBest : ''}`}>
                 {formatLapTime(driver.last_lap_time)}
             </td>
             <td>
@@ -260,7 +261,7 @@ const DriverRow: FC<DriverRowProps> = ({ driver, index, fastestLapTime, isSelect
                 </div>
             </td>
             <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: deg.color }}>{deg.text}</td>
-            <td className="lap-time-cell" style={{ opacity: 0.8 }}>
+            <td className={styles.lapTimeCell} style={{ opacity: 0.8 }}>
                 -
             </td>
             <td>
@@ -303,7 +304,7 @@ interface CompactTableProps {
 const CompactTable: FC<CompactTableProps> = ({ drivers, selectedDriver, onDriverSelect }) => (
     <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
         <div style={{ overflowX: 'auto' }}>
-            <table className="driver-table compact">
+            <table className={`${styles.driverTable} ${styles.compact}`}>
                 <thead>
                     <tr>
                         <th style={{ width: '35px' }}>P</th>

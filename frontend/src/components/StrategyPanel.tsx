@@ -11,6 +11,8 @@
 import { useMemo, useState, type FC } from 'react';
 import type { DriverState } from '../types';
 import ExplainabilityPanel from './ExplainabilityPanel';
+import PitRejoinVisualizer from './PitRejoinVisualizer';
+import { useRaceStore } from '../store/raceStore';
 
 // =============================================================================
 // Types
@@ -113,6 +115,9 @@ const CompactStrategy: FC<{ driver: DriverState }> = ({ driver }) => {
 // =============================================================================
 
 const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compact = false, currentLap = 0, totalLaps }) => {
+    const sortedDrivers = useRaceStore(s => s.sortedDrivers);
+    const recentPits = useRaceStore(s => s.recentPits);
+
     const driver = useMemo((): DriverState | null => {
         if (!drivers || drivers.length === 0) return null;
         if (selectedDriver) {
@@ -347,21 +352,44 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                     </div>
                 </Section>
 
-                {/* Rejoin */}
-                {(driver.predicted_rejoin_position || 0) > 0 && (
-                    <Section label="Predicted Rejoin">
-                        <div style={{ display: 'flex', gap: '16px', fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
-                            <div>
-                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '2px' }}>POSITION</div>
-                                <div style={{ fontWeight: 700 }}>P{driver.predicted_rejoin_position}</div>
+                {/* Rejoin Visualizer — shown when driver is in pit window or pitting */}
+                {((currentLap >= (driver.pit_window_min ?? 0) &&
+                   currentLap <= (driver.pit_window_max ?? 0) &&
+                   (driver.pit_window_min ?? 0) > 0) ||
+                  driver.in_pit === true) && (
+                    <Section label="Pit Rejoin">
+                        <PitRejoinVisualizer
+                            driver={driver}
+                            allDrivers={sortedDrivers}
+                        />
+                    </Section>
+                )}
+
+                {/* Pit History Strip */}
+                {recentPits.length > 0 && (
+                    <Section label="Recent Pits">
+                        {recentPits.slice(0, 3).map((pit, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', padding: '2px 0', color: 'var(--text-secondary)' }}>
+                                <span style={{ color: 'var(--text-primary)', minWidth: '28px' }}>#{pit.driver_number}</span>
+                                <span>L{pit.lap_number}</span>
+                                {pit.compound && (
+                                    <span style={{
+                                        width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                                        display: 'inline-block',
+                                        background: pit.compound === 'SOFT' ? 'var(--tyre-soft)'
+                                            : pit.compound === 'MEDIUM' ? 'var(--tyre-medium)'
+                                            : pit.compound === 'HARD' ? 'var(--tyre-hard)'
+                                            : pit.compound === 'INTERMEDIATE' ? 'var(--tyre-inter)'
+                                            : pit.compound === 'WET' ? 'var(--tyre-wet)'
+                                            : 'var(--text-muted)',
+                                    }} />
+                                )}
+                                {pit.compound && <span style={{ fontSize: '0.7rem', textTransform: 'uppercase' as const }}>{pit.compound.slice(0, 1)}</span>}
+                                {pit.pit_duration != null && (
+                                    <span style={{ color: 'var(--text-muted)', marginLeft: 'auto' }}>{pit.pit_duration.toFixed(1)}s</span>
+                                )}
                             </div>
-                            <div>
-                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '2px' }}>TRAFFIC</div>
-                                <div style={{ color: (driver.rejoin_traffic_severity || 0) > 0.6 ? 'var(--status-red)' : (driver.rejoin_traffic_severity || 0) > 0.3 ? 'var(--status-amber)' : 'var(--status-green)' }}>
-                                    {(driver.rejoin_traffic_severity || 0) > 0.6 ? 'HIGH' : (driver.rejoin_traffic_severity || 0) > 0.3 ? 'MED' : 'LOW'}
-                                </div>
-                            </div>
-                        </div>
+                        ))}
                     </Section>
                 )}
             </div>

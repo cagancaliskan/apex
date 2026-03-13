@@ -132,6 +132,25 @@ const TelemetryPanel: FC<TelemetryPanelProps> = ({ driver, compact = false }) =>
                 <HBar value={throttle} color="var(--status-green)" label="THR" />
                 <HBar value={brake} color="var(--status-red)" label="BRK" />
             </div>
+
+            {/* Sector Times */}
+            {(driver.sector_1 != null || driver.sector_2 != null || driver.sector_3 != null) && (
+                <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                    {(['sector_1', 'sector_2', 'sector_3'] as const).map((key, i) => {
+                        const val = driver[key];
+                        return (
+                            <div key={key} style={{ flex: 1, textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' as const, marginBottom: '2px' }}>
+                                    S{i + 1}
+                                </div>
+                                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: val != null ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                                    {val != null ? val.toFixed(3) : '—'}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };

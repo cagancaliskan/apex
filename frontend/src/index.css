@@ -114,9 +114,8 @@ body {
   overflow: hidden;
 }
 
-/* Stub classes — referenced in legacy components, kept harmless */
-.card-glow { /* no glow in v7 */ }
-.text-gradient { color: var(--color-info); }
+/* Stub class — referenced in MetricCard and TelemetryChart */
+.card-glow { /* no visual glow in v7 */ }
 
 /* ============================================================================
    Layout Components
@@ -215,80 +214,7 @@ body {
   padding: 6px 12px 4px;
 }
 
-/* Keep legacy sidebar classes for any remaining usage */
-.sidebar {
-  width: var(--sidebar-width);
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  z-index: 100;
-  padding: var(--space-sm);
-  gap: var(--space-md);
-}
-
-.sidebar-icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: color var(--transition-fast);
-  border-radius: var(--radius-sm);
-}
-
-.sidebar-icon:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.topbar {
-  height: var(--topbar-height);
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-md);
-  gap: var(--space-lg);
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
-
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  margin-left: auto;
-}
-
-.topbar-label {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-}
-
-.topbar-value {
-  font-family: var(--font-mono);
-  font-size: 0.92rem;
-  color: var(--text-primary);
-  font-weight: 600;
-}
+/* sidebar, topbar, topbar-left/right — used only by Sidebar.tsx and TopBar.tsx which are not imported in active pages; orphaned classes removed */
 
 /* ============================================================================
    Cards & Containers
@@ -304,13 +230,6 @@ body {
 
 .card:hover {
   background: var(--bg-card-hover);
-}
-
-.card-glass {
-  background: rgba(22, 27, 34, 0.8);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--border-color);
 }
 
 /* ============================================================================
@@ -333,11 +252,6 @@ h1 { font-size: 1.75rem; }
 h2 { font-size: 1.5rem; }
 h3 { font-size: 1.25rem; }
 h4 { font-size: 1rem; }
-
-.text-mono {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
 
 /* Metric Cards — migrated to MetricCard.module.css */
 
@@ -456,82 +370,8 @@ h4 { font-size: 1rem; }
   color: var(--text-primary);
 }
 
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-}
-
 /* Session Selector — migrated to SessionSelector.module.css */
-
-/* ============================================================================
-   Header
-   ============================================================================ */
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-lg);
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: var(--space-xl);
-  border-radius: var(--radius-lg);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-lg);
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.session-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.session-info .circuit {
-  font-family: var(--font-sans);
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.session-info .session-type {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.lap-counter {
-  font-family: var(--font-mono);
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.lap-counter .current { color: var(--color-info); }
-.lap-counter .total { color: var(--text-tertiary); }
-
-/* ============================================================================
-   Grid Layouts
-   ============================================================================ */
-
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-md);
-  margin-bottom: var(--space-xl);
-}
+/* btn-ghost, header, header-left/right, session-info, lap-counter, metrics-grid — orphaned, removed */
 
 /* 3-column professional dashboard layout */
 .dashboard-grid {
@@ -556,77 +396,16 @@ h4 { font-size: 1rem; }
   }
 }
 
-/* ============================================================================
-   Data Cells & Telemetry Typography
-   ============================================================================ */
-
-.data-cell {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.78rem;
-  text-align: right;
-  color: var(--text-secondary);
-}
-
-/* Small tyre badge (20px for compact leaderboard) */
-.tyre-badge-sm {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-full);
-  font-size: 0.6rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.tyre-badge-sm.soft { background: var(--tyre-soft); color: white; }
-.tyre-badge-sm.medium { background: var(--tyre-medium); color: black; }
-.tyre-badge-sm.hard { background: var(--tyre-hard); color: black; }
-.tyre-badge-sm.intermediate { background: var(--tyre-inter); color: black; }
-.tyre-badge-sm.wet { background: var(--tyre-wet); color: white; }
-
-/* Pit window bar */
-.pit-window-bar {
-  position: relative;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.pit-window-bar .pit-range {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  background: rgba(88, 166, 255, 0.25);
-  border-radius: 3px;
-}
-
-.pit-window-bar .pit-ideal {
-  position: absolute;
-  top: 0;
-  width: 2px;
-  height: 100%;
-  background: var(--color-info);
-}
-
+/* data-cell, tyre-badge-sm, pit-window-bar — orphaned, removed */
 /* Speed readout, h-bar, sector-delta, lb-row, in-pit-dot migrated to LiveDashboard.module.css */
-
 /* Strategy console sections — migrated to StrategyPanel.module.css */
 
 /* ============================================================================
    Animations (minimal, professional)
    ============================================================================ */
 
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
+/* @keyframes slideIn and .animate-slide-in — orphaned, removed */
 /* .animate-fade-in migrated to ReplayPage.module.css */
-.animate-slide-in { animation: slideIn 0.2s ease forwards; }
 
 /* ============================================================================
    Scrollbar
@@ -660,32 +439,5 @@ h4 { font-size: 1rem; }
 .mb-lg { margin-bottom: var(--space-lg); }
 .mb-xl { margin-bottom: var(--space-xl); }
 
-/* ============================================================================
-   Telemetry Panel
-   ============================================================================ */
-
-/* .telemetry-panel, .drs-indicator migrated to TelemetryPanel.module.css */
-
-/* Mini telemetry classes migrated to DriverTable.module.css */
-
-/* Track Map — migrated to TrackMap.module.css */
-
-/* Telemetry Charts — migrated to TelemetryChart.module.css */
-
-/* Race Progress Bar — migrated to RaceProgressBar.module.css */
-
-/* Weather Widget — migrated to WeatherWidget.module.css */
-
-/* ============================================================================
-   Responsive Adjustments
-   ============================================================================ */
-
-@media (max-width: 1200px) {
-  /* .track-map responsive rule migrated to TrackMap.module.css */
-  /* .telemetry-chart-panel responsive rule migrated to TelemetryChart.module.css */
-}
-
-@media (max-width: 900px) {
-  /* .track-map svg responsive rule migrated to TrackMap.module.css */
-  .dashboard-grid { grid-template-columns: 1fr; }
-}
+/* Component-specific classes migrated to their respective .module.css files:
+   TelemetryPanel, DriverTable, TrackMap, TelemetryChart, RaceProgressBar, WeatherWidget */

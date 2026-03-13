@@ -40,7 +40,7 @@ interface RecommendationStyle {
 function getRecStyle(rec: RecommendationType | undefined): RecommendationStyle {
     switch (rec) {
         case 'PIT_NOW':
-            return { bg: 'rgba(248, 81, 73, 0.12)', border: 'var(--status-red)', text: 'PIT NOW', color: 'var(--status-red)' };
+            return { bg: 'rgba(225, 6, 0, 0.12)', border: 'var(--color-accent)', text: 'PIT NOW', color: 'var(--color-accent)' };
         case 'CONSIDER_PIT':
             return { bg: 'rgba(210, 153, 34, 0.12)', border: 'var(--status-amber)', text: 'CONSIDER PIT', color: 'var(--status-amber)' };
         case 'EXTEND_STINT':
@@ -59,7 +59,7 @@ function getDegColor(slope: number | undefined): string {
 
 function getCliffColor(risk: number | undefined): string {
     if (!risk) return 'var(--status-green)';
-    if (risk > 0.7) return 'var(--status-red)';
+    if (risk > 0.8) return 'var(--color-accent)';
     if (risk > 0.4) return 'var(--status-amber)';
     return 'var(--status-green)';
 }
@@ -184,7 +184,18 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                 {/* Recommendation */}
                 <Section label="Recommendation">
                     <div style={{ padding: '6px 8px', background: rec.bg, borderLeft: `3px solid ${rec.border}`, borderRadius: '2px', marginBottom: '4px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: rec.color, letterSpacing: '0.04em' }}>{rec.text}</div>
+                        <div style={{
+                            fontWeight: 700,
+                            fontSize: driver.pit_recommendation === 'PIT_NOW' ? '0.7rem' : '0.9rem',
+                            letterSpacing: driver.pit_recommendation === 'PIT_NOW' ? '0.08em' : '0.04em',
+                            fontFamily: driver.pit_recommendation === 'PIT_NOW' ? "'Orbitron', sans-serif" : 'inherit',
+                            textTransform: 'uppercase' as const,
+                            padding: driver.pit_recommendation === 'PIT_NOW' ? '2px 6px' : undefined,
+                            borderRadius: driver.pit_recommendation === 'PIT_NOW' ? 'var(--radius-sm)' : undefined,
+                            backgroundColor: driver.pit_recommendation === 'PIT_NOW' ? 'var(--color-accent)' : undefined,
+                            color: driver.pit_recommendation === 'PIT_NOW' ? '#fff' : rec.color,
+                            display: 'inline-block',
+                        }}>{rec.text}</div>
                         {driver.pit_reason && (
                             <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{driver.pit_reason}</div>
                         )}
@@ -282,6 +293,18 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: getCliffColor(driver.cliff_risk) }}>
                                     {Math.round((driver.cliff_risk || 0) * 100)}%
                                 </span>
+                                {(driver.cliff_risk ?? 0) > 0.8 && (
+                                    <span style={{
+                                        fontFamily: "'Orbitron', sans-serif",
+                                        fontSize: '0.65rem',
+                                        fontWeight: 700,
+                                        color: 'var(--color-accent)',
+                                        letterSpacing: '0.1em',
+                                        marginLeft: '6px',
+                                    }}>
+                                        CLIFF
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>

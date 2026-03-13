@@ -133,7 +133,7 @@ body {
 /* Status bar — single-line dense session info */
 .status-bar {
   background: var(--bg-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   padding: 0 12px;
@@ -201,7 +201,7 @@ body {
 /* Tab bar — page navigation */
 .tab-bar {
   background: var(--bg-primary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: stretch;
   padding: 0 12px;
@@ -256,7 +256,7 @@ body {
   bottom: 0;
   width: 280px;
   background: var(--bg-secondary);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid var(--border-color);
   z-index: 201;
   display: flex;
   flex-direction: column;
@@ -274,7 +274,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-color);
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -301,7 +301,7 @@ body {
 
 .session-drawer-active {
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-color);
   background: rgba(88, 166, 255, 0.06);
   flex-shrink: 0;
 }
@@ -322,7 +322,7 @@ body {
   display: flex;
   gap: 6px;
   padding: 8px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
@@ -345,7 +345,7 @@ body {
 .sidebar {
   width: var(--sidebar-width);
   background: var(--bg-secondary);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -378,7 +378,7 @@ body {
 .topbar {
   height: var(--topbar-height);
   background: var(--bg-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   padding: 0 var(--space-md);
@@ -422,7 +422,7 @@ body {
 
 .card {
   background: var(--bg-card);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   transition: background var(--transition-fast);
@@ -436,7 +436,7 @@ body {
   background: rgba(22, 27, 34, 0.8);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
 }
 
 /* ============================================================================
@@ -476,7 +476,7 @@ h4 { font-size: 1rem; }
   padding: var(--space-lg);
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
 }
 
 .metric-card .label {
@@ -724,7 +724,7 @@ h4 { font-size: 1rem; }
 .session-option {
   padding: var(--space-md);
   background: var(--bg-tertiary);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -760,7 +760,7 @@ h4 { font-size: 1rem; }
   justify-content: space-between;
   padding: var(--space-lg);
   background: var(--bg-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-color);
   margin-bottom: var(--space-xl);
   border-radius: var(--radius-lg);
 }
@@ -1066,7 +1066,10 @@ h4 { font-size: 1rem; }
 .sector-delta.no-data { color: var(--text-muted); }
 
 /* Leaderboard row borders for urgency states */
-.lb-row-pit-now { border-left: 3px solid var(--status-red) !important; }
+.lb-row-pit-now {
+    background: rgba(225, 6, 0, 0.12);
+    border-left: 2px solid var(--color-accent);
+}
 .lb-row-window { border-left: 3px solid var(--status-amber) !important; }
 .lb-row-threat { border-left: 3px solid var(--color-orange) !important; }
 
@@ -1082,7 +1085,7 @@ h4 { font-size: 1rem; }
 /* Strategy console sections */
 .strategy-section {
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .strategy-section:last-child {
@@ -1090,12 +1093,12 @@ h4 { font-size: 1rem; }
 }
 
 .strategy-section-label {
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  margin-bottom: 6px;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
 }
 
 /* ============================================================================
@@ -1268,7 +1271,7 @@ h4 { font-size: 1rem; }
 .race-progress-bar-container {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
 }
 
 .race-progress-bar {

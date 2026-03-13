@@ -249,9 +249,15 @@ const Leaderboard: FC<LeaderboardProps> = ({ drivers, selectedDriver, onSelect, 
                                 {d.current_lap || 0}
                             </div>
 
-                            {/* In-pit dot */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {/* Status: in-pit dot + undercut/overcut icons */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
                                 {d.in_pit && <div className="in-pit-dot" />}
+                                {d.undercut_threat && (
+                                    <span title="Undercut threat" style={{ color: 'var(--status-amber)', fontSize: '0.75rem' }}>⬇</span>
+                                )}
+                                {d.overcut_opportunity && (
+                                    <span title="Overcut opportunity" style={{ color: 'var(--status-green)', fontSize: '0.75rem' }}>⬆</span>
+                                )}
                             </div>
                         </div>
                     );

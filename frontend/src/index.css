@@ -4,15 +4,20 @@
 
 /* CSS Variables - Design System (v7 professional ATLAS/TCDS inspired) */
 :root {
-  /* Background colors */
-  --bg-primary: #0d1117;
-  --bg-secondary: #161b22;
-  --bg-tertiary: #1c2128;
-  --bg-card: #161b22;
-  --bg-card-hover: #1c2128;
+  /* Background colors — deeper blacks */
+  --bg-primary: #08090b;
+  --bg-secondary: #0f1117;
+  --bg-tertiary: #161b22;
+  --bg-card: #0f1117;
+  --bg-card-hover: #161b22;
+
+  /* NEW: F1 red accent — for PIT_NOW badges, CLIFF label, primary interactive */
+  --color-accent: #e10600;
+
+  /* Info/blue — demoted to informational only */
+  --color-info: #3b82f6;
 
   /* Status & semantic colors (professional palette) */
-  --color-info: #58a6ff;
   --color-purple: #a371f7;
   --status-green: #3fb950;
   --status-amber: #d29922;
@@ -30,10 +35,13 @@
   --font-display: var(--font-sans);
 
   /* Text colors */
-  --text-primary: #ffffff;
-  --text-secondary: #8b949e;
+  --text-primary: #f0f0f0;
+  --text-secondary: #6b7280;
   --text-tertiary: #6e7681;
   --text-muted: #484f58;
+
+  /* NEW: border color — replaces rgba(255,255,255,0.06) literals throughout */
+  --border-color: #1f2937;
 
   /* Tyre compound colors (unchanged from F1 spec) */
   --tyre-soft: #ff0000;
@@ -42,15 +50,15 @@
   --tyre-inter: #39d353;
   --tyre-wet: #0080ff;
 
-  /* Layout dimensions */
+  /* Layout dimensions — density improvements */
   --sidebar-width: 48px;
   --topbar-height: 44px;
-  --status-bar-height: 32px;
-  --tab-bar-height: 28px;
+  --status-bar-height: 28px;   /* was 32px */
+  --tab-bar-height: 24px;      /* was 28px */
   --panel-header: 32px;
-  --row-height: 28px;
-  --leaderboard-width: 320px;
-  --strategy-width: 360px;
+  --row-height: 26px;          /* was 28px */
+  --leaderboard-width: 300px;  /* was 320px */
+  --strategy-width: 340px;     /* was 360px */
 
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, type FC } from 'react';
+import { Radio, RotateCcw, BarChart2 } from 'lucide-react';
 import styles from './App.module.css';
 import LiveDashboard from './pages/LiveDashboard';
 import ReplayPage from './pages/ReplayPage';
@@ -277,12 +278,15 @@ const App: FC = () => {
             {/* Tab Bar */}
             <nav className={styles.tabBar}>
                 <button className={`${styles.tabBtn}${currentPage === 'live' ? ` ${styles.tabBtnActive}` : ''}`} onClick={() => setCurrentPage('live')}>
+                    <Radio size={14} />
                     Live
                 </button>
                 <button className={`${styles.tabBtn}${currentPage === 'replay' ? ` ${styles.tabBtnActive}` : ''}`} onClick={() => setCurrentPage('replay')}>
+                    <RotateCcw size={14} />
                     Replay
                 </button>
                 <button className={`${styles.tabBtn}${currentPage === 'backtest' ? ` ${styles.tabBtnActive}` : ''}`} onClick={() => setCurrentPage('backtest')}>
+                    <BarChart2 size={14} />
                     Backtest
                 </button>
             </nav>

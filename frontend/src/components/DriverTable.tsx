@@ -246,7 +246,7 @@ const DriverRow: FC<DriverRowProps> = ({ driver, index, fastestLapTime, isSelect
             </td>
             <td className={styles.gapCell}>
                 {driver.position === 1 ? (
-                    <span style={{ color: 'var(--color-info)' }}>LEADER</span>
+                    <span style={{ color: 'var(--color-accent)' }}>LEADER</span>
                 ) : (
                     formatGap(driver.gap_to_leader)
                 )}
@@ -270,7 +270,7 @@ const DriverRow: FC<DriverRowProps> = ({ driver, index, fastestLapTime, isSelect
                         style={{
                             width: '40px',
                             height: '6px',
-                            background: 'var(--bg-tertiary)',
+                            background: 'var(--bg-elevated)',
                             borderRadius: '3px',
                             overflow: 'hidden',
                         }}
@@ -356,7 +356,7 @@ const CompactTable: FC<CompactTableProps> = ({ drivers, selectedDriver, onDriver
                                         fontSize: '0.75rem',
                                         color:
                                             driver.position === 1
-                                                ? 'var(--color-info)'
+                                                ? 'var(--color-accent)'
                                                 : driver.position === 0
                                                     ? 'var(--text-muted)'
                                                     : 'var(--text-secondary)',
@@ -368,7 +368,7 @@ const CompactTable: FC<CompactTableProps> = ({ drivers, selectedDriver, onDriver
                                     style={{
                                         fontSize: '0.75rem',
                                         fontFamily: 'var(--font-mono)',
-                                        color: driver.speed > 300 ? 'var(--color-info)' : 'var(--text-secondary)',
+                                        color: driver.speed > 300 ? 'var(--color-accent)' : 'var(--text-secondary)',
                                     }}
                                 >
                                     {driver.speed ? Math.round(driver.speed) : '-'}

@@ -53,7 +53,7 @@ const RivalRow: FC<{ rival: RivalPrediction }> = ({ rival }) => (
         alignItems: 'center',
         gap: 'var(--space-xs)',
         padding: 'var(--space-xs)',
-        background: 'var(--bg-tertiary)',
+        background: 'var(--bg-elevated)',
         borderRadius: 'var(--radius-sm)',
         borderLeft: `3px solid ${getTeamColor(rival.team)}`
     }}>
@@ -102,7 +102,7 @@ const RivalRow: FC<{ rival: RivalPrediction }> = ({ rival }) => (
                 fontFamily: 'var(--font-sans)',
                 fontWeight: 700,
                 fontSize: '0.85rem',
-                color: 'var(--color-info)'
+                color: 'var(--color-accent)'
             }}>
                 L{rival.predictedPitLap}
             </div>

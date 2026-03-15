@@ -88,7 +88,7 @@ const BrakingIntensityBar: FC<BrakingIntensityBarProps> = ({ value, maxValue = 1
         return (
             <div className="braking-intensity-bar horizontal" style={{ width: '100%', height: width }}>
                 {showLabel && <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>BRAKE</span>}
-                <div style={{ height: width, background: 'var(--bg-tertiary)', borderRadius: width / 2, overflow: 'hidden', position: 'relative' }}>
+                <div style={{ height: width, background: 'var(--bg-elevated)', borderRadius: width / 2, overflow: 'hidden', position: 'relative' }}>
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${percentage}%`, background: color, borderRadius: width / 2, transition: 'width 0.1s ease', boxShadow: percentage > 50 ? `0 0 8px ${color}` : 'none' }} />
                 </div>
             </div>
@@ -98,7 +98,7 @@ const BrakingIntensityBar: FC<BrakingIntensityBarProps> = ({ value, maxValue = 1
     return (
         <div className="braking-intensity-bar vertical" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
             {showLabel && <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Brake</span>}
-            <div style={{ width, height, background: 'var(--bg-tertiary)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+            <div style={{ width, height, background: 'var(--bg-elevated)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
                 <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: `${percentage}%`, background: color, borderRadius: 4, transition: 'height 0.1s ease', boxShadow: percentage > 50 ? `0 0 8px ${color}` : 'none' }} />
             </div>
             <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(value)}%</span>
@@ -112,14 +112,14 @@ const ThrottleBrakeIndicator: FC<ThrottleBrakeIndicatorProps> = ({ throttle = 0,
         <div className="throttle-brake-indicator" style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>THR</span>
-                <div style={{ width: 20, height, background: 'var(--bg-tertiary)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                <div style={{ width: 20, height, background: 'var(--bg-elevated)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
                     <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: `${throttle}%`, background: 'var(--accent-green)', borderRadius: 4, transition: 'height 0.1s ease' }} />
                 </div>
                 <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{Math.round(throttle)}%</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>BRK</span>
-                <div style={{ width: 20, height, background: 'var(--bg-tertiary)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                <div style={{ width: 20, height, background: 'var(--bg-elevated)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
                     <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: `${normalizedBrake}%`, background: normalizedBrake > 80 ? '#ff0000' : 'var(--status-red)', borderRadius: 4, transition: 'height 0.1s ease', boxShadow: normalizedBrake > 80 ? '0 0 8px rgba(255, 0, 0, 0.5)' : 'none' }} />
                 </div>
                 <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{Math.round(normalizedBrake)}%</span>

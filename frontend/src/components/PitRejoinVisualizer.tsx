@@ -66,7 +66,7 @@ const PitRejoinVisualizer: FC<PitRejoinVisualizerProps> = ({ driver, allDrivers 
     // So "Rejoin Spot" is +pitLoss seconds "Behind" my current spot.
 
     return (
-        <div style={{ marginTop: 'var(--space-md)', padding: 'var(--space-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
+        <div style={{ marginTop: 'var(--space-md)', padding: 'var(--space-sm)', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>PIT REJOIN PREDICTION</span>
                 {(driver.rejoin_traffic_severity ?? 0) > 0.6 && (

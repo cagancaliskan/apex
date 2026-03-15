@@ -55,7 +55,7 @@ const TyreLifeChart: FC<TyreLifeChartProps> = ({ driver, height = 120 }) => {
         <div className="tyre-life-chart" style={{ marginTop: 'var(--space-md)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>PREDICTED PACE (NEXT 5 LAPS)</span>
-                <span style={{ fontSize: '0.7rem', fontFamily: 'var(--font-display)', color: 'var(--accent-cyan)' }}>
+                <span style={{ fontSize: '0.7rem', fontFamily: 'var(--font-display)', color: 'var(--status-blue)' }}>
                     +{((data[data.length - 1] - data[0])).toFixed(3)}s
                 </span>
             </div>
@@ -68,7 +68,7 @@ const TyreLifeChart: FC<TyreLifeChartProps> = ({ driver, height = 120 }) => {
                 <polyline
                     points={points}
                     fill="none"
-                    stroke="var(--accent-cyan)"
+                    stroke="var(--status-blue)"
                     strokeWidth="2"
                     vectorEffect="non-scaling-stroke"
                 />

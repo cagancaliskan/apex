@@ -25,7 +25,7 @@ const StrategyComparison: FC<StrategyComparisonProps> = ({ currentPosition: _cur
             </div>
             <div style={{
                 padding: 'var(--space-sm)',
-                background: 'var(--bg-tertiary)',
+                background: 'var(--bg-elevated)',
                 borderRadius: 'var(--radius-sm)',
                 fontSize: '0.7rem',
                 color: 'var(--text-muted)',

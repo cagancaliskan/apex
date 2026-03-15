@@ -2,6 +2,8 @@
 
 .telemetryChartPanel {
   min-width: 320px;
+  background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-surface) 100%);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
 .telemetryChart {
@@ -23,6 +25,10 @@
 
 .throttleBrakeChart {
   /* wrapper for throttle/brake overlay chart */
+}
+
+.speedLine {
+  transition: d 300ms ease;
 }
 
 @media (max-width: 1200px) {

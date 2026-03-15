@@ -132,7 +132,7 @@ const CarMarker: FC<CarMarkerProps> = ({ driver, x, y, isSelected, onClick }) =>
             {isSelected && (
                 <circle r={10} fill="none" stroke={teamColor} strokeWidth={2} opacity={0.6} />
             )}
-            <circle r={5} fill={teamColor} stroke="#000" strokeWidth={1} />
+            <circle r={5} fill={teamColor} stroke="#000" strokeWidth={1} style={{ filter: isSelected ? `drop-shadow(0 0 4px ${teamColor})` : undefined }} />
             <text y={-10} textAnchor="middle" fill="white" fontSize="8" fontWeight="bold" fontFamily="var(--font-mono)">
                 {driver.name_acronym || driver.driver_number}
             </text>
@@ -160,8 +160,8 @@ const DRSZoneHighlight: FC<DRSZoneHighlightProps> = ({ zone, bounds, width, heig
             y1={start.y}
             x2={end.x}
             y2={end.y}
-            stroke="rgba(63, 185, 80, 0.7)"
-            strokeWidth={6}
+            stroke="rgba(0,200,180,0.6)"
+            strokeWidth={3}
             strokeLinecap="round"
             opacity={0.7}
         />
@@ -272,17 +272,6 @@ const TrackMap: FC<TrackMapProps> = ({
             .filter((pos): pos is CarPosition => pos !== null);
     }, [drivers, geometry, bounds, width, height]);
 
-    // Track color based on status
-    const trackColor = useMemo(() => {
-        const colors: Record<TrackStatus, string> = {
-            GREEN: '#444444',
-            YELLOW: 'rgba(255, 208, 0, 0.9)',
-            RED: 'rgba(255, 0, 85, 0.9)',
-            SC: 'rgba(255, 165, 0, 0.9)',
-            VSC: 'rgba(255, 140, 0, 0.7)',
-        };
-        return colors[trackStatus] || colors.GREEN;
-    }, [trackStatus]);
 
     const handleCarClick = useCallback(
         (driver: DriverState) => {
@@ -399,10 +388,10 @@ const TrackMap: FC<TrackMapProps> = ({
                     <path d={outerPath} fill="rgba(40, 40, 40, 0.5)" stroke="none" />
 
                     {/* Inner edge */}
-                    <path d={innerPath} fill="none" stroke="#333" strokeWidth={2} />
+                    <path d={innerPath} fill="none" stroke="#1e2530" strokeWidth={2} />
 
                     {/* Outer edge */}
-                    <path d={outerPath} fill="none" stroke={trackColor} strokeWidth={2} />
+                    <path d={outerPath} fill="none" stroke="#2a3441" strokeWidth={2} />
 
                     {/* Center racing line */}
                     <path d={trackPath} fill="none" stroke="rgba(100, 100, 100, 0.5)" strokeWidth={1} strokeDasharray="4 4" />

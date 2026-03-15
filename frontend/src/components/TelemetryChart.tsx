@@ -140,6 +140,12 @@ const Chart: FC<ChartProps> = ({ data, xKey, yKey, label, unit, color, height = 
                 </span>
             </div>
             <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <linearGradient id="speedAreaFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%"   stopColor="#3b82f6" stopOpacity={0.15} />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                </defs>
                 {showGrid && yLabels.map((l, i) => (
                     <g key={i}>
                         <line x1={padding.left} y1={l.y} x2={width - padding.right} y2={l.y} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 4" />
@@ -147,7 +153,8 @@ const Chart: FC<ChartProps> = ({ data, xKey, yKey, label, unit, color, height = 
                     </g>
                 ))}
                 <rect x={padding.left} y={padding.top} width={width - padding.left - padding.right} height={height - padding.top - padding.bottom} fill="rgba(0,0,0,0.2)" rx={4} />
-                {path && <path d={path} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
+                {path && <path d={`${path} L ${width - padding.right} ${height - padding.bottom} L ${padding.left} ${height - padding.bottom} Z`} fill="url(#speedAreaFill)" stroke="none" />}
+                {path && <path d={path} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={styles.speedLine} />}
                 {(!data || data.length === 0) && <text x={width / 2} y={height / 2} textAnchor="middle" fill="var(--text-muted)" fontSize="10">No data</text>}
             </svg>
         </div>

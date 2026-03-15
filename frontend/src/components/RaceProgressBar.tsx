@@ -58,9 +58,9 @@ interface RaceProgressBarProps {
 const EventMarker: FC<EventMarkerProps> = ({ type, position, label, onClick }) => {
     const markerStyles: Record<string, { color: string; symbol: string; tooltip: string }> = {
         dnf: { color: 'var(--status-red)', symbol: '×', tooltip: `DNF: ${label}` },
-        pit: { color: 'var(--accent-yellow)', symbol: '●', tooltip: `Pit: ${label}` },
-        overtake: { color: 'var(--accent-cyan)', symbol: '↑', tooltip: `Overtake: ${label}` },
-        fastest_lap: { color: 'var(--accent-purple)', symbol: '⚡', tooltip: `Fastest Lap: ${label}` },
+        pit: { color: 'var(--status-amber)', symbol: '●', tooltip: `Pit: ${label}` },
+        overtake: { color: 'var(--status-blue)', symbol: '↑', tooltip: `Overtake: ${label}` },
+        fastest_lap: { color: 'var(--color-purple)', symbol: '⚡', tooltip: `Fastest Lap: ${label}` },
     };
     const style = markerStyles[type] || markerStyles.pit;
 
@@ -73,7 +73,7 @@ const EventMarker: FC<EventMarkerProps> = ({ type, position, label, onClick }) =
 
 const FlagPeriod: FC<FlagPeriodData> = ({ startPercent, endPercent, type }) => {
     const colors: Record<string, string> = { safety_car: 'rgba(255, 208, 0, 0.4)', red_flag: 'rgba(255, 0, 85, 0.5)', vsc: 'rgba(255, 165, 0, 0.3)', yellow: 'rgba(255, 208, 0, 0.25)' };
-    const borderColors: Record<string, string> = { safety_car: 'var(--accent-yellow)', red_flag: 'var(--status-red)', vsc: 'var(--accent-orange)', yellow: 'var(--accent-yellow)' };
+    const borderColors: Record<string, string> = { safety_car: 'var(--status-amber)', red_flag: 'var(--status-red)', vsc: 'var(--color-orange)', yellow: 'var(--status-amber)' };
 
     return (
         <div style={{ position: 'absolute', left: `${startPercent}%`, width: `${endPercent - startPercent}%`, top: 0, bottom: 0, backgroundColor: colors[type] || colors.yellow, borderLeft: `2px solid ${borderColors[type] || borderColors.yellow}`, borderRight: `2px solid ${borderColors[type] || borderColors.yellow}`, zIndex: 1 }} title={type.replace('_', ' ').toUpperCase()} />
@@ -143,7 +143,7 @@ const RaceProgressBar: FC<RaceProgressBarProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Race Progress</span>
                 <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-display)', color: 'var(--text-secondary)' }}>
-                    <span style={{ color: 'var(--accent-cyan)' }}>{currentLap}</span>
+                    <span style={{ color: 'var(--status-blue)' }}>{currentLap}</span>
                     <span style={{ color: 'var(--text-muted)' }}>/{totalLaps}</span>
                 </span>
             </div>
@@ -151,8 +151,8 @@ const RaceProgressBar: FC<RaceProgressBarProps> = ({
             <div ref={barRef} className={styles.raceProgressBar} style={{ position: 'relative', height: 20, backgroundColor: 'var(--bg-tertiary)', borderRadius: 10, overflow: 'visible', cursor: onSeek ? 'pointer' : 'default' }} onMouseMove={handleMouseMove} onMouseDown={(e) => { setIsDragging(true); handleSeek(e); }} onMouseUp={() => setIsDragging(false)} onMouseLeave={() => { setHoveredPosition(null); setIsDragging(false); }}>
                 {lapMarkers.map(({ lap, position }) => <LapMarker key={lap} position={position} lapNumber={lap} totalLaps={totalLaps} />)}
                 {flagPeriods.map((period, index) => <FlagPeriod key={index} {...period} />)}
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${progress}%`, background: 'linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta))', borderRadius: 10, transition: isDragging ? 'none' : 'width 0.3s ease', zIndex: 2 }} />
-                <div style={{ position: 'absolute', left: `${progress}%`, top: '50%', transform: 'translate(-50%, -50%)', width: 12, height: 12, borderRadius: '50%', backgroundColor: 'white', boxShadow: '0 0 8px var(--accent-cyan), 0 2px 4px rgba(0,0,0,0.3)', zIndex: 15, transition: isDragging ? 'none' : 'left 0.3s ease' }} />
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${progress}%`, background: 'linear-gradient(90deg, var(--status-blue), var(--color-accent))', borderRadius: 10, transition: isDragging ? 'none' : 'width 0.3s ease', zIndex: 2 }} />
+                <div style={{ position: 'absolute', left: `${progress}%`, top: '50%', transform: 'translate(-50%, -50%)', width: 12, height: 12, borderRadius: '50%', backgroundColor: 'white', boxShadow: '0 0 8px var(--status-blue), 0 2px 4px rgba(0,0,0,0.3)', zIndex: 15, transition: isDragging ? 'none' : 'left 0.3s ease' }} />
                 {events.map((event, index) => <EventMarker key={index} type={event.type} position={event.position} label={event.label} onClick={() => onSeek?.({ lap: event.lap, percent: event.position })} />)}
                 {hoveredPosition !== null && onSeek && <div style={{ position: 'absolute', left: `${hoveredPosition}%`, top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255, 255, 255, 0.5)', transform: 'translateX(-50%)', zIndex: 5, pointerEvents: 'none' }} />}
             </div>

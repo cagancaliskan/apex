@@ -2,7 +2,7 @@
 
 .strategySection {
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .strategySection:last-child {

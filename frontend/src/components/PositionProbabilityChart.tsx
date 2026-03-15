@@ -30,7 +30,7 @@ function getPositionColor(position: number): string {
     if (position === 1) return '#ffd700'; // Gold
     if (position === 2) return '#c0c0c0'; // Silver
     if (position === 3) return '#cd7f32'; // Bronze
-    if (position <= 10) return 'var(--color-info)';
+    if (position <= 10) return 'var(--color-accent)';
     return 'var(--text-muted)';
 }
 
@@ -88,7 +88,7 @@ const PositionProbabilityChart: FC<PositionProbabilityChartProps> = ({
                 <span style={{
                     fontFamily: 'var(--font-sans)',
                     fontSize: '0.85rem',
-                    color: 'var(--color-info)'
+                    color: 'var(--color-accent)'
                 }}>
                     E[P] = {expectedPosition.toFixed(1)}
                 </span>
@@ -117,7 +117,7 @@ const PositionProbabilityChart: FC<PositionProbabilityChartProps> = ({
                                 fontFamily: 'var(--font-sans)',
                                 fontSize: compact ? '0.7rem' : '0.8rem',
                                 fontWeight: position === currentPosition ? 700 : 400,
-                                color: position === currentPosition ? 'var(--color-info)' : 'var(--text-secondary)'
+                                color: position === currentPosition ? 'var(--color-accent)' : 'var(--text-secondary)'
                             }}>
                                 P{position}
                             </span>
@@ -126,7 +126,7 @@ const PositionProbabilityChart: FC<PositionProbabilityChartProps> = ({
                             <div style={{
                                 flex: 1,
                                 height: compact ? '12px' : '16px',
-                                background: 'var(--bg-tertiary)',
+                                background: 'var(--bg-elevated)',
                                 borderRadius: 'var(--radius-sm)',
                                 overflow: 'hidden',
                                 position: 'relative'

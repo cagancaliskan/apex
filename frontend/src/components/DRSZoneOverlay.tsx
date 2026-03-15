@@ -92,7 +92,7 @@ const DRSStatusIndicator: FC<DRSStatusIndicatorProps> = ({ status, size = 'mediu
     const sizes = { small: { dot: 8, fontSize: '0.6rem', padding: '2px 6px' }, medium: { dot: 10, fontSize: '0.7rem', padding: '4px 8px' }, large: { dot: 14, fontSize: '0.8rem', padding: '6px 12px' } };
     const { dot, fontSize, padding } = sizes[size];
 
-    let backgroundColor = 'var(--bg-tertiary)', dotColor = 'var(--text-muted)', textColor = 'var(--text-muted)', label = 'DRS OFF', glow = 'none';
+    let backgroundColor = 'var(--bg-elevated)', dotColor = 'var(--text-muted)', textColor = 'var(--text-muted)', label = 'DRS OFF', glow = 'none';
     if (isActive) { backgroundColor = 'rgba(0, 255, 136, 0.1)'; dotColor = 'var(--accent-green)'; textColor = 'var(--accent-green)'; label = 'DRS OPEN'; glow = '0 0 8px var(--accent-green)'; }
     else if (isAvailable) { backgroundColor = 'rgba(255, 208, 0, 0.1)'; dotColor = 'var(--accent-yellow)'; textColor = 'var(--accent-yellow)'; label = 'DRS READY'; glow = '0 0 5px var(--accent-yellow)'; }
 
@@ -110,7 +110,7 @@ const DRSZoneBar: FC<DRSZoneBarProps> = ({ zones = [], currentPosition = 0, widt
             <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>DRS Zones</span>
             <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{zones.length} zone{zones.length !== 1 ? 's' : ''}</span>
         </div>
-        <div style={{ height: 8, background: 'var(--bg-tertiary)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+        <div style={{ height: 8, background: 'var(--bg-elevated)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
             {zones.map((zone, index) => <div key={index} style={{ position: 'absolute', left: `${zone.start}%`, width: `${zone.end - zone.start}%`, top: 0, bottom: 0, background: 'var(--accent-green)', opacity: 0.6 }} />)}
             <div style={{ position: 'absolute', left: `${currentPosition}%`, top: -2, bottom: -2, width: 3, background: 'white', borderRadius: 2, transform: 'translateX(-50%)', transition: 'left 0.1s ease' }} />
         </div>

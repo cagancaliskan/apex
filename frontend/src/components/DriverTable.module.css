@@ -12,13 +12,13 @@
   text-align: left;
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   position: sticky;
   top: var(--topbar-height);
-  background: var(--bg-card);
+  background: var(--bg-surface);
   z-index: 10;
 }
 
@@ -61,7 +61,7 @@
 
 .driverTeam {
   font-size: 0.7rem;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
 }
 
 .gapCell {
@@ -112,7 +112,7 @@
 .miniBar {
   width: 5px;
   height: 100%;
-  background: var(--bg-tertiary);
+  background: var(--bg-elevated);
   border-radius: 2px;
   overflow: hidden;
   position: relative;

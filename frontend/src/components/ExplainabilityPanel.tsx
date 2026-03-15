@@ -270,7 +270,7 @@ const ExplainabilityPanel: FC<ExplainabilityPanelProps> = ({ driverNumber, onClo
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'var(--bg-primary)',
+            background: 'var(--bg-base)',
             zIndex: 10,
             display: 'flex',
             flexDirection: 'column',
@@ -279,7 +279,7 @@ const ExplainabilityPanel: FC<ExplainabilityPanelProps> = ({ driverNumber, onClo
             {/* Header */}
             <div style={{
                 padding: '8px 10px',
-                background: 'var(--bg-tertiary)',
+                background: 'var(--bg-elevated)',
                 borderBottom: '1px solid rgba(255,255,255,0.06)',
                 display: 'flex',
                 alignItems: 'center',
@@ -335,7 +335,7 @@ const ExplainabilityPanel: FC<ExplainabilityPanelProps> = ({ driverNumber, onClo
                 {error && (
                     <div style={{ padding: '16px', color: 'var(--status-red)', fontSize: '0.72rem' }}>
                         Error: {error}
-                        <button onClick={() => doFetch(true)} style={{ marginLeft: '8px', color: 'var(--color-info)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem' }}>
+                        <button onClick={() => doFetch(true)} style={{ marginLeft: '8px', color: 'var(--color-accent)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem' }}>
                             Retry
                         </button>
                     </div>
@@ -407,7 +407,7 @@ const ExplainabilityPanel: FC<ExplainabilityPanelProps> = ({ driverNumber, onClo
                                 style={{
                                     background: 'rgba(88,166,255,0.1)',
                                     border: '1px solid rgba(88,166,255,0.2)',
-                                    color: 'var(--color-info)',
+                                    color: 'var(--color-accent)',
                                     borderRadius: '4px',
                                     padding: '5px 14px',
                                     fontSize: '0.68rem',

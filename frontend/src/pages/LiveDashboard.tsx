@@ -197,12 +197,19 @@ const Leaderboard: FC<LeaderboardProps> = ({ drivers, selectedDriver, onSelect, 
                     const tyreTxtColor = TYRE_TEXT_COLORS[compound] ?? '#000';
                     const urgencyClass = getRowUrgencyClass(d, currentLap, styles);
                     const gapVal = showInt ? d.gap_to_ahead : d.gap_to_leader;
+                    const posClass = d.position === 1 ? styles.posP1
+                        : d.position === 2 ? styles.posP2
+                        : d.position === 3 ? styles.posP3
+                        : styles.posRest;
+                    const gapDisplay = d.position === 1
+                        ? 'LEADER'
+                        : `▼ ${fmtGap(gapVal)}`;
 
                     return (
                         <div
                             key={d.driver_number}
                             onClick={() => onSelect(d.driver_number)}
-                            className={urgencyClass}
+                            className={[urgencyClass, isSelected ? styles.lbRowSelected : ''].filter(Boolean).join(' ')}
                             style={{
                                 height: 'var(--row-height)',
                                 display: 'grid',
@@ -211,14 +218,12 @@ const Leaderboard: FC<LeaderboardProps> = ({ drivers, selectedDriver, onSelect, 
                                 alignItems: 'center',
                                 padding: '0 6px',
                                 cursor: 'pointer',
-                                background: isSelected ? 'rgba(88,166,255,0.08)' : 'transparent',
-                                borderLeft: isSelected ? '2px solid var(--color-info)' : '2px solid transparent',
                                 borderBottom: '1px solid rgba(255,255,255,0.025)',
                                 transition: 'background 80ms',
                             }}
                         >
                             {/* Position */}
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 700, color: (d.position ?? 99) <= 3 ? 'var(--text-primary)' : 'var(--text-secondary)', textAlign: 'center' }}>
+                            <div className={posClass} style={{ fontSize: '0.78rem', textAlign: 'center' }}>
                                 {d.position || '—'}
                             </div>
 
@@ -231,8 +236,11 @@ const Leaderboard: FC<LeaderboardProps> = ({ drivers, selectedDriver, onSelect, 
                             </div>
 
                             {/* Gap */}
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: gapVal === 0 || gapVal == null ? 'var(--text-muted)' : 'var(--text-secondary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                                {d.position === 1 ? '—' : fmtGap(gapVal)}
+                            <div
+                                className={d.position !== 1 ? styles.gapLosing : undefined}
+                                style={{ fontSize: '0.72rem', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: d.position === 1 ? 'var(--text-muted)' : undefined }}
+                            >
+                                {gapDisplay}
                             </div>
 
                             {/* Tyre badge + age */}

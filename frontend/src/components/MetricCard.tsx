@@ -35,12 +35,20 @@ interface MetricCardProps {
 /**
  * Card displaying a labeled metric value with optional change indicator.
  */
+const COLOR_TOKEN: Record<string, string> = {
+    cyan: 'var(--status-blue)',
+    green: 'var(--status-green)',
+    red: 'var(--status-red)',
+    orange: 'var(--accent-orange)',
+    purple: 'var(--color-purple)',
+};
+
 const MetricCard: FC<MetricCardProps> = ({ label, value, delta, deltaType, color = 'cyan', icon: Icon }) => {
     return (
         <div className={`${styles.metricCard} card-glow`}>
             <div className="flex items-center justify-between">
                 <span className={styles.label}>{label}</span>
-                {Icon && <Icon size={18} style={{ color: `var(--accent-${color})`, opacity: 0.7 }} />}
+                {Icon && <Icon size={18} style={{ color: COLOR_TOKEN[color] ?? COLOR_TOKEN.cyan, opacity: 0.7 }} />}
             </div>
             <div className={`${styles.value} ${styles[color] ?? ''}`}>{value}</div>
             {delta && (

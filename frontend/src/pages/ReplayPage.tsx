@@ -103,7 +103,7 @@ const ReplayPage: FC = () => {
     const togglePlay = () => controlReplay(isPlaying ? 'pause' : 'play');
     const changeSpeed = (newSpeed: number) => { setSpeed(newSpeed); controlReplay('speed', newSpeed); };
 
-    const handleMouseEnter = (e: MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; };
+    const handleMouseEnter = (e: MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = 'var(--status-blue)'; };
     const handleMouseLeave = (e: MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; };
 
     return (
@@ -121,14 +121,14 @@ const ReplayPage: FC = () => {
                         <p className="text-muted">
                             No cached sessions found. Run the download script first:
                             <br />
-                            <code style={{ display: 'block', marginTop: 'var(--space-sm)', padding: 'var(--space-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
+                            <code style={{ display: 'block', marginTop: 'var(--space-sm)', padding: 'var(--space-sm)', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)' }}>
                                 python scripts/download_session.py --year 2023 --round 1
                             </code>
                         </p>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
                             {sessions.map((session) => (
-                                <button key={session.session_key} onClick={() => startReplay(session.session_key)} disabled={loading} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--space-md)', background: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--text-primary)', transition: 'all 0.2s' }}>
+                                <button key={session.session_key} onClick={() => startReplay(session.session_key)} disabled={loading} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--space-md)', background: 'var(--bg-elevated)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--text-primary)', transition: 'all 0.2s' }}>
                                     <div>
                                         <div style={{ fontWeight: 600 }}>{session.country} - {session.session_name}</div>
                                         <div className="text-muted text-sm">{session.circuit}</div>
@@ -156,21 +156,21 @@ const ReplayPage: FC = () => {
                         </div>
 
                         {/* Timeline */}
-                        <div style={{ height: '8px', background: 'var(--bg-tertiary)', borderRadius: '4px', marginBottom: 'var(--space-md)', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${((replayState?.current_lap || 0) / (replayState?.total_laps || 1)) * 100}%`, background: 'linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta))', transition: 'width 0.3s ease' }} />
+                        <div style={{ height: '8px', background: 'var(--bg-elevated)', borderRadius: '4px', marginBottom: 'var(--space-md)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${((replayState?.current_lap || 0) / (replayState?.total_laps || 1)) * 100}%`, background: 'linear-gradient(90deg, var(--status-blue), var(--color-accent))', transition: 'width 0.3s ease' }} />
                         </div>
 
                         {/* Controls */}
                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-md)' }}>
                             <button onClick={() => controlReplay('seek', 0)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><SkipBack size={24} /></button>
-                            <button onClick={togglePlay} style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--accent-cyan)', border: 'none', color: 'black', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <button onClick={togglePlay} style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--status-blue)', border: 'none', color: 'black', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 {isPlaying ? <Pause size={24} /> : <Play size={24} />}
                             </button>
                             <button onClick={() => controlReplay('stop')} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><Square size={24} /></button>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)', marginLeft: 'var(--space-lg)', flexWrap: 'wrap' }}>
                                 <FastForward size={16} className="text-muted" />
                                 {[0.05, 0.1, 0.25, 0.5, 1, 2, 5].map((s) => (
-                                    <button key={s} onClick={() => changeSpeed(s)} style={{ padding: 'var(--space-xs) var(--space-sm)', background: speed === s ? 'var(--accent-cyan)' : 'transparent', color: speed === s ? 'black' : 'var(--text-primary)', border: speed === s ? 'none' : '1px solid var(--text-muted)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.2s' }}>
+                                    <button key={s} onClick={() => changeSpeed(s)} style={{ padding: 'var(--space-xs) var(--space-sm)', background: speed === s ? 'var(--status-blue)' : 'transparent', color: speed === s ? 'black' : 'var(--text-primary)', border: speed === s ? 'none' : '1px solid var(--text-muted)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.2s' }}>
                                         {s}x
                                     </button>
                                 ))}
@@ -183,7 +183,7 @@ const ReplayPage: FC = () => {
                     {/* Main Dashboard Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px 350px', gap: 'var(--space-lg)', marginTop: 'var(--space-lg)' }}>
                         <div>
-                            <h3 style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 'var(--space-md)' }}>Race Classification</h3>
+                            <h3 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 'var(--space-md)' }}>Race Classification</h3>
                             <DriverTable drivers={replayState?.drivers || []} onDriverSelect={setSelectedDriver} selectedDriver={selectedDriver} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>

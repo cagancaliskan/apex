@@ -3,15 +3,15 @@
   flex-direction: column;
   gap: var(--space-sm);
   padding: var(--space-lg);
-  background: var(--bg-card);
+  background: var(--bg-surface);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-subtle);
 }
 
 .label {
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -28,9 +28,9 @@
 .value.green { color: var(--status-green); }
 .value.amber { color: var(--status-amber); }
 .value.red { color: var(--status-red); }
-.value.cyan { color: var(--accent-cyan); }
+.value.cyan { color: var(--status-blue); }
 .value.orange { color: var(--accent-orange); }
-.value.purple { color: var(--accent-purple); }
+.value.purple { color: var(--color-purple); }
 
 .delta {
   font-size: 0.875rem;

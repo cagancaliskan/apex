@@ -250,7 +250,7 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                             </div>
                             <div style={{ position: 'relative', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'visible' }}>
                                 {/* Window range */}
-                                <div style={{ position: 'absolute', top: 0, left: `${minPct}%`, width: `${maxPct - minPct}%`, height: '100%', background: 'rgba(88,166,255,0.2)', borderRadius: '4px' }} />
+                                <div style={{ position: 'absolute', top: 0, left: `${minPct}%`, width: `${maxPct - minPct}%`, height: '100%', background: `linear-gradient(90deg, rgba(225,6,0,0.2) 0%, rgba(225,6,0,0.5) 50%, rgba(225,6,0,0.2) 100%)`, borderRadius: '4px' }} />
                                 {/* Ideal marker */}
                                 <div style={{ position: 'absolute', top: '-1px', left: `${idealPct}%`, width: '2px', height: '10px', background: 'var(--color-accent)', transform: 'translateX(-50%)', borderRadius: '1px' }} />
                                 {/* Current lap */}
@@ -296,7 +296,7 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginBottom: '2px' }}>CLIFF RISK</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
-                                    <div style={{ height: '100%', width: `${Math.round((driver.cliff_risk || 0) * 100)}%`, background: getCliffColor(driver.cliff_risk ?? undefined), borderRadius: '2px' }} />
+                                    <div style={{ height: '100%', width: `${Math.round((driver.cliff_risk || 0) * 100)}%`, background: `linear-gradient(90deg, #3fb950 0%, #d29922 50%, #f85149 100%)`, borderRadius: '2px' }} />
                                 </div>
                                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: getCliffColor(driver.cliff_risk ?? undefined) }}>
                                     {Math.round((driver.cliff_risk || 0) * 100)}%

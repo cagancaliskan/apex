@@ -107,8 +107,8 @@ const BacktestPage: FC = () => {
                             style={{
                                 width: '100%',
                                 padding: 'var(--space-sm)',
-                                background: 'var(--bg-tertiary)',
-                                border: '1px solid var(--border-color)',
+                                background: 'var(--bg-elevated)',
+                                border: '1px solid var(--border-subtle)',
                                 borderRadius: 'var(--radius-sm)',
                                 color: 'var(--text-primary)',
                                 fontSize: '0.9rem'
@@ -140,8 +140,8 @@ const BacktestPage: FC = () => {
                             style={{
                                 width: '100%',
                                 padding: 'var(--space-sm)',
-                                background: 'var(--bg-tertiary)',
-                                border: '1px solid var(--border-color)',
+                                background: 'var(--bg-elevated)',
+                                border: '1px solid var(--border-subtle)',
                                 borderRadius: 'var(--radius-sm)',
                                 color: 'var(--text-primary)',
                                 fontSize: '0.9rem'
@@ -178,9 +178,9 @@ const BacktestPage: FC = () => {
                                     style={{
                                         flex: 1,
                                         padding: 'var(--space-sm)',
-                                        background: alternativeStrategy === strat ? 'var(--color-info)' : 'var(--bg-tertiary)',
+                                        background: alternativeStrategy === strat ? 'var(--color-accent)' : 'var(--bg-elevated)',
                                         color: alternativeStrategy === strat ? 'black' : 'var(--text-primary)',
-                                        border: '1px solid var(--border-color)',
+                                        border: '1px solid var(--border-subtle)',
                                         borderRadius: 'var(--radius-sm)',
                                         cursor: 'pointer',
                                         fontWeight: alternativeStrategy === strat ? 600 : 400,
@@ -200,7 +200,7 @@ const BacktestPage: FC = () => {
                         style={{
                             width: '100%',
                             padding: 'var(--space-md)',
-                            background: isRunning ? 'var(--bg-tertiary)' : 'var(--color-info)',
+                            background: isRunning ? 'var(--bg-elevated)' : 'var(--color-accent)',
                             color: isRunning ? 'var(--text-muted)' : 'black',
                             border: 'none',
                             borderRadius: 'var(--radius-md)',
@@ -237,8 +237,8 @@ const BacktestPage: FC = () => {
                             <div style={{
                                 width: '40px',
                                 height: '40px',
-                                border: '3px solid var(--bg-tertiary)',
-                                borderTop: '3px solid var(--color-info)',
+                                border: '3px solid var(--bg-elevated)',
+                                borderTop: '3px solid var(--color-accent)',
                                 borderRadius: '50%',
                                 animation: 'spin 1s linear infinite',
                                 margin: '0 auto var(--space-md)'
@@ -257,7 +257,7 @@ const BacktestPage: FC = () => {
                                 justifyContent: 'space-around',
                                 marginBottom: 'var(--space-lg)',
                                 padding: 'var(--space-md)',
-                                background: 'var(--bg-tertiary)',
+                                background: 'var(--bg-elevated)',
                                 borderRadius: 'var(--radius-md)'
                             }}>
                                 <div style={{ textAlign: 'center' }}>
@@ -320,7 +320,7 @@ const BacktestPage: FC = () => {
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Alternative:</span>
-                                    <span style={{ color: 'var(--color-info)' }}>{result.alternativeStrategy}</span>
+                                    <span style={{ color: 'var(--color-accent)' }}>{result.alternativeStrategy}</span>
                                 </div>
                             </div>
                         </div>

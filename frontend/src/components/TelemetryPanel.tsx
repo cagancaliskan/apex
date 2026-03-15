@@ -92,9 +92,9 @@ const TelemetryPanel: FC<TelemetryPanelProps> = ({ driver, compact = false }) =>
 
     if (compact) {
         return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 10px', height: '100%', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 10px', height: '100%', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)', minWidth: '52px' }}>{Math.round(speed)} <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>km/h</span></span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', fontWeight: 700, color: 'var(--color-info)', minWidth: '16px' }}>G{gearDisplay}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', fontWeight: 700, color: 'var(--color-accent)', minWidth: '16px' }}>G{gearDisplay}</span>
                 <DRSIndicator status={drs} size="small" />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: 0 }}>
                     <HBar value={throttle} color="var(--status-green)" label="T" />
@@ -111,7 +111,7 @@ const TelemetryPanel: FC<TelemetryPanelProps> = ({ driver, compact = false }) =>
                 <div style={{ width: 3, height: 22, background: teamColor, borderRadius: 2, flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{driver.name_acronym || `#${driver.driver_number}`}</div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>{driver.team_name || '—'}</div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{driver.team_name || '—'}</div>
                 </div>
                 <DRSIndicator status={drs} size="medium" />
             </div>
@@ -124,7 +124,7 @@ const TelemetryPanel: FC<TelemetryPanelProps> = ({ driver, compact = false }) =>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gear</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-info)', lineHeight: 1 }}>{gearDisplay}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-accent)', lineHeight: 1 }}>{gearDisplay}</div>
                 </div>
             </div>
 

@@ -8,10 +8,13 @@ sensitivity analysis, and what-if scenarios.
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 
+from rsw.config.constants import DEFAULT_PIT_LOSS_SECONDS, DEFAULT_TOTAL_LAPS
 from rsw.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -20,6 +23,10 @@ router = APIRouter()
 
 # Will be set during app startup
 _app_state = None
+
+# In-memory cache: {driver_number: (lap_number, timestamp, payload)}
+_explain_cache: dict[int, tuple[int, float, dict]] = {}
+_CACHE_TTL_SECONDS = 10  # Cache for 10 seconds
 
 
 def init_explain_routes(app_state: Any) -> None:
@@ -52,12 +59,20 @@ async def get_strategy_explanation(driver_number: int) -> dict[str, Any]:
     if driver is None:
         raise HTTPException(status_code=404, detail=f"Driver {driver_number} not found")
 
+    # Check cache — return cached result if same lap and within TTL
+    current_lap = race_state.current_lap or 0
+    cached = _explain_cache.get(driver_number)
+    if cached is not None:
+        cached_lap, cached_time, cached_payload = cached
+        if cached_lap == current_lap and (time.time() - cached_time) < _CACHE_TTL_SECONDS:
+            return {"driver_number": driver_number, **cached_payload}
+
     try:
         from rsw.strategy.decision import evaluate_strategy
         from rsw.strategy.explain import format_explainability_payload
 
         # Determine pit loss from track characteristics
-        pit_loss = 22.0
+        pit_loss = DEFAULT_PIT_LOSS_SECONDS
         cliff_age = None
         sim_service = _app_state.simulation_service
         if sim_service and sim_service._track_characteristics:
@@ -84,7 +99,7 @@ async def get_strategy_explanation(driver_number: int) -> dict[str, Any]:
         rec = evaluate_strategy(
             driver_number=driver.driver_number,
             current_lap=race_state.current_lap or 1,
-            total_laps=race_state.total_laps or 50,
+            total_laps=race_state.total_laps or DEFAULT_TOTAL_LAPS,
             current_position=driver.position or 10,
             deg_slope=driver.deg_slope,
             cliff_risk=driver.cliff_risk,
@@ -103,7 +118,7 @@ async def get_strategy_explanation(driver_number: int) -> dict[str, Any]:
             rec=rec,
             driver_number=driver.driver_number,
             current_lap=race_state.current_lap or 1,
-            total_laps=race_state.total_laps or 50,
+            total_laps=race_state.total_laps or DEFAULT_TOTAL_LAPS,
             current_position=driver.position or 10,
             deg_slope=driver.deg_slope,
             cliff_risk=driver.cliff_risk,
@@ -116,6 +131,9 @@ async def get_strategy_explanation(driver_number: int) -> dict[str, Any]:
             safety_car=race_state.safety_car,
             cliff_age=cliff_age,
         )
+
+        # Cache the result
+        _explain_cache[driver_number] = (current_lap, time.time(), payload)
 
         return {"driver_number": driver_number, **payload}
 

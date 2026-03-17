@@ -9,10 +9,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [2.1.0] - 2026-03-17
+
 ### Added
-- Industry-level documentation suite
-- Python SDK documentation
-- Deployment guides for Docker and Kubernetes
+
+- **Live Race Mode** (Feature #1)
+  - Real-time F1 session tracking via OpenF1 API polling (5s intervals)
+  - `LiveRaceService` with automatic session detection and state broadcasting
+  - REST endpoints: `POST /api/live/start`, `POST /api/live/stop`, `GET /api/live/status`, `GET /api/live/active-sessions`
+  - WebSocket messages: `start_live`, `stop_live`, `live_started`, `live_stopped`
+  - Mutual exclusion with simulation mode (auto-stops simulation when live starts)
+  - 19 new tests for live race functionality
+
+- **Championship Simulator** (Feature #2)
+  - Multi-race Monte Carlo championship prediction (WDC & WCC)
+  - `ChampionshipService` with full-season simulation using GridSimulator + CompetitorAI
+  - `ChampionshipContext` integration — first real use of `calculate_risk_modifier()` from `situational_strategy.py`
+  - REST endpoints: `POST /api/championship/simulate`, `GET /api/championship/calendar/{year}`, `GET /api/championship/standings/{year}/{up_to_round}`
+  - Frontend `ChampionshipPage` with standings table, probability charts, season timeline
+  - DNF modeling (7% probability), fastest lap bonus, sprint race support
+  - Pydantic models: `RaceCalendarEntry`, `DriverStanding`, `ConstructorStanding`, `ChampionshipResult`
+  - 39 new tests for championship simulation
+
+- **UI/UX Redesign**
+  - Complete CSS design token system migration (layered depth, elevation tokens)
+  - Inter + JetBrains Mono typography integration
+  - 30+ component refactors to new token system (DriverTable, MetricCard, TelemetryPanel, StrategyPanel, SessionSelector, TrackMap, WeatherWidget, RaceProgressBar, etc.)
+  - Red accent theme with gradient fills and animation keyframes (pulse-ring, flash events, slideInAlert)
+  - Lucide React icon integration across all tab and navigation elements
+  - Card elevation system, hairline dividers, mono numeric styling
+
+- **Strategy Explainability**
+  - `GET /api/strategy/explain/{driver_number}` endpoint with factor ranking and sensitivity analysis
+  - `ExplainabilityPanel` frontend component for human-readable strategy explanations
+
+- **Weather Integration**
+  - `WeatherClient` for OpenMeteo API integration
+  - `GET /api/weather/current/{circuit_key}` and `GET /api/weather/forecast/{circuit_key}` endpoints
+  - Weather effects integrated into physics simulation
+
+- **Physics Models**
+  - `FuelModel` — fuel load impact on lap time (burn rate, weight penalties)
+  - `WeatherModel` — rain/temperature effects on grip and pace
+  - `TrackModel` — track-specific characteristics and rubber evolution
+  - `PitTrafficModel` — pit lane traffic and interaction effects
+  - `SeasonLearner` — cross-session driver pace/degradation priors
+
+- **Infrastructure**
+  - Constants module (`src/rsw/config/constants.py`) for physics defaults
+  - Enhanced WebSocket protocol with live mode messages
+  - Comprehensive documentation suite update
+  - Architecture diagrams (Mermaid)
+  - CI/CD pipeline enhancements
+
+### Changed
+- Version bumped from 1.0.7 to 2.1.0
+- Frontend version bumped to 1.1.0
+- `App.tsx` now has 4 tabs: Live, Replay, Backtest, Championship
+- TypeScript types expanded with championship and live mode interfaces
+- Test count increased from 68 to 211 (143 new tests)
 
 ---
 
@@ -150,6 +207,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 2.1.0 | 2026-03-17 | Live Race Mode, Championship Simulator, UI/UX redesign |
 | 2.0.1 | 2026-01-12 | V2 patch: Strategy fixes & UI polish |
 | 2.0.0 | 2026-01-10 | Major V2 release: New Architecture |
 | 1.0.0 | 2026-01-01 | Production release, full documentation |

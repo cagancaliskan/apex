@@ -63,6 +63,15 @@ logs/
 
 # FastF1 cache
 ff1_cache/
+.fastf1-cache/
 
 # Claude AI agent files
 .claude/
+
+# Agent/Swarm working directories
+.claude-flow/
+.swarm/
+frontend/.claude-flow/
+
+# MCP configuration
+.mcp.json

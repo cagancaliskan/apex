@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from rsw.logging_config import get_logger
 
@@ -115,3 +115,33 @@ def _calculate_round_numbers(sessions: list[Any]) -> dict[int, int]:
     race_meetings.sort(key=lambda x: x[1])
 
     return {key: i + 1 for i, (key, _) in enumerate(race_meetings)}
+
+
+@router.get("/{session_key}")
+async def get_session(session_key: int) -> dict[str, Any]:
+    """
+    Get details for a specific F1 session.
+
+    Args:
+        session_key: Unique session identifier
+
+    Returns:
+        Session details dict, or 404 if not found
+    """
+    if _app_state is None:
+        raise HTTPException(status_code=503, detail="Service not initialized")
+
+    session = await _app_state.client.get_session(session_key)
+    if session is None:
+        raise HTTPException(status_code=404, detail=f"Session {session_key} not found")
+
+    return {
+        "session_key": session.session_key,
+        "session_name": session.session_name,
+        "session_type": session.session_type,
+        "circuit": session.circuit_short_name,
+        "country": session.country_name,
+        "date": session.date_start.isoformat(),
+        "year": session.year,
+        "meeting_key": session.meeting_key,
+    }

@@ -12,6 +12,7 @@ API Documentation: https://docs.fastf1.dev/
 """
 
 import asyncio
+import atexit
 import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC
@@ -20,7 +21,10 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from rsw.logging_config import get_logger
 from rsw.state.schemas import DriverState
+
+logger = get_logger(__name__)
 
 # FastF1 imports - will be lazy loaded
 _fastf1 = None
@@ -40,13 +44,15 @@ def _ensure_fastf1():
         os.makedirs(cache_dir, exist_ok=True)
         fastf1.Cache.enable_cache(cache_dir)
         _fastf1_cache_enabled = True
-        print(f"FastF1 cache enabled at: {cache_dir}")
+        logger.info("fastf1_cache_enabled", cache_dir=cache_dir)
 
     return _fastf1
 
 
 # Thread pool for running blocking FastF1 calls
-_executor = ThreadPoolExecutor(max_workers=2)
+_FASTF1_WORKERS = int(os.getenv("RSW_FASTF1_WORKERS", "4"))
+_executor = ThreadPoolExecutor(max_workers=_FASTF1_WORKERS)
+atexit.register(lambda: _executor.shutdown(wait=False))
 
 
 async def load_session(year: int, round_number: int | str, session_type: str = "R"):
@@ -102,8 +108,8 @@ async def get_track_geometry(session) -> dict[str, Any]:
             # Get fastest lap for track geometry
             try:
                 fastest_lap = session.laps.pick_fastest()
-            except Exception:
-                # Handle DataNotLoadedError or other access errors
+            except Exception as e:
+                logger.debug("pick_fastest_failed", error=str(e))
                 fastest_lap = None
 
             if fastest_lap is None:
@@ -113,8 +119,8 @@ async def get_track_geometry(session) -> dict[str, Any]:
                     if valid_laps.empty:
                         raise ValueError("No valid laps found in session")
                     fastest_lap = valid_laps.iloc[0]
-                except Exception:
-                    raise ValueError("Could not retrive any laps for geometry")
+                except Exception as e:
+                    raise ValueError(f"Could not retrieve any laps for geometry: {e}") from e
 
             telemetry = fastest_lap.get_telemetry()
             if telemetry is None or telemetry.empty:
@@ -167,7 +173,8 @@ async def get_track_geometry(session) -> dict[str, Any]:
             try:
                 circuit_info = session.get_circuit_info()
                 rotation = float(circuit_info.rotation) if circuit_info else 0
-            except Exception:
+            except Exception as e:
+                logger.debug("circuit_info_unavailable", error=str(e))
                 rotation = 0
 
             # Downsample for transfer (every 5th point is usually enough)
@@ -197,7 +204,7 @@ async def get_track_geometry(session) -> dict[str, Any]:
                 "total_points": len(x),
             }
         except Exception as e:
-            print(f"Warning: Failed to extract track geometry: {e}")
+            logger.warning("track_geometry_extraction_failed", error=str(e))
             # Return empty default geometry (perfect circle placeholder or empty)
             return {
                 "center_line": [],
@@ -307,7 +314,7 @@ async def get_driver_positions(session, frame_index: int = 0) -> dict[str, dict]
                     else 0,
                 }
             except Exception as e:
-                print(f"Error getting position for driver {driver}: {e}")
+                logger.debug("driver_position_error", driver=driver, error=str(e))
                 continue
 
         return drivers
@@ -328,32 +335,32 @@ async def get_weather_data(session) -> list[dict]:
         if weather_df is None or weather_df.empty:
             return []
 
-        weather_points = []
-        for _, row in weather_df.iterrows():
-            point = {
-                "time": row["Time"].total_seconds() if hasattr(row["Time"], "total_seconds") else 0,
-                "track_temp": float(row.get("TrackTemp", 0))
-                if row.get("TrackTemp") is not None
-                else None,
-                "air_temp": float(row.get("AirTemp", 0))
-                if row.get("AirTemp") is not None
-                else None,
-                "humidity": float(row.get("Humidity", 0))
-                if row.get("Humidity") is not None
-                else None,
-                "wind_speed": float(row.get("WindSpeed", 0))
-                if row.get("WindSpeed") is not None
-                else None,
-                "wind_direction": float(row.get("WindDirection", 0))
-                if row.get("WindDirection") is not None
-                else None,
-                "rainfall": bool(row.get("Rainfall", False))
-                if row.get("Rainfall") is not None
-                else False,
-            }
-            weather_points.append(point)
+        # Vectorized extraction using to_dict
+        result = pd.DataFrame()
+        result["time"] = weather_df["Time"].apply(
+            lambda t: t.total_seconds() if hasattr(t, "total_seconds") else 0
+        )
 
-        return weather_points
+        col_map = {
+            "TrackTemp": "track_temp",
+            "AirTemp": "air_temp",
+            "Humidity": "humidity",
+            "WindSpeed": "wind_speed",
+            "WindDirection": "wind_direction",
+        }
+        for src, dst in col_map.items():
+            if src in weather_df.columns:
+                col = weather_df[src]
+                result[dst] = col.where(col.notna(), None).astype(float, errors="ignore")
+            else:
+                result[dst] = None
+
+        if "Rainfall" in weather_df.columns:
+            result["rainfall"] = weather_df["Rainfall"].fillna(False).astype(bool)
+        else:
+            result["rainfall"] = False
+
+        return result.to_dict(orient="records")
 
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(_executor, _extract)
@@ -398,16 +405,16 @@ async def get_or_load_session(year: int, round_number: int | str, session_type: 
     cache_key = f"{year}_{round_number}_{session_type}"
 
     if cache_key not in _session_cache:
-        print(f"Loading FastF1 session: {year} R{round_number} {session_type}...")
+        logger.info("loading_fastf1_session", year=year, round=round_number, type=session_type)
         _session_cache[cache_key] = await load_session(year, round_number, session_type)
-        print("Session loaded successfully")
+        logger.info("fastf1_session_loaded")
 
     return _session_cache[cache_key]
 
 
 def clear_session_cache():
     """Clear the session cache to free memory."""
-    _session_cache = {}
+    _session_cache.clear()
 
 
 def extract_race_data(session):
@@ -451,10 +458,11 @@ def extract_race_data(session):
                         else 0,
                     )
                     drivers.append(driver_state)
-                except Exception:
+                except Exception as e:
+                    logger.debug("driver_parse_skip", driver_id=driver_id, error=str(e))
                     continue
     except Exception as e:
-        print(f"Warning: Failed to extract drivers: {e}")
+        logger.warning("driver_extraction_failed", error=str(e))
 
     # 2. Laps - Convert to LapData Pydantic models
     def _timedelta_to_seconds(val):
@@ -467,7 +475,7 @@ def extract_race_data(session):
         try:
             if pd.isna(val):
                 return None
-        except Exception:
+        except (TypeError, ValueError):
             pass
         return None
 
@@ -514,9 +522,9 @@ def extract_race_data(session):
                     )
             except Exception as e:
                 # Catch DataNotLoadedError or AttributeError from session.laps
-                print(f"Warning: Failed to iterate laps: {e}")
+                logger.warning("lap_iteration_failed", error=str(e))
     except Exception as e:
-        print(f"Warning: Failed to parse laps: {e}")
+        logger.warning("lap_parsing_failed", error=str(e))
         all_laps = []
 
     # 3. Pit Stops - Convert to PitData Pydantic models
@@ -553,9 +561,9 @@ def extract_race_data(session):
                             )
                         )
             except Exception as e:
-                print(f"Warning: Failed to manual extract pits: {e}")
+                logger.warning("pit_extraction_failed", error=str(e))
     except Exception as e:
-        print(f"Warning: Failed to extract pits: {e}")
+        logger.warning("pit_data_extraction_failed", error=str(e))
         all_pits = []
 
     # 4. Stints - Parse real stints from FastF1 lap data (Stint + Compound columns)
@@ -609,10 +617,11 @@ def extract_race_data(session):
                                 tyre_age_at_start=tyre_age_at_start,
                             )
                         )
-                    except Exception:
+                    except Exception as e:
+                        logger.debug("stint_parse_skip", driver=drv_num, stint=stint_num, error=str(e))
                         continue
     except Exception as e:
-        print(f"Warning: Failed to extract real stints: {e}")
+        logger.warning("stint_extraction_failed", error=str(e))
 
     # Fallback: if no stints were extracted, create a single dummy stint per driver
     if not all_stints and all_laps:
@@ -634,23 +643,28 @@ def extract_race_data(session):
     try:
         messages = getattr(session, "race_control_messages", None)
         if messages is not None and not messages.empty:
-            for _, msg in messages.iterrows():
+            now = datetime.now(UTC)
+            for row in messages.itertuples():
+                category = getattr(row, "Category", "Other") or "Other"
+                flag = getattr(row, "Flag", None)
+                message = getattr(row, "Message", "") or ""
+                raw_lap = getattr(row, "Lap", None)
+                lap_number = int(raw_lap) if raw_lap is not None and str(raw_lap).isdigit() else None
+                raw_num = getattr(row, "RacingNumber", None)
+                driver_number = int(raw_num) if raw_num is not None and str(raw_num).isdigit() else None
+
                 all_race_control.append(
                     RaceControlMessage(
-                        category=msg.get("Category", "Other"),
-                        flag=msg.get("Flag", None),
-                        message=msg.get("Message", ""),
-                        lap_number=int(msg["Lap"])
-                        if msg.get("Lap") and str(msg["Lap"]).isdigit()
-                        else None,
-                        driver_number=int(msg["RacingNumber"])
-                        if msg.get("RacingNumber") and str(msg["RacingNumber"]).isdigit()
-                        else None,
-                        timestamp=datetime.now(UTC),
+                        category=category,
+                        flag=flag,
+                        message=message,
+                        lap_number=lap_number,
+                        driver_number=driver_number,
+                        timestamp=now,
                     )
                 )
     except Exception as e:
-        print(f"Warning: Failed to extract race control: {e}")
+        logger.warning("race_control_extraction_failed", error=str(e))
         all_race_control = []
 
     return drivers, all_laps, all_stints, all_pits, all_race_control

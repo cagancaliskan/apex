@@ -92,7 +92,7 @@ export function useSimulation(): UseSimulationReturn {
     const setSpeed = useCallback(async (speed: SimulationSpeed) => {
         try {
             const response = await fetch(
-                `${API_BASE}/api/speed/${speed}`,
+                `${API_BASE}/api/simulation/speed/${speed}`,
                 { method: 'POST' }
             );
 

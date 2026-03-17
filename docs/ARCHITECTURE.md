@@ -1,30 +1,27 @@
 # Architecture Documentation
 
-Complete technical architecture documentation for the F1 Race Strategy Workbench.
+Complete technical architecture documentation for the F1 Race Strategy Workbench v2.1.
 
 ---
 
 ## Table of Contents
 
 1. [System Overview](#system-overview)
-2. [Architecture Diagrams](#architecture-diagrams)
-3. [Core Components](#core-components)
-4. [Data Flow](#data-flow)
-5. [Design Principles](#design-principles)
-6. [Directory Structure](#directory-structure)
-7. [Key Abstractions](#key-abstractions)
-8. [Security Model](#security-model)
-9. [Scalability](#scalability)
+2. [Core Components](#core-components)
+3. [Data Flow](#data-flow)
+4. [Design Principles](#design-principles)
+5. [Directory Structure](#directory-structure)
+6. [Key Abstractions](#key-abstractions)
+7. [Security Model](#security-model)
+8. [Scalability](#scalability)
+
+For visual diagrams, see [Architecture Diagrams](ARCHITECTURE_DIAGRAMS.md).
 
 ---
 
 ## System Overview
 
-The F1 Race Strategy Workbench is a real-time analytics platform that ingests live F1 timing data, processes it through machine learning models, and provides pit strategy recommendations via REST API and WebSocket.
-
-### High-Level Architecture
-
-![System Architecture](images/architecture.png)
+The F1 Race Strategy Workbench is a real-time analytics platform that ingests live F1 timing data, processes it through physics-based models and ML estimators, and provides pit strategy recommendations, championship predictions, and race simulations via REST API and WebSocket.
 
 ### Key Characteristics
 
@@ -32,25 +29,11 @@ The F1 Race Strategy Workbench is a real-time analytics platform that ingests li
 |--------|-------------|
 | **Architecture Style** | Event-driven, microservices-ready monolith |
 | **Communication** | REST API + WebSocket for real-time updates |
-| **Data Source** | OpenF1 public API |
+| **Data Sources** | OpenF1 (real-time), FastF1 (historical), OpenMeteo (weather) |
 | **State Management** | Immutable state with reducer pattern |
 | **ML Pipeline** | Online learning with RLS estimators |
-
----
-
-## Architecture Diagrams
-
-### System Architecture
-
-![Architecture Overview](images/architecture.png)
-
-### Data Flow
-
-![Data Flow](images/data_flow.png)
-
-### Component Diagram
-
-![Components](images/components.png)
+| **Physics Engine** | Tyre, fuel, weather, track models |
+| **Simulation** | GridSimulator (20-car), Monte Carlo (championship) |
 
 ---
 
@@ -58,24 +41,19 @@ The F1 Race Strategy Workbench is a real-time analytics platform that ingests li
 
 ### 1. Ingest Layer (`src/rsw/ingest/`)
 
-**Purpose:** Fetch and normalize data from external sources.
+**Purpose:** Fetch and normalize data from three external sources.
 
 | Module | Responsibility |
 |--------|----------------|
 | `base.py` | Abstract `DataProvider` interface, canonical DTOs |
-| `openf1_client.py` | OpenF1 API client implementation |
+| `openf1_client.py` | OpenF1 API client — real-time timing, positions, laps |
+| `fastf1_service.py` | FastF1 library — historical telemetry, session results, event schedules |
+| `weather_client.py` | OpenMeteo API — current conditions, forecasts by circuit coordinates |
 
 **Key Classes:**
-- `DataProvider` — Abstract base for all data sources
-- `OpenF1Client` — HTTP client with caching
-- `UpdateBatch` — Canonical data format for all providers
-
-```python
-# Example: Fetching session data
-client = OpenF1Client()
-sessions = await client.get_sessions(year=2024)
-laps = await client.get_laps(session_key=9999)
-```
+- `OpenF1Client` — HTTP client with caching for real-time data
+- `FastF1Service` — Thread-pool executor wrapper for FastF1 (blocking I/O)
+- `WeatherClient` — Async weather data for circuits worldwide
 
 ---
 
@@ -85,92 +63,118 @@ laps = await client.get_laps(session_key=9999)
 
 | Module | Responsibility |
 |--------|----------------|
-| `schemas.py` | Pydantic models for `RaceState`, `DriverState` |
+| `schemas.py` | Pydantic models for `RaceState`, `DriverState` (80+ fields per driver) |
 | `store.py` | `RaceStateStore` with observer pattern |
 | `reducers.py` | Pure functions for state updates |
 
-**State Structure:**
-```python
-RaceState:
-  ├── session_key: int
-  ├── session_name: str
-  ├── current_lap: int
-  ├── total_laps: int
-  ├── drivers: dict[int, DriverState]
-  ├── flags: list[str]
-  ├── safety_car: bool
-  └── timestamp: datetime
+**DriverState Fields (key groups):**
 ```
-
-**Reducer Pattern:**
-```python
-# Pure function: (state, action) → new_state
-new_state = apply_laps(current_state, lap_data)
-new_state = apply_positions(new_state, position_data)
+DriverState:
+  ├── Identity: driver_number, name_acronym, full_name, team_name, team_colour
+  ├── Timing: current_lap, last_lap_time, best_lap_time, gap_to_leader, sectors
+  ├── Telemetry: speed, gear, throttle, brake, drs
+  ├── Position: rel_dist, x, y (track coordinates)
+  ├── Tyres: compound, tyre_age, stint_number, deg_slope, cliff_risk
+  ├── Strategy: pit_window_min/max/ideal, pit_recommendation, pit_confidence
+  ├── Physics: fuel_remaining_kg, fuel_laps_remaining, predicted_pace[]
+  └── Status: in_pit, retired, undercut_threat, overcut_opportunity
 ```
 
 ---
 
-### 3. ML Models (`src/rsw/models/`)
+### 3. Physics & ML Models (`src/rsw/models/`)
 
-**Purpose:** Real-time prediction of tyre degradation and performance.
+**Purpose:** Physics simulation and real-time performance prediction.
+
+#### Degradation Models (`models/degradation/`)
 
 | Module | Responsibility |
 |--------|----------------|
-| `degradation/rls.py` | Recursive Least Squares estimator |
-| `degradation/model.py` | Driver-specific degradation models |
-| `degradation/manager.py` | Multi-driver model management |
-| `features/` | Feature engineering and filtering |
+| `rls.py` | Recursive Least Squares estimator — online learning per driver |
+| `online_model.py` | Real-time tyre degradation tracking |
+| `calibration.py` | Model calibration against telemetry data |
 
-**RLS Estimator:**
-- Online learning (updates with each lap)
-- Warm-start from compound priors
-- Forgetting factor for recency weighting
-- Confidence intervals for predictions
+#### Physics Models (`models/physics/`)
 
-```python
-# Prediction after training
-prediction = model.predict_next_k(k=5)
-# Returns: [92.5, 92.6, 92.7, 92.8, 92.9]
-```
+| Module | Responsibility |
+|--------|----------------|
+| `tyre_model.py` | Compound characteristics, degradation curves, cliff detection |
+| `fuel_model.py` | Fuel burn rate, weight penalty (~0.035s/kg), range estimation |
+| `weather_model.py` | Rain/temperature effects on grip, wet tyre transitions |
+| `track_model.py` | Track-specific characteristics, rubber evolution over stint |
+| `traffic_model.py` | DRS zones, dirty air effects on following cars |
+| `pit_traffic_model.py` | Pit lane traffic interactions, unsafe release modeling |
+| `season_learner.py` | Cross-session learning — driver pace/degradation priors from `data/season_data/` |
 
 ---
 
 ### 4. Strategy Engine (`src/rsw/strategy/`)
 
-**Purpose:** Calculate optimal pit strategies and recommendations using parallel Monte Carlo simulations.
+**Purpose:** Calculate optimal pit strategies and simulate race outcomes.
 
 | Module | Responsibility |
 |--------|----------------|
-| `pit_window.py` | Optimal pit window calculation |
-| `pitloss.py` | Pit stop time loss estimation |
-| `monte_carlo.py` | Parallelized race outcome simulation |
-| `decision.py` | Strategy recommendation engine |
-| `explainer.py` | Human-readable explanations |
-| `grid_simulator.py` | Discrete event simulation for race grid |
+| `pit_window.py` | Optimal pit window calculation (min/max/ideal laps) |
+| `pitloss.py` | Pit stop time loss estimation including traffic |
+| `monte_carlo.py` | Parallelized single-race outcome simulation |
+| `grid_simulator.py` | Full 20-car discrete event race simulation |
+| `competitor_ai.py` | 10 team-specific AI profiles for pit decisions |
+| `situational_strategy.py` | `ChampionshipContext`, `ChampionshipPhase`, `calculate_risk_modifier()` |
+| `decision.py` | Strategy recommendation engine (PIT_NOW / STAY_OUT / CONSIDER_PIT) |
+| `explain.py` | Human-readable strategy explanations |
+| `sensitivity.py` | Parameter sensitivity analysis |
+| `strategy_generator.py` | Strategy variant generation |
+| `strategy_comparator.py` | Multi-strategy comparison |
+| `driver_behavior.py` | Driver characteristic extraction |
+| `team_profiles.py` | Team-specific strategy patterns |
 
-**Strategy Output:**
-```python
-StrategyRecommendation:
-  ├── recommendation: PIT_NOW | STAY_OUT | CONSIDER_PIT
-  ├── confidence: float (0-1)
-  ├── pit_window: PitWindow
-  ├── expected_position: float
-  ├── pit_rejoin: PitRejoinPrediction
-  └── explanation: str
-```
+**GridSimulator:**
+- Simulates all 20 cars lap-by-lap with physics models
+- CompetitorAI makes pit decisions per team strategy profile
+- Accounts for safety cars, tyre degradation, fuel burn, track evolution
+- Used by both single-race Monte Carlo and Championship Simulator
 
 ---
 
 ### 5. Services Layer (`src/rsw/services/`)
 
-**Purpose:** Orchestrate business logic and state updates.
+**Purpose:** Orchestrate business logic and coordinate state updates.
 
 | Service | Responsibility |
 |---------|----------------|
-| `SimulationService` | Main loop management, state propagation, thread safety |
-| `StrategyService` | Async strategy evaluation, caching, parallel execution management |
+| `SimulationService` | Race replay — loads FastF1 data, steps through laps, broadcasts state via WebSocket |
+| `LiveRaceService` | **NEW v2.1** — Real-time OpenF1 polling (5s interval), state updates, mutual exclusion with simulation |
+| `ChampionshipService` | **NEW v2.1** — Multi-race Monte Carlo (N simulations x remaining races), WDC/WCC prediction |
+| `StrategyService` | Async strategy evaluation, caching, parallel execution |
+| `SessionService` | Session data management, FastF1 loading |
 | `ReplayService` | Historical session playback control |
+
+**LiveRaceService Flow:**
+```
+start(session_key) → polling loop (5s):
+  1. Fetch positions, laps, car data from OpenF1
+  2. Apply reducers to update RaceState
+  3. Run StrategyService for pit recommendations
+  4. Broadcast state_update via WebSocket
+```
+
+**ChampionshipService Flow:**
+```
+simulate(year, start_from_round, n_simulations) → asyncio.to_thread():
+  1. Fetch calendar via FastF1
+  2. Fetch completed standings via FastF1 session.results
+  3. Build synthetic driver grid from SeasonLearner priors
+  4. For each simulation (N=200):
+       For each remaining race:
+         a. Build ChampionshipContext per driver
+         b. calculate_risk_modifier() → adjust SC probability
+         c. GridSimulator.run_simulation()
+         d. Apply DNF (7% probability)
+         e. Award fastest lap (+1 point to random top-10)
+         f. Convert positions → points (Race/Sprint scoring)
+  5. Aggregate: mean/std/p10/p90/prob_champion per driver
+  6. Group by team for WCC standings
+```
 
 ---
 
@@ -180,77 +184,124 @@ StrategyRecommendation:
 
 | Module | Responsibility |
 |--------|----------------|
-| `routes/health.py` | Health/readiness probes |
-| `routes/sessions.py` | Session management |
-| `routes/strategy.py` | Strategy endpoints |
-| `routes/replay.py` | Historical replay |
+| `routes/health.py` | Health, liveness, readiness probes |
+| `routes/sessions.py` | Session browsing and filtering |
+| `routes/simulation.py` | Race simulation control (load/stop/speed) |
+| `routes/live.py` | **NEW v2.1** — Live race tracking (start/stop/status/active-sessions) |
+| `routes/championship.py` | **NEW v2.1** — Championship simulation and standings |
+| `routes/explain_route.py` | Strategy explainability with sensitivity analysis |
+| `routes/weather.py` | Weather data and forecasts |
+| `websocket_manager.py` | WebSocket connection management and broadcasting |
 
-**Endpoint Categories:**
-- **Health:** `/health`, `/health/live`, `/health/ready`
-- **Data:** `/api/sessions`, `/api/state`
-- **Strategy:** `/api/strategy/{driver}`
-- **Replay:** `/api/replay/sessions`, `/api/replay/{id}/start`
+**Endpoint Summary:**
+
+| Category | Endpoints |
+|----------|-----------|
+| Health | `GET /health`, `/health/live`, `/health/ready` |
+| Sessions | `GET /api/sessions`, `/api/sessions/{key}` |
+| Simulation | `POST /api/simulation/load/{year}/{round}`, `/stop`, `/speed/{speed}`, `GET /status` |
+| Live | `POST /api/live/start`, `/stop`, `GET /status`, `/active-sessions` |
+| Championship | `POST /api/championship/simulate`, `GET /calendar/{year}`, `/standings/{year}/{round}` |
+| Explain | `GET /api/strategy/explain/{driver_number}` |
+| Weather | `GET /api/weather/current/{circuit}`, `/forecast/{circuit}` |
+| State | `GET /api/state` |
+| Replay | `GET /api/replay/sessions`, `POST /replay/{key}/start`, `/control` |
+| WebSocket | `WS /ws` — state_update, ping/pong, start/stop session, start/stop live, set_speed |
 
 ---
 
 ### 7. Frontend (`frontend/`)
 
-**Purpose:** React-based user interface.
+**Purpose:** React 18 TypeScript single-page application.
 
 | Directory | Content |
 |-----------|---------|
-| `src/components/` | React components (`TelemetryPanel`, `StrategyPanel`, `PitRejoinVisualizer`) |
-| `src/hooks/` | Custom hooks (WebSocket, state) |
-| `src/services/` | API client services |
-| `src/stores/` | Zustand state stores |
+| `src/pages/` | `LiveDashboard`, `ReplayPage`, `BacktestPage`, `ChampionshipPage` |
+| `src/components/` | 30+ UI components (see below) |
+| `src/hooks/` | `useWebSocket`, `useSimulation`, `useAlerts` |
+| `src/store/` | Zustand store (`raceStore.ts`) |
+| `src/types/` | TypeScript type definitions mirroring backend schemas |
+
+**Component Categories:**
+- **Core:** DriverTable, TrackMap, SessionSelector, TopBar, Sidebar
+- **Analytics:** TelemetryPanel, StrategyPanel, ExplainabilityPanel, TelemetryChart
+- **Visualization:** TyreLifeChart, PositionProbabilityChart, PitRejoinVisualizer, CompetitorPredictions
+- **Indicators:** BrakingZoneIndicator, DRSZoneOverlay, RaceProgressBar, WeatherWidget
+- **UI Primitives:** MetricCard, RaceMessages, StrategyComparison
+
+**Design System (v2.1):**
+- CSS custom property tokens for colors, spacing, elevation, typography
+- Layered depth system with card elevation levels
+- Inter (body) + JetBrains Mono (data) font pairing
+- Red accent theme with gradient fills
+- Animation keyframes: pulse-ring, flash events, slideInAlert
 
 ---
 
 ## Data Flow
 
-### Real-Time Data Pipeline
+### Mode 1: Live Race
 
 ```
-1. OpenF1 API
-   │
-   ▼
-2. OpenF1Client (HTTP fetch + cache)
-   │
-   ▼
-3. UpdateBatch (canonical format)
-   │
-   ▼
-4. Reducers (pure state updates)
-   │
-   ▼
-5. RaceStateStore (immutable state)
-   │
-   ▼
-6. SimulationService (Orchestrator)
-   │
-   ├──▶ 7a. StrategyService (Async)
-   │         │
-   │         ▼
-   │    7b. Parallel Strategy Engine
-   │         │
-   │         ▼
-   │    7c. Recommendations
-   │
-   ▼
-8. WebSocket Broadcast
-   │
-   ▼
-9. Frontend (React)
+OpenF1 API (polling 5s)
+       │
+       ▼
+LiveRaceService
+       │
+       ├── Fetch positions, laps, car data
+       ├── Apply reducers → RaceStateStore
+       ├── StrategyService → recommendations
+       │
+       ▼
+WebSocket broadcast (state_update)
+       │
+       ▼
+React Frontend (LiveDashboard)
 ```
 
-### Request Lifecycle
+### Mode 2: Historical Replay
 
-1. **Client Request** → FastAPI router
-2. **Authentication** → JWT/API key validation
-3. **Handler** → Business logic execution
-4. **State Access** → Read from RaceStateStore
-5. **Response** → JSON serialization
-6. **Logging** → Structured log output
+```
+FastF1 (session.load)
+       │
+       ▼
+SimulationService (lap-by-lap stepping)
+       │
+       ├── Apply reducers → RaceStateStore
+       ├── StrategyService → recommendations
+       │
+       ▼
+WebSocket broadcast (state_update)
+       │
+       ▼
+React Frontend (ReplayPage)
+```
+
+### Mode 3: Championship Prediction
+
+```
+POST /api/championship/simulate
+       │
+       ▼
+ChampionshipService.simulate()
+       │
+       ├── FastF1: calendar + completed standings
+       ├── SeasonLearner: driver pace priors
+       │
+       ▼
+asyncio.to_thread() → simulation loop:
+  N simulations × remaining races
+       │
+       ├── ChampionshipContext per driver
+       ├── GridSimulator.run_simulation()
+       ├── DNF + fastest lap + points
+       │
+       ▼
+JSON Response → ChampionshipResult
+       │
+       ▼
+React Frontend (ChampionshipPage)
+```
 
 ---
 
@@ -263,18 +314,18 @@ StrategyRecommendation:
 | **SRP** | Each service has single responsibility |
 | **OCP** | Factories enable extension without modification |
 | **LSP** | All implementations substitutable for interfaces |
-| **ISP** | Focused interfaces (IDataProvider, ICache) |
-| **DIP** | Dependency injection via Container |
+| **ISP** | Focused interfaces (DataProvider, Cache) |
+| **DIP** | Dependency injection via Container and `init_*_routes()` pattern |
 
 ### Additional Patterns
 
-| Principle | Implementation |
-|-----------|----------------|
-| **DRY** | Shared utilities in `utils.py` |
-| **KISS** | Simple, clear factory methods |
-| **Separation of Concerns** | Layered architecture |
-| **Immutability** | Immutable state with reducers |
-| **Observer Pattern** | WebSocket state broadcasting |
+| Pattern | Implementation |
+|---------|----------------|
+| **Reducer Pattern** | Immutable state updates via pure functions |
+| **Observer Pattern** | WebSocket broadcasting on state change |
+| **Strategy Pattern** | CompetitorAI with 10 team-specific profiles |
+| **Factory Pattern** | DataProviderFactory for data source selection |
+| **Service Layer** | Business logic isolated from API routes |
 
 ---
 
@@ -282,110 +333,55 @@ StrategyRecommendation:
 
 ```
 src/rsw/
-├── __init__.py
-├── main.py                 # FastAPI application entry
-├── config.py               # Configuration loading
-├── exceptions.py           # Custom exception hierarchy
-├── interfaces.py           # Abstract base classes
-├── container.py            # Dependency injection
-├── utils.py                # Shared utilities
-├── domain.py               # Value objects
-├── factories.py            # Factory patterns
-│
-├── api/                    # REST API layer
-│   ├── __init__.py
-│   └── routes/
-│       ├── health.py
-│       ├── sessions.py
-│       ├── strategy.py
-│       └── replay.py
-│
-├── ingest/                 # Data ingestion
-│   ├── __init__.py
-│   ├── base.py             # Abstract DataProvider
-│   └── openf1_client.py    # OpenF1 implementation
-│
-├── state/                  # State management
-│   ├── __init__.py
-│   ├── schemas.py          # Pydantic models
-│   ├── store.py            # State store
-│   └── reducers.py         # Pure update functions
-│
-├── models/                 # ML models
-│   ├── __init__.py
-│   ├── degradation/
-│   │   ├── rls.py          # RLS estimator
-│   │   ├── model.py        # Driver model
-│   │   └── manager.py      # Multi-driver manager
-│   └── features/
-│       ├── builder.py      # Feature engineering
-│       └── filters.py      # Data filtering
-│
-├── strategy/               # Strategy engine
-│   ├── __init__.py
-│   ├── pit_window.py       # Pit window calculation
-│   ├── pitloss.py          # Pit loss estimation
-│   ├── monte_carlo.py      # Race simulation
-│   ├── decision.py         # Recommendations
-│   └── explainer.py        # Explanations
-│
-├── services/               # Business logic
-│   ├── session_service.py
-│   ├── strategy_service.py
-│   └── replay_service.py
-│
-├── repositories/           # Data access
-│   └── session_repository.py
-│
-└── middleware/             # HTTP middleware
-    ├── auth.py             # Authentication
-    └── logging.py          # Request logging
-```
-
----
-
-## Key Abstractions
-
-### DataProvider Interface
-
-```python
-class DataProvider(ABC):
-    @abstractmethod
-    async def get_sessions(...) -> list[SessionInfo]: ...
-    
-    @abstractmethod
-    async def get_laps(...) -> list[LapData]: ...
-    
-    @abstractmethod
-    async def get_drivers(...) -> list[DriverInfo]: ...
-```
-
-### Factory Pattern
-
-```python
-class DataProviderFactory:
-    @staticmethod
-    def create(provider_type: str) -> DataProvider:
-        if provider_type == "openf1":
-            return OpenF1Client()
-        elif provider_type == "fastf1":
-            return FastF1Client()
-        raise ValueError(f"Unknown provider: {provider_type}")
-```
-
-### Dependency Injection
-
-```python
-class Container:
-    _instances: dict[type, Any] = {}
-    
-    @classmethod
-    def get(cls, interface: type[T]) -> T:
-        return cls._instances[interface]
-    
-    @classmethod
-    def register(cls, interface: type, impl: Any) -> None:
-        cls._instances[interface] = impl
+├── main.py                     # FastAPI app entry, lifespan, WebSocket handler
+├── config/                     # Configuration
+│   ├── settings.py             #   App config loading (YAML + env vars)
+│   └── constants.py            #   Physics constants and defaults
+├── api/                        # REST API layer
+│   ├── routes/
+│   │   ├── health.py           #   Health/readiness probes
+│   │   ├── sessions.py         #   Session browsing
+│   │   ├── simulation.py       #   Simulation control
+│   │   ├── live.py             #   Live race tracking
+│   │   ├── championship.py     #   Championship Monte Carlo
+│   │   ├── explain_route.py    #   Strategy explainability
+│   │   └── weather.py          #   Weather data
+│   └── websocket_manager.py    #   Connection management
+├── services/                   # Business logic
+│   ├── simulation_service.py   #   Race replay engine
+│   ├── live_race_service.py    #   Real-time OpenF1 polling
+│   ├── championship_service.py #   Championship prediction
+│   ├── strategy_service.py     #   Pit strategy calculations
+│   ├── session_service.py      #   Session data management
+│   └── replay_service.py       #   Playback control
+├── strategy/                   # Strategy engine
+│   ├── monte_carlo.py          #   Race outcome simulation
+│   ├── grid_simulator.py       #   20-car race simulation
+│   ├── competitor_ai.py        #   AI competitor modeling
+│   ├── situational_strategy.py #   Championship-aware strategy
+│   ├── pit_window.py           #   Pit window optimization
+│   ├── decision.py             #   Recommendations
+│   ├── explain.py              #   Explanations
+│   └── sensitivity.py          #   Sensitivity analysis
+├── models/                     # ML & physics models
+│   ├── degradation/            #   RLS estimator, calibration
+│   ├── physics/                #   Tyre, fuel, weather, track, traffic models
+│   └── features/               #   Feature engineering
+├── ingest/                     # Data ingestion
+│   ├── openf1_client.py        #   OpenF1 real-time API
+│   ├── fastf1_service.py       #   FastF1 historical data
+│   └── weather_client.py       #   OpenMeteo weather API
+├── state/                      # State management
+│   ├── schemas.py              #   Pydantic state models
+│   ├── store.py                #   Race state store
+│   └── reducers.py             #   Pure state update functions
+├── middleware/                  # HTTP middleware
+│   ├── auth.py                 #   JWT authentication
+│   ├── rate_limit.py           #   Rate limiting
+│   └── error_handler.py        #   Centralized error handling
+├── repositories/               # Data access layer
+├── db/                         # Database models (SQLAlchemy)
+└── backtest/                   # Replay and metrics
 ```
 
 ---
@@ -398,20 +394,19 @@ class Container:
 |--------|----------|
 | JWT Bearer | User authentication |
 | API Key | Service-to-service |
-| None | Development mode |
-
-### Authorization
-
-- Role-based access (admin, user, api_user)
-- Permission checking via decorators
-- Rate limiting per API key
+| WebSocket Token | Optional WS auth (`RSW_WS_AUTH_REQUIRED`) |
+| None | Development mode (default) |
 
 ### Security Features
 
-- CORS configuration
-- Input validation (Pydantic)
+- CORS origin validation (wildcards rejected in production)
+- Input validation via Pydantic v2
+- Rate limiting middleware (configurable)
+- Correlation ID middleware for request tracing
 - SQL injection prevention (parameterized queries)
 - XSS protection (React escaping)
+- Trivy vulnerability scanning in CI
+- Bandit static security analysis
 
 ---
 
@@ -435,27 +430,21 @@ class Container:
                     └─────────┘
 ```
 
-### Caching Strategy
+### Performance Characteristics
 
-| Level | Cache | TTL |
-|-------|-------|-----|
-| API Response | In-memory | 5s |
-| Session Data | Redis | 1h |
-| Historical | Disk | 24h |
-
-### Performance Targets
-
-| Metric | Target |
-|--------|--------|
-| API Latency (p95) | < 100ms |
-| WebSocket Latency | < 50ms |
-| Concurrent Users | 1000+ |
-| Memory per Instance | < 512MB |
+| Operation | Latency | Notes |
+|-----------|---------|-------|
+| REST API (p95) | < 100ms | Standard endpoints |
+| WebSocket update | < 50ms | State broadcast |
+| Championship simulation | 20-60s | Batch computation, `asyncio.to_thread()` |
+| Live polling cycle | 5s | OpenF1 API rate-limited |
+| GridSimulator (single race) | ~15ms | Used in Monte Carlo loop |
 
 ---
 
-## Next Steps
+## Related Documentation
 
+- [Architecture Diagrams](ARCHITECTURE_DIAGRAMS.md) — Visual Mermaid diagrams
 - [API Reference](API.md) — Detailed endpoint documentation
 - [Deployment Guide](DEPLOYMENT.md) — Production deployment
 - [Development Guide](DEVELOPMENT.md) — Contributing code

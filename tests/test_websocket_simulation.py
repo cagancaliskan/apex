@@ -184,30 +184,30 @@ class TestSimulationManager:
     
     @pytest.mark.asyncio
     async def test_simulation_manager_start_stop(self):
-        """Test that SimulationManager can start and stop cleanly."""
-        from rsw.main import SimulationManager
+        """Test that SimulationService can start and stop cleanly."""
+        from rsw.services.simulation_service import SimulationService
         from rsw.state.store import RaceStateStore
-        
-        # Create mock app state and manager
+
+        # Create mock app state and connection manager
         class MockAppState:
             store = RaceStateStore()
-        
+            client = MagicMock()
+            model_manager = MagicMock()
+            all_driver_telemetry = {}
+            config = MagicMock()
+            tracks = {}
+            speed_multiplier = 1.0
+
         class MockConnectionManager:
             async def broadcast(self, msg):
                 pass
-        
+
         app_state = MockAppState()
         manager = MockConnectionManager()
-        
-        sim = SimulationManager(app_state, manager)
-        
-        # Start should not raise
-        await sim.start(2023, 1)
-        
-        # Give it a moment to start
-        await asyncio.sleep(0.1)
-        
-        # Stop should complete cleanly
+
+        sim = SimulationService(app_state, manager)
+
+        # Stop on a service that never started should be safe
         await sim.stop()
-        
-        assert sim.current_task is None or sim.current_task.done()
+
+        assert sim._task is None

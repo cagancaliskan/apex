@@ -56,14 +56,13 @@ class InMemoryRateLimiter:
         )
 
     def _get_key(self, request: Request) -> str:
-        """Get rate limit key from request."""
-        # Use client IP as key
+        """Get rate limit key from request, incorporating user identity when available."""
         client_ip = request.client.host if request.client else "unknown"
 
-        # Could also include user ID if authenticated
-        # user = getattr(request.state, "user", None)
-        # if user:
-        #     return f"{client_ip}:{user.user_id}"
+        # Include user ID for per-user rate limiting when authenticated
+        user = getattr(request.state, "user", None)
+        if user and hasattr(user, "user_id"):
+            return f"{client_ip}:{user.user_id}"
 
         return client_ip
 

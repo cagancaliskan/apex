@@ -13,7 +13,10 @@ from fastapi import Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, Info, generate_latest
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from rsw.logging_config import get_logger
 from rsw.runtime_config import get_config
+
+logger = get_logger(__name__)
 
 # ============================================================================
 # Application Info
@@ -181,8 +184,9 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         try:
             response = cast(Response, await call_next(request))
             status = str(response.status_code)
-        except Exception:
+        except Exception as e:
             status = "500"
+            logger.warning("request_failed", method=method, endpoint=endpoint, error=str(e))
             raise
         finally:
             duration = time.time() - start_time

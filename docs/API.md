@@ -11,12 +11,17 @@ Complete REST and WebSocket API documentation for the F1 Race Strategy Workbench
 3. [Health Endpoints](#health-endpoints)
 4. [Session Endpoints](#session-endpoints)
 5. [State Endpoints](#state-endpoints)
-6. [Strategy Endpoints](#strategy-endpoints)
-7. [Replay Endpoints](#replay-endpoints)
-8. [WebSocket API](#websocket-api)
-9. [Error Handling](#error-handling)
-10. [Rate Limiting](#rate-limiting)
-11. [Examples](#examples)
+6. [Simulation Endpoints](#simulation-endpoints)
+7. [Live Race Endpoints](#live-race-endpoints)
+8. [Championship Endpoints](#championship-endpoints)
+9. [Strategy Explainability Endpoints](#strategy-explainability-endpoints)
+10. [Weather Endpoints](#weather-endpoints)
+11. [Strategy Endpoints](#strategy-endpoints)
+12. [Replay Endpoints](#replay-endpoints)
+13. [WebSocket API](#websocket-api)
+14. [Error Handling](#error-handling)
+15. [Rate Limiting](#rate-limiting)
+16. [Examples](#examples)
 
 ---
 
@@ -338,6 +343,403 @@ Get specific driver state.
 
 ---
 
+## Simulation Endpoints
+
+### POST /api/simulation/load/{year}/{round_num}
+
+Load and start a race simulation from FastF1 historical data.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `year` | integer | Race year (2018-2025) |
+| `round_num` | integer | Round number in the season |
+
+**Response:** `200 OK`
+```json
+{
+  "status": "ok",
+  "year": 2023,
+  "round": 22,
+  "session_name": "Abu Dhabi Grand Prix"
+}
+```
+
+### POST /api/simulation/stop
+
+Stop the current simulation.
+
+**Response:** `200 OK`
+```json
+{
+  "status": "ok",
+  "message": "Simulation stopped"
+}
+```
+
+### POST /api/simulation/speed/{speed}
+
+Set simulation playback speed.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `speed` | float | Playback speed multiplier (1, 5, 10, 20, 50) |
+
+**Response:** `200 OK`
+```json
+{
+  "status": "ok",
+  "speed": 10.0
+}
+```
+
+### GET /api/simulation/status
+
+Get current simulation status.
+
+**Response:** `200 OK`
+```json
+{
+  "running": true,
+  "year": 2023,
+  "round": 22,
+  "current_lap": 35,
+  "total_laps": 58,
+  "speed": 10.0
+}
+```
+
+---
+
+## Live Race Endpoints
+
+> **New in v2.1** — Real-time F1 session tracking via OpenF1 API.
+
+### POST /api/live/start
+
+Start live race tracking. Automatically detects the current active session if no `session_key` is provided.
+
+**Request Body (optional):**
+```json
+{
+  "session_key": 9999
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "status": "started",
+  "session_key": 9999,
+  "session_name": "Race"
+}
+```
+
+**Errors:**
+- `400` — No active sessions found
+- `409` — Live tracking already running
+
+### POST /api/live/stop
+
+Stop live race tracking.
+
+**Response:** `200 OK`
+```json
+{
+  "status": "stopped"
+}
+```
+
+### GET /api/live/status
+
+Get current live tracking status.
+
+**Response:** `200 OK`
+```json
+{
+  "running": true,
+  "session_key": 9999,
+  "current_lap": 42,
+  "poll_interval_seconds": 5
+}
+```
+
+### GET /api/live/active-sessions
+
+List currently active F1 sessions from OpenF1.
+
+**Response:** `200 OK`
+```json
+{
+  "sessions": [
+    {
+      "session_key": 9999,
+      "session_name": "Race",
+      "session_type": "Race",
+      "circuit_short_name": "Bahrain",
+      "country_name": "Bahrain"
+    }
+  ]
+}
+```
+
+---
+
+## Championship Endpoints
+
+> **New in v2.1** — Multi-race Monte Carlo championship prediction.
+
+### POST /api/championship/simulate
+
+Run a full championship simulation. This is a long-running endpoint (20-60s) that simulates the remaining season using Monte Carlo methods.
+
+**Request Body:**
+```json
+{
+  "year": 2023,
+  "start_from_round": 10,
+  "n_simulations": 200,
+  "include_sprints": true
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `year` | integer | 2023 | Season year |
+| `start_from_round` | integer | 1 | Simulate from this round onwards |
+| `n_simulations` | integer | 200 | Number of Monte Carlo iterations (1-1000) |
+| `include_sprints` | boolean | true | Include sprint race points |
+
+**Response:** `200 OK`
+```json
+{
+  "year": 2023,
+  "start_from_round": 10,
+  "total_rounds": 22,
+  "completed_rounds": 9,
+  "remaining_rounds": 13,
+  "n_simulations": 200,
+  "elapsed_seconds": 35.2,
+  "calendar": [
+    {
+      "round_number": 1,
+      "event_name": "Bahrain Grand Prix",
+      "country": "Bahrain",
+      "location": "Sakhir",
+      "total_laps": 57,
+      "is_sprint_weekend": false,
+      "completed": true
+    }
+  ],
+  "wdc": [
+    {
+      "driver_number": 1,
+      "name": "Max VERSTAPPEN",
+      "team": "Red Bull Racing",
+      "team_colour": "3671C6",
+      "current_points": 375,
+      "simulated_points_mean": 66.2,
+      "simulated_points_std": 28.1,
+      "total_points_mean": 441.2,
+      "total_points_p10": 398,
+      "total_points_p90": 488,
+      "predicted_position": 1.1,
+      "prob_champion": 0.72,
+      "prob_top3": 0.98,
+      "prob_top10": 1.0
+    }
+  ],
+  "wcc": [
+    {
+      "team": "Red Bull Racing",
+      "team_colour": "3671C6",
+      "driver_numbers": [1, 11],
+      "current_points": 650,
+      "total_points_mean": 812.5,
+      "total_points_p10": 740,
+      "total_points_p90": 880,
+      "predicted_position": 1.05,
+      "prob_champion": 0.89
+    }
+  ]
+}
+```
+
+### GET /api/championship/calendar/{year}
+
+Get season calendar with race entries. Lightweight endpoint — no simulation.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `year` | integer | Season year (2018-2025) |
+
+**Response:** `200 OK`
+```json
+{
+  "calendar": [
+    {
+      "round_number": 1,
+      "event_name": "Bahrain Grand Prix",
+      "country": "Bahrain",
+      "location": "Sakhir",
+      "total_laps": 57,
+      "is_sprint_weekend": false,
+      "completed": true
+    }
+  ]
+}
+```
+
+### GET /api/championship/standings/{year}/{up_to_round}
+
+Get actual championship standings after a specific round (from FastF1 data).
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `year` | integer | Season year |
+| `up_to_round` | integer | Include results up to this round |
+
+**Response:** `200 OK`
+```json
+{
+  "drivers": [
+    {
+      "driver_number": 1,
+      "name": "Max VERSTAPPEN",
+      "team": "Red Bull Racing",
+      "points": 375,
+      "positions": [1, 1, 2, 1, 1, 1, 1, 5, 1]
+    }
+  ]
+}
+```
+
+---
+
+## Strategy Explainability Endpoints
+
+> **New in v2.1** — Human-readable strategy explanations with sensitivity analysis.
+
+### GET /api/strategy/explain/{driver_number}
+
+Get detailed strategy explanation for a specific driver including factor rankings and sensitivity analysis.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `driver_number` | integer | Driver number (1-99) |
+
+**Response:** `200 OK`
+```json
+{
+  "driver_number": 1,
+  "recommendation": "STAY_OUT",
+  "confidence": 0.85,
+  "explanation": "Stay out — tyres in good condition with 15 laps of life remaining.",
+  "factors": [
+    {
+      "name": "tyre_condition",
+      "weight": 0.35,
+      "value": 0.82,
+      "description": "Tyre degradation rate is below average"
+    },
+    {
+      "name": "track_position",
+      "weight": 0.25,
+      "value": 0.95,
+      "description": "Clean air advantage in P1"
+    },
+    {
+      "name": "undercut_threat",
+      "weight": 0.20,
+      "value": 0.15,
+      "description": "Low undercut risk from cars behind"
+    }
+  ],
+  "sensitivity": {
+    "tyre_age_+5": { "recommendation": "CONSIDER_PIT", "confidence": 0.62 },
+    "safety_car": { "recommendation": "PIT_NOW", "confidence": 0.91 },
+    "rain_probability_30pct": { "recommendation": "STAY_OUT", "confidence": 0.70 }
+  }
+}
+```
+
+---
+
+## Weather Endpoints
+
+> **New in v2.1** — Weather data via OpenMeteo API integration.
+
+### GET /api/weather/current/{circuit_key}
+
+Get current weather conditions for a circuit.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `circuit_key` | string | Circuit identifier (e.g., "bahrain", "monza") |
+
+**Response:** `200 OK`
+```json
+{
+  "circuit": "bahrain",
+  "track_temp": 42.5,
+  "air_temp": 28.3,
+  "humidity": 45,
+  "wind_speed": 12.5,
+  "wind_direction": "NW",
+  "rainfall": 0.0,
+  "is_raining": false,
+  "timestamp": "2024-03-02T15:30:00Z"
+}
+```
+
+### GET /api/weather/forecast/{circuit_key}
+
+Get weather forecast for the next hours at a circuit.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `circuit_key` | string | Circuit identifier |
+
+**Response:** `200 OK`
+```json
+{
+  "circuit": "bahrain",
+  "forecast": [
+    {
+      "time": "2024-03-02T16:00:00Z",
+      "air_temp": 27.8,
+      "humidity": 48,
+      "wind_speed": 14.0,
+      "rain_probability": 0.05,
+      "rainfall_mm": 0.0
+    },
+    {
+      "time": "2024-03-02T17:00:00Z",
+      "air_temp": 26.5,
+      "humidity": 52,
+      "wind_speed": 15.2,
+      "rain_probability": 0.10,
+      "rainfall_mm": 0.0
+    }
+  ]
+}
+```
+
+---
+
 ## Strategy Endpoints
 
 ### GET /api/strategy/{driver_number}
@@ -534,75 +936,139 @@ Stop and reset current replay.
 
 ```javascript
 const ws = new WebSocket('ws://localhost:8000/ws');
+
+// With authentication (when RSW_WS_AUTH_REQUIRED=true)
+const ws = new WebSocket('ws://localhost:8000/ws?token=<jwt_token>');
 ```
 
-### Authentication
+### Client → Server Messages
 
-Send after connection:
+**Start Simulation (Replay Mode):**
 ```json
 {
-  "type": "auth",
-  "token": "Bearer <jwt_token>"
+  "type": "start_session",
+  "year": 2023,
+  "round_num": 22
 }
 ```
 
-### Subscribe to Updates
-
+**Stop Simulation:**
 ```json
 {
-  "type": "subscribe",
-  "channels": ["state", "strategy", "messages"]
+  "type": "stop_session"
 }
 ```
 
-### Message Types
+**Set Speed:**
+```json
+{
+  "type": "set_speed",
+  "speed": 10.0
+}
+```
 
-**State Update:**
+**Start Live Tracking (v2.1):**
+```json
+{
+  "type": "start_live",
+  "session_key": 9999
+}
+```
+> If `session_key` is omitted, auto-detects the latest active session.
+
+**Stop Live Tracking (v2.1):**
+```json
+{
+  "type": "stop_live"
+}
+```
+
+**Keepalive:**
+```json
+{
+  "type": "ping"
+}
+```
+
+### Server → Client Messages
+
+**State Update** (sent continuously during simulation or live tracking):
 ```json
 {
   "type": "state_update",
   "data": {
+    "session_key": 9999,
+    "session_name": "Race",
     "current_lap": 35,
-    "drivers": { ... },
-    "timestamp": "2024-03-02T15:45:00Z"
+    "total_laps": 57,
+    "track_status": "GREEN",
+    "weather": { "track_temp": 42.5, "is_raining": false },
+    "drivers": {
+      "1": {
+        "driver_number": 1,
+        "name_acronym": "VER",
+        "position": 1,
+        "last_lap_time": 92.456,
+        "compound": "MEDIUM",
+        "tyre_age": 15,
+        "pit_recommendation": "STAY_OUT",
+        "pit_confidence": 0.85
+      }
+    }
   }
 }
 ```
 
-**Strategy Update:**
+**Session Started:**
 ```json
 {
-  "type": "strategy_update",
-  "data": {
-    "driver_number": 1,
-    "recommendation": "CONSIDER_PIT",
-    "reason": "Cliff risk increasing"
-  }
+  "type": "session_started",
+  "year": 2023,
+  "round": 22
 }
 ```
 
-**Race Control Message:**
+**Session Stopped:**
 ```json
 {
-  "type": "race_control",
-  "data": {
-    "category": "Flag",
-    "flag": "YELLOW",
-    "message": "Yellow flag in sector 2",
-    "lap_number": 35
-  }
+  "type": "session_stopped"
 }
 ```
 
-**Pit Stop:**
+**Live Started (v2.1):**
 ```json
 {
-  "type": "pit_stop",
-  "data": {
-    "driver_number": 1,
-    "lap_number": 35,
-    "pit_duration": 22.5
-  }
+  "type": "live_started"
+}
+```
+
+**Live Stopped (v2.1):**
+```json
+{
+  "type": "live_stopped"
+}
+```
+
+**Speed Set:**
+```json
+{
+  "type": "speed_set",
+  "speed": 10.0
+}
+```
+
+**Pong (keepalive response):**
+```json
+{
+  "type": "pong"
+}
+```
+
+**Error:**
+```json
+{
+  "type": "error",
+  "message": "Session not found"
 }
 ```
 

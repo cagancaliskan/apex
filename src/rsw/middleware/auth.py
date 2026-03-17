@@ -4,6 +4,7 @@ Authentication and authorization middleware.
 Provides JWT-based authentication and API key validation.
 """
 
+import os
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -158,15 +159,19 @@ async def get_current_user(
 
     # Try API key
     if api_key:
-        # In production, validate against stored API keys
-        # For now, accept any non-empty key in dev mode
-        if config.is_development:
-            return AuthUser(user_id=f"api_key_{api_key[:8]}", roles=["api_user"])
+        # Validate against known API keys
+        valid_dev_keys = os.getenv("RSW_DEV_API_KEYS", "rsw-dev-key-2024").split(",")
 
-        # Production: validate against database
-        # user = await validate_api_key(api_key)
-        # if user:
-        #     return user
+        if config.is_development:
+            if api_key in valid_dev_keys:
+                return AuthUser(user_id=f"api_key_{api_key[:8]}", roles=["api_user"])
+            logger.warning("invalid_dev_api_key", key_prefix=api_key[:4])
+        else:
+            # Production: validate against database
+            # user = await validate_api_key(api_key)
+            # if user:
+            #     return user
+            pass
 
     raise HTTPException(
         status_code=401,

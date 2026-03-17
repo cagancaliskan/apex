@@ -14,6 +14,9 @@ from typing import Any
 import httpx
 
 from ..config import load_app_config
+from ..logging_config import get_logger
+
+logger = get_logger(__name__)
 from .base import (
     DataProvider,
     DriverInfo,
@@ -45,12 +48,17 @@ class OpenF1Client(DataProvider):
         self._cache_ttl = config.polling.cache_ttl_seconds
 
     async def _get_client(self) -> httpx.AsyncClient:
-        """Get or create the HTTP client."""
+        """Get or create the HTTP client with connection pooling."""
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
                 timeout=self.timeout,
                 headers={"Accept": "application/json"},
+                limits=httpx.Limits(
+                    max_connections=20,
+                    max_keepalive_connections=10,
+                    keepalive_expiry=30,
+                ),
             )
         return self._client
 
@@ -83,7 +91,7 @@ class OpenF1Client(DataProvider):
                 # Handle 429 Rate Limit explicitly
                 if response.status_code == 429:
                     retry_after = int(response.headers.get("Retry-After", 5))
-                    print(f"Rate limited on {endpoint}. Retrying after {retry_after}s...")
+                    logger.warning("rate_limited", endpoint=endpoint, retry_after=retry_after)
                     await asyncio.sleep(retry_after)
                     continue
 
@@ -96,17 +104,15 @@ class OpenF1Client(DataProvider):
                 return data if isinstance(data, list) else []
 
             except httpx.HTTPStatusError as e:
-                print(f"HTTP error fetching {endpoint} (attempt {attempt + 1}/{max_retries}): {e}")
+                logger.warning("http_error", endpoint=endpoint, attempt=attempt + 1, max_retries=max_retries, error=str(e))
                 if attempt == max_retries - 1:
                     return []
             except httpx.RequestError as e:
-                print(
-                    f"Request error fetching {endpoint} (attempt {attempt + 1}/{max_retries}): {e}"
-                )
+                logger.warning("request_error", endpoint=endpoint, attempt=attempt + 1, max_retries=max_retries, error=str(e))
                 if attempt == max_retries - 1:
                     return []
             except Exception as e:
-                print(f"Unexpected error fetching {endpoint}: {e}")
+                logger.error("unexpected_fetch_error", endpoint=endpoint, error=str(e))
                 return []
 
             # Exponential backoff for retries
@@ -163,7 +169,7 @@ class OpenF1Client(DataProvider):
                 )
                 sessions.append(session)
             except (KeyError, ValueError) as e:
-                print(f"Error parsing session: {e}")
+                logger.debug("parse_error", entity="session", error=str(e))
                 continue
 
         return sessions
@@ -211,7 +217,7 @@ class OpenF1Client(DataProvider):
                 )
                 drivers.append(driver)
             except (KeyError, ValueError) as e:
-                print(f"Error parsing driver: {e}")
+                logger.debug("parse_error", entity="driver", error=str(e))
                 continue
 
         return drivers
@@ -247,7 +253,7 @@ class OpenF1Client(DataProvider):
                 )
                 laps.append(lap)
             except (KeyError, ValueError) as e:
-                print(f"Error parsing lap: {e}")
+                logger.debug("parse_error", entity="lap", error=str(e))
                 continue
 
         return laps
@@ -283,7 +289,7 @@ class OpenF1Client(DataProvider):
                     latest_positions[driver_num] = position
 
             except (KeyError, ValueError) as e:
-                print(f"Error parsing position: {e}")
+                logger.debug("parse_error", entity="position", error=str(e))
                 continue
 
         return list(latest_positions.values())
@@ -318,7 +324,7 @@ class OpenF1Client(DataProvider):
                     latest_intervals[driver_num] = interval
 
             except (KeyError, ValueError) as e:
-                print(f"Error parsing interval: {e}")
+                logger.debug("parse_error", entity="interval", error=str(e))
                 continue
 
         return list(latest_intervals.values())
@@ -348,7 +354,7 @@ class OpenF1Client(DataProvider):
                 )
                 stints.append(stint)
             except (KeyError, ValueError) as e:
-                print(f"Error parsing stint: {e}")
+                logger.debug("parse_error", entity="stint", error=str(e))
                 continue
 
         return stints
@@ -369,7 +375,7 @@ class OpenF1Client(DataProvider):
                 )
                 pits.append(pit)
             except (KeyError, ValueError) as e:
-                print(f"Error parsing pit: {e}")
+                logger.debug("parse_error", entity="pit", error=str(e))
                 continue
 
         return pits
@@ -392,7 +398,7 @@ class OpenF1Client(DataProvider):
                 )
                 messages.append(msg)
             except (KeyError, ValueError) as e:
-                print(f"Error parsing race control: {e}")
+                logger.debug("parse_error", entity="race_control", error=str(e))
                 continue
 
         return messages
@@ -405,28 +411,28 @@ async def test_client() -> None:
 
     try:
         # Get 2023 sessions
-        print("Fetching 2023 sessions...")
+        logger.info("test_fetching_sessions", year=2023)
         sessions = await client.get_sessions(year=2023)
-        print(f"Found {len(sessions)} sessions")
+        logger.info("test_sessions_found", count=len(sessions))
 
         if sessions:
             # Get details for the first race session
             race_sessions = [s for s in sessions if s.session_name == "Race"]
             if race_sessions:
                 session = race_sessions[0]
-                print(f"\nSession: {session.country_name} {session.session_name}")
+                logger.info("test_session", country=session.country_name, name=session.session_name)
 
                 # Get drivers
                 drivers = await client.get_drivers(session.session_key)
-                print(f"Drivers: {len(drivers)}")
+                logger.info("test_drivers_found", count=len(drivers))
 
                 # Get some laps
                 laps = await client.get_laps(session.session_key)
-                print(f"Laps: {len(laps)}")
+                logger.info("test_laps_found", count=len(laps))
 
                 # Get stints
                 stints = await client.get_stints(session.session_key)
-                print(f"Stints: {len(stints)}")
+                logger.info("test_stints_found", count=len(stints))
     finally:
         await client.close()
 

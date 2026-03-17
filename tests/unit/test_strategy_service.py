@@ -206,9 +206,9 @@ class TestMonteCarloSimulation:
         self, strategy_service, mock_driver, mock_config
     ):
         """run_monte_carlo should return probability metrics."""
-        competitors = [MagicMock(last_lap_time=93.0, deg_slope=0.05)]
-        
-        with patch("rsw.strategy.monte_carlo.simulate_race") as mock_sim:
+        competitors = [MagicMock(last_lap_time=93.0, deg_slope=0.05, driver_number=44)]
+
+        with patch("rsw.strategy.monte_carlo.simulate_grid_outcome") as mock_sim:
             mock_sim.return_value = MagicMock(
                 expected_position=2.3,
                 position_std=1.1,
@@ -216,14 +216,14 @@ class TestMonteCarloSimulation:
                 prob_podium=0.78,
                 prob_points=0.95,
             )
-            
+
             result = strategy_service.run_monte_carlo(
                 driver=mock_driver,
                 competitors=competitors,
                 remaining_laps=37,
                 pit_loss=22.0,
             )
-            
+
             assert "expected_position" in result
             assert "position_std" in result
             assert "prob_win" in result
@@ -236,7 +236,7 @@ class TestMonteCarloSimulation:
         self, strategy_service, mock_driver, mock_config
     ):
         """run_monte_carlo should use config's simulation count."""
-        with patch("rsw.strategy.monte_carlo.simulate_race") as mock_sim:
+        with patch("rsw.strategy.monte_carlo.simulate_grid_outcome") as mock_sim:
             mock_sim.return_value = MagicMock(
                 expected_position=1.0,
                 position_std=0.0,
@@ -244,14 +244,14 @@ class TestMonteCarloSimulation:
                 prob_podium=1.0,
                 prob_points=1.0,
             )
-            
+
             strategy_service.run_monte_carlo(
                 driver=mock_driver,
                 competitors=[],
                 remaining_laps=10,
                 pit_loss=22.0,
             )
-            
+
             # Verify simulation count from config
             call_kwargs = mock_sim.call_args.kwargs
             assert call_kwargs.get("n_simulations") == mock_config.monte_carlo_simulations
@@ -260,7 +260,7 @@ class TestMonteCarloSimulation:
         self, strategy_service, mock_driver
     ):
         """run_monte_carlo should accept custom simulation count."""
-        with patch("rsw.strategy.monte_carlo.simulate_race") as mock_sim:
+        with patch("rsw.strategy.monte_carlo.simulate_grid_outcome") as mock_sim:
             mock_sim.return_value = MagicMock(
                 expected_position=3.0,
                 position_std=2.0,
@@ -268,7 +268,7 @@ class TestMonteCarloSimulation:
                 prob_podium=0.4,
                 prob_points=0.8,
             )
-            
+
             strategy_service.run_monte_carlo(
                 driver=mock_driver,
                 competitors=[],
@@ -276,7 +276,7 @@ class TestMonteCarloSimulation:
                 pit_loss=22.0,
                 n_simulations=500,
             )
-            
+
             # Verify custom count used
             call_kwargs = mock_sim.call_args.kwargs
             assert call_kwargs.get("n_simulations") == 500

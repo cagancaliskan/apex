@@ -121,6 +121,12 @@ class PollingConfig(BaseSettings):
     max_retries: int = 3
     batch_size: int = 100
 
+    # Live race mode polling intervals
+    live_race_interval: float = Field(default=5.0, ge=1.0, le=60.0)
+    live_practice_interval: float = Field(default=15.0, ge=5.0, le=60.0)
+    live_weather_interval: float = Field(default=300.0, ge=60.0, le=900.0)
+    live_max_consecutive_errors: int = 5
+
     model_config = SettingsConfigDict(env_prefix="RSW_POLLING_")
 
 

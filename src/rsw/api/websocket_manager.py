@@ -107,7 +107,8 @@ class ConnectionManager:
         for connection in self.active_connections:
             try:
                 await connection.send_text(message_json)
-            except Exception:
+            except Exception as e:
+                logger.debug("ws_broadcast_send_failed", error=str(e))
                 disconnected.append(connection)
 
         for conn in disconnected:
@@ -128,7 +129,8 @@ class ConnectionManager:
             message_json = json.dumps(message, default=str)
             await websocket.send_text(message_json)
             return True
-        except Exception:
+        except Exception as e:
+            logger.debug("ws_send_to_failed", error=str(e))
             self.disconnect(websocket)
             return False
 

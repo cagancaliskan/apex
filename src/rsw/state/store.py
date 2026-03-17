@@ -10,7 +10,10 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
 
+from ..logging_config import get_logger
 from ..ingest.base import UpdateBatch
+
+logger = get_logger(__name__)
 from .reducers import apply_update_batch
 from .schemas import RaceState, StateSnapshot
 
@@ -117,7 +120,7 @@ class RaceStateStore:
             try:
                 await callback(self._state)
             except Exception as e:
-                print(f"Error notifying subscriber: {e}")
+                logger.warning("subscriber_notification_error", error=str(e))
 
     def snapshot(self, snapshot_id: str | None = None) -> StateSnapshot:
         """Create a snapshot of current state."""

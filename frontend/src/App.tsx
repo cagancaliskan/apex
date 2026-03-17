@@ -9,11 +9,12 @@
  */
 
 import { useState, useEffect, useCallback, useRef, type FC } from 'react';
-import { Radio, RotateCcw, BarChart2 } from 'lucide-react';
+import { Radio, RotateCcw, BarChart2, Trophy } from 'lucide-react';
 import styles from './App.module.css';
 import LiveDashboard from './pages/LiveDashboard';
 import ReplayPage from './pages/ReplayPage';
 import BacktestPage from './pages/BacktestPage';
+import ChampionshipPage from './pages/ChampionshipPage';
 import SessionSelector from './components/SessionSelector';
 import { useRaceStore } from './store/raceStore';
 import type { RaceState, WebSocketMessage } from './types';
@@ -33,7 +34,7 @@ interface Session {
 }
 
 type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
-type Page = 'live' | 'replay' | 'backtest';
+type Page = 'live' | 'replay' | 'backtest' | 'championship';
 
 // =============================================================================
 // Helpers
@@ -67,12 +68,15 @@ const App: FC = () => {
     const [currentPage, setCurrentPage] = useState<Page>('live');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [simSpeed, setSimSpeed] = useState(1);
+    const [liveSessions, setLiveSessions] = useState<Array<{ session_key: number; session_name: string; session_type: string; circuit: string; country: string }>>([]);
     const wsRef = useRef<WebSocket | null>(null);
 
     // Zustand store actions + state
     const updateState = useRaceStore(s => s.updateState);
     const setConnected = useRaceStore(s => s.setConnected);
     const setSimulationRunning = useRaceStore(s => s.setSimulationRunning);
+    const isLiveMode = useRaceStore(s => s.isLiveMode);
+    const liveConnectionQuality = useRaceStore(s => s.liveConnectionQuality);
     const alerts = useRaceStore(s => s.alerts);
     const dismissAlert = useRaceStore(s => s.dismissAlert);
 
@@ -130,6 +134,14 @@ const App: FC = () => {
                 } else if (message.type === 'session_stopped') {
                     setIsPolling(false);
                     setSimulationRunning(false);
+                } else if (message.type === 'live_started') {
+                    setIsPolling(true);
+                    setSimulationRunning(true);
+                    useRaceStore.getState().setLiveMode(true);
+                } else if (message.type === 'live_stopped') {
+                    setIsPolling(false);
+                    setSimulationRunning(false);
+                    useRaceStore.getState().setLiveMode(false);
                 }
             } catch (error) {
                 console.error('Failed to parse WebSocket message:', error);
@@ -195,6 +207,34 @@ const App: FC = () => {
         }
     };
 
+    const fetchLiveSessions = async () => {
+        try {
+            const response = await fetch('/api/live/sessions');
+            const data = await response.json();
+            setLiveSessions(data.sessions || []);
+        } catch {
+            setLiveSessions([]);
+        }
+    };
+
+    const handleStartLive = (sessionKey?: number) => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+            const msg: Record<string, unknown> = { type: 'start_live' };
+            if (sessionKey) msg.session_key = sessionKey;
+            wsRef.current.send(JSON.stringify(msg));
+            setIsPolling(true);
+            setCurrentPage('live');
+            setDrawerOpen(false);
+        }
+    };
+
+    const handleStopLive = () => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: 'stop_live' }));
+            setIsPolling(false);
+        }
+    };
+
     const flagClass = getFlagClass(flags, safetycar, redFlag, vsc);
     const flagLabel = getFlagLabel(flags, safetycar, redFlag, vsc);
     const displayName = trackName || (selectedSession?.circuit) || '—';
@@ -239,8 +279,42 @@ const App: FC = () => {
                 )}
                 <span className={styles.statusSpacer} />
 
-                {/* Speed Controls */}
-                {isPolling && (
+                {/* Live Badge or Speed Controls */}
+                {isPolling && isLiveMode ? (
+                    <>
+                        <span className={styles.statusSep}>│</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span style={{
+                                display: 'inline-block',
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                background: liveConnectionQuality === 'poor' ? 'var(--status-amber)' : '#e10600',
+                                animation: liveConnectionQuality !== 'poor' ? 'livePulse 1.5s ease-in-out infinite' : 'none',
+                                boxShadow: '0 0 6px rgba(225, 6, 0, 0.6)',
+                            }} />
+                            <span style={{
+                                fontSize: '0.65rem',
+                                fontWeight: 700,
+                                fontFamily: 'var(--font-mono)',
+                                color: '#e10600',
+                                letterSpacing: '0.08em',
+                                textTransform: 'uppercase',
+                            }}>
+                                LIVE
+                            </span>
+                            {liveConnectionQuality !== 'good' && (
+                                <span style={{
+                                    fontSize: '0.55rem',
+                                    color: liveConnectionQuality === 'poor' ? 'var(--status-red)' : 'var(--status-amber)',
+                                    fontFamily: 'var(--font-mono)',
+                                }}>
+                                    ({liveConnectionQuality})
+                                </span>
+                            )}
+                        </span>
+                    </>
+                ) : isPolling ? (
                     <>
                         <span className={styles.statusSep}>│</span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
@@ -268,7 +342,7 @@ const App: FC = () => {
                             ))}
                         </span>
                     </>
-                )}
+                ) : null}
 
                 <button className={styles.menuBtn} onClick={() => setDrawerOpen(true)} title="Sessions">
                     ≡
@@ -289,6 +363,10 @@ const App: FC = () => {
                     <BarChart2 size={14} />
                     Backtest
                 </button>
+                <button className={`${styles.tabBtn}${currentPage === 'championship' ? ` ${styles.tabBtnActive}` : ''}`} onClick={() => setCurrentPage('championship')}>
+                    <Trophy size={14} />
+                    Championship
+                </button>
             </nav>
 
             {/* Alert Strip */}
@@ -306,7 +384,9 @@ const App: FC = () => {
 
             {/* Main Content */}
             <main className={styles.mainContent}>
-                {currentPage === 'replay' ? (
+                {currentPage === 'championship' ? (
+                    <ChampionshipPage />
+                ) : currentPage === 'replay' ? (
                     <ReplayPage />
                 ) : currentPage === 'backtest' ? (
                     <BacktestPage />
@@ -357,8 +437,47 @@ const App: FC = () => {
                             </>
                         )}
 
+                        {/* Live Sessions Section */}
                         <div className="session-drawer-list">
-                            <div className="session-drawer-list-label">Available Sessions</div>
+                            <div className="session-drawer-list-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span>Live Sessions</span>
+                                <button
+                                    onClick={fetchLiveSessions}
+                                    style={{ fontSize: '0.65rem', color: 'var(--color-info)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                                >
+                                    Refresh
+                                </button>
+                            </div>
+                            {isLiveMode ? (
+                                <div style={{ padding: '8px 12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#e10600', animation: 'livePulse 1.5s ease-in-out infinite' }} />
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 600 }}>Live tracking active</span>
+                                    </div>
+                                    <button className="btn btn-secondary" onClick={handleStopLive} style={{ width: '100%', fontSize: '0.8rem' }}>
+                                        Stop Live
+                                    </button>
+                                </div>
+                            ) : liveSessions.length > 0 ? (
+                                liveSessions.map(ls => (
+                                    <div
+                                        key={ls.session_key}
+                                        style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}
+                                        onClick={() => handleStartLive(ls.session_key)}
+                                    >
+                                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>{ls.circuit} — {ls.session_name}</div>
+                                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{ls.country} · {ls.session_type}</div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                    No active sessions. Click Refresh to check.
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="session-drawer-list">
+                            <div className="session-drawer-list-label">Replay Sessions</div>
                             <SessionSelector
                                 sessions={sessions}
                                 selectedSession={selectedSession}

@@ -163,7 +163,6 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
     const sparky = pace.slice(0, 5);
     const sparkMin = sparky.length > 0 ? Math.min(...sparky) : 0;
     const sparkMax = sparky.length > 0 ? Math.max(...sparky) : 1;
-    const sparkRange = sparkMax - sparkMin || 1;
 
     const [showExplain, setShowExplain] = useState(false);
 
@@ -265,23 +264,24 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                     )}
                 </Section>
 
-                {/* Threats */}
-                {(driver.undercut_threat || driver.overcut_opportunity) && (
-                    <Section label="Threats">
-                        {driver.undercut_threat && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 6px', background: 'rgba(255,107,0,0.1)', borderLeft: '3px solid var(--color-orange)', borderRadius: '2px', marginBottom: '4px' }}>
-                                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-orange)', letterSpacing: '0.06em' }}>UNDERCUT THREAT</span>
-                                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)' }}>Car ahead vulnerable</span>
-                            </div>
-                        )}
-                        {driver.overcut_opportunity && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 6px', background: 'rgba(88,166,255,0.08)', borderLeft: '3px solid var(--color-info)', borderRadius: '2px' }}>
-                                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-info)', letterSpacing: '0.06em' }}>OVERCUT VIABLE</span>
-                                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)' }}>Car behind pitting</span>
-                            </div>
-                        )}
-                    </Section>
-                )}
+                {/* Threats — always visible */}
+                <Section label="Threats">
+                    {driver.undercut_threat && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 6px', background: 'rgba(255,107,0,0.1)', borderLeft: '3px solid var(--color-orange)', borderRadius: '2px', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-orange)', letterSpacing: '0.06em' }}>UNDERCUT THREAT</span>
+                            <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)' }}>Car ahead vulnerable</span>
+                        </div>
+                    )}
+                    {driver.overcut_opportunity && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 6px', background: 'rgba(88,166,255,0.08)', borderLeft: '3px solid var(--color-info)', borderRadius: '2px' }}>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-info)', letterSpacing: '0.06em' }}>OVERCUT VIABLE</span>
+                            <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)' }}>Car behind pitting</span>
+                        </div>
+                    )}
+                    {!driver.undercut_threat && !driver.overcut_opportunity && (
+                        <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No threats detected</div>
+                    )}
+                </Section>
 
                 {/* Degradation */}
                 <Section label="Tyre Degradation">
@@ -320,22 +320,34 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
 
                 {/* Predicted Pace */}
                 {sparky.length > 0 && (
-                    <Section label={`Predicted Pace (${confPct}% model conf)`}>
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '44px' }}>
+                    <Section label={`Predicted Pace — Next 5 Laps (${confPct}% conf)`}>
+                        <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', marginBottom: '4px', fontStyle: 'italic' }}>
+                            taller bars = slower pace (degrading)
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '52px' }}>
                             {sparky.map((v, i) => {
-                                const BAR_MAX = 30; // px — avoids % height in flex child
-                                const barH = sparkRange > 0 ? Math.max(4, ((sparkMax - v) / sparkRange) * BAR_MAX) : BAR_MAX / 2;
-                                const isFastest = v === sparkMin;
+                                const BAR_MAX = 30;
+                                const range = sparkMax - sparkMin;
+                                const barH = range > 0.05 ? Math.max(4, ((v - sparkMin) / range) * BAR_MAX) : BAR_MAX / 2;
+                                const delta = v - sparky[0];
+                                const barColor = i === 0
+                                    ? 'rgba(88,166,255,0.55)'
+                                    : delta > 0.5 ? 'var(--status-red)'
+                                    : delta > 0.2 ? 'var(--status-amber)'
+                                    : 'rgba(88,166,255,0.4)';
                                 return (
-                                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
-                                        <div style={{ width: '100%', height: `${barH}px`, background: isFastest ? 'var(--status-green)' : 'rgba(88,166,255,0.4)', borderRadius: '2px 2px 0 0' }} />
-                                        <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>+{i + 1}</div>
+                                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                        <div style={{ fontSize: '0.48rem', color: i === 0 ? 'var(--text-muted)' : barColor, fontFamily: 'var(--font-mono)', marginBottom: '2px', whiteSpace: 'nowrap' }}>
+                                            {i === 0 ? 'base' : delta > 0 ? `+${delta.toFixed(1)}s` : '—'}
+                                        </div>
+                                        <div style={{ width: '100%', height: `${barH}px`, background: barColor, borderRadius: '2px 2px 0 0' }} />
+                                        <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>+{i + 1}</div>
                                     </div>
                                 );
                             })}
                         </div>
                         <div style={{ marginTop: '2px', fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                            Next: {sparky[0] ? `${sparky[0].toFixed(3)}s` : '—'}
+                            Base: {sparky[0] ? `${sparky[0].toFixed(3)}s` : '—'}
                         </div>
                     </Section>
                 )}
@@ -355,15 +367,24 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                     </div>
                 </Section>
 
-                {/* Rejoin Visualizer — shown when driver is in pit window or pitting */}
+                {/* Rejoin Visualizer — always visible */}
                 {((effectiveLap >= (driver.pit_window_min ?? 0) &&
                    effectiveLap <= (driver.pit_window_max ?? 0) &&
                    (driver.pit_window_min ?? 0) > 0) ||
-                  driver.in_pit === true) && (
+                  driver.in_pit === true) ? (
                     <PitRejoinVisualizer
                         driver={driver}
                         allDrivers={sortedDrivers}
                     />
+                ) : (
+                    <div style={{ marginTop: 'var(--space-md)', padding: 'var(--space-sm)', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', minHeight: '72px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '3px' }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pit Rejoin Prediction</span>
+                        <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            {hasPitWindow
+                                ? `Outside window — opens L${winMin}, ideal L${winIdeal ?? '?'}`
+                                : 'No pit window calculated yet'}
+                        </span>
+                    </div>
                 )}
 
                 {/* Pit History Strip */}

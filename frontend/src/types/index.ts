@@ -186,6 +186,8 @@ export type WebSocketMessageType =
     | 'state_update'
     | 'session_started'
     | 'session_stopped'
+    | 'live_started'
+    | 'live_stopped'
     | 'speed_set'
     | 'ping'
     | 'pong'
@@ -235,6 +237,62 @@ export interface SimulationState {
     speed: SimulationSpeed;
     year: number | null;
     round: number | null;
+}
+
+// =============================================================================
+// Championship Simulator Types
+// =============================================================================
+
+export interface RaceCalendarEntry {
+    round_number: number;
+    event_name: string;
+    country: string;
+    location: string;
+    total_laps: number;
+    is_sprint_weekend: boolean;
+    completed: boolean;
+}
+
+export interface DriverChampionshipStanding {
+    driver_number: number;
+    name: string;
+    team: string;
+    team_colour: string;
+    current_points: number;
+    simulated_points_mean: number;
+    simulated_points_std: number;
+    total_points_mean: number;
+    total_points_p10: number;
+    total_points_p90: number;
+    predicted_position: number;
+    prob_champion: number;
+    prob_top3: number;
+    prob_top10: number;
+}
+
+export interface ConstructorChampionshipStanding {
+    team: string;
+    team_colour: string;
+    driver_numbers: number[];
+    current_points: number;
+    total_points_mean: number;
+    total_points_p10: number;
+    total_points_p90: number;
+    predicted_position: number;
+    prob_champion: number;
+}
+
+export interface ChampionshipSimulationResult {
+    year: number;
+    start_from_round: number;
+    total_rounds: number;
+    completed_rounds: number;
+    remaining_rounds: number;
+    n_simulations: number;
+    calendar: RaceCalendarEntry[];
+    wdc: DriverChampionshipStanding[];
+    wcc: ConstructorChampionshipStanding[];
+    elapsed_seconds: number;
 }
 
 // =============================================================================

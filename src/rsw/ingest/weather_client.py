@@ -14,6 +14,10 @@ from typing import Any
 
 import httpx
 
+from rsw.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 # F1 Circuit coordinates
 CIRCUIT_COORDINATES: dict[str, tuple[float, float]] = {
@@ -239,5 +243,6 @@ def get_weather_sync(circuit_key: str) -> WeatherData | None:
     """Synchronous wrapper for current weather."""
     try:
         return asyncio.run(WeatherClient().get_current(circuit_key))
-    except Exception:
+    except Exception as e:
+        logger.debug("weather_sync_failed", circuit_key=circuit_key, error=str(e))
         return None

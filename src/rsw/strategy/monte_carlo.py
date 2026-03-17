@@ -13,6 +13,10 @@ from typing import Any
 
 import numpy as np
 
+from rsw.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 @dataclass
 class OutcomeDistribution:
@@ -443,8 +447,8 @@ def _simulate_parallel(
                 )
             )
         return positions
-    except Exception:
-        # Fallback to sequential on error
+    except Exception as e:
+        logger.warning("parallel_sim_failed_falling_back", error=str(e))
         return _simulate_sequential_legacy(
             driver_pace,
             driver_deg,

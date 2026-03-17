@@ -11,6 +11,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
+from rsw.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 class PlaybackState(Enum):
     """Replay playback state."""
@@ -108,8 +112,8 @@ class ReplaySession:
                             "file": str(file),
                         }
                     )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("replay_cache_read_error", file=str(file), error=str(e))
 
         return sessions
 

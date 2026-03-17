@@ -29,6 +29,14 @@ from typing import TYPE_CHECKING, Any, Protocol
 import numpy as np
 import pandas as pd
 
+from rsw.config.constants import (
+    DEFAULT_BASE_PACE_SECONDS,
+    DEFAULT_PIT_LOSS_SECONDS,
+    DEFAULT_TOTAL_LAPS,
+    FRAME_INTERVAL_SECONDS,
+    LOW_CONFIDENCE_PHYSICS_ONLY,
+    MEDIUM_CONFIDENCE_DEFAULT,
+)
 from rsw.ingest.base import UpdateBatch
 from rsw.logging_config import get_logger
 from rsw.models.physics.track_characteristics import TrackCharacteristics, TrackLearner
@@ -60,9 +68,9 @@ class IAppState(Protocol):
     Defines the minimal interface required by the simulation service.
     """
 
-    store: Any
+    store: Any  # RaceStateStore — typed as Any to avoid circular import
     speed_multiplier: float
-    all_driver_telemetry: dict[str, Any]
+    all_driver_telemetry: dict[str, dict[str, Any]]
 
 
 def sanitize_for_json(obj: Any) -> Any:
@@ -84,6 +92,8 @@ def sanitize_for_json(obj: Any) -> Any:
         return float(obj)
     elif isinstance(obj, (int, np.integer)) and not isinstance(obj, bool):  # bool is int instance
         return int(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
     elif isinstance(obj, dict):
         return {k: sanitize_for_json(v) for k, v in obj.items()}
     elif isinstance(obj, list):
@@ -131,7 +141,7 @@ class SimulationService:
         self._replay_data: dict[str, Any] = {}
         self._lap_gaps: dict[int, dict[int, float]] = {}
         self._lap_positions: dict[int, dict[int, int]] = {}
-        self._session_base_pace: float = 90.0  # Calibrated from real lap data after loading
+        self._session_base_pace: float = DEFAULT_BASE_PACE_SECONDS
 
         # Initialize strategy service
         self._strategy_service = self._create_strategy_service()
@@ -252,7 +262,7 @@ class SimulationService:
             await self._load_data(year, round_number)
 
             state = self.state.store.get()
-            max_lap = state.total_laps or 50
+            max_lap = state.total_laps or DEFAULT_TOTAL_LAPS
 
             for current_lap in range(1, max_lap + 1):
                 if not self._running:
@@ -336,7 +346,7 @@ class SimulationService:
                     for drv_num, pos in pos_map.items()
                 ]
 
-                total_race_laps = max(l.lap_number for l in all_laps) if all_laps else 50
+                total_race_laps = max(l.lap_number for l in all_laps) if all_laps else DEFAULT_TOTAL_LAPS
 
                 self._track_characteristics = self._track_learner.learn_from_session(
                     circuit_key=circuit_key,
@@ -374,7 +384,7 @@ class SimulationService:
                     track_name=track_name,
                     country=country,
                     drivers={d.driver_number: d for d in drivers},
-                    total_laps=max(l.lap_number for l in all_laps) if all_laps else 50,
+                    total_laps=max(l.lap_number for l in all_laps) if all_laps else DEFAULT_TOTAL_LAPS,
                     track_config=track_geometry,
                     weather=current_weather,
                 )
@@ -455,11 +465,11 @@ class SimulationService:
                                 "telemetry": telemetry,
                                 "driver_number": int(driver),
                             }
-                    except Exception:
+                    except Exception as e:
+                        logger.debug("telemetry_skip_driver", driver=driver, error=str(e))
                         continue
             except Exception as e:
-                # Catch access errors to session.laps
-                logger.warning(f"Failed to load telemetry: {e}")
+                logger.warning("telemetry_load_failed", error=str(e))
 
             return data
 
@@ -501,24 +511,34 @@ class SimulationService:
                 if pd.isna(leader_time):
                     continue
 
-                gaps_for_lap: dict[int, float] = {}
+                # Vectorized gap calculation
+                driver_nums = lap_data["DriverNumber"].astype(int)
+                times = lap_data["Time"]
+
+                has_time = times.notna()
+                time_gaps = pd.Series(0.0, index=lap_data.index)
+
+                if has_time.any():
+                    time_gaps[has_time] = (times[has_time] - leader_time).dt.total_seconds().clip(lower=0)
+
+                if (~has_time).any():
+                    positions = lap_data.loc[~has_time, "Position"]
+                    time_gaps[~has_time] = positions.apply(
+                        lambda pos: float((pos - 1) * 1.0) if pd.notna(pos) else 0.0
+                    )
+
+                gaps_for_lap = dict(zip(driver_nums, time_gaps))
+
+                # Vectorized position extraction
                 positions_for_lap: dict[int, int] = {}
-                for _, row in lap_data.iterrows():
-                    driver_num = int(row["DriverNumber"])
-                    driver_time = row["Time"]
-
-                    if pd.isna(driver_time):
-                        pos = row["Position"]
-                        gaps_for_lap[driver_num] = float((pos - 1) * 1.0) if pd.notna(pos) else 0.0
-                    else:
-                        gap = (driver_time - leader_time).total_seconds()
-                        gaps_for_lap[driver_num] = max(0.0, gap)
-
-                    # Capture real-time race position from FastF1 lap data
-                    if has_position_col:
-                        raw_pos = row.get("Position", None)
-                        if raw_pos is not None and pd.notna(raw_pos):
-                            positions_for_lap[driver_num] = int(raw_pos)
+                if has_position_col:
+                    pos_col = lap_data["Position"]
+                    valid_pos = pos_col.notna()
+                    if valid_pos.any():
+                        positions_for_lap = dict(zip(
+                            driver_nums[valid_pos],
+                            pos_col[valid_pos].astype(int),
+                        ))
 
                 lap_gaps[int(lap_num)] = gaps_for_lap
                 self._lap_positions[int(lap_num)] = positions_for_lap
@@ -636,7 +656,7 @@ class SimulationService:
                         "predicted_pace": prediction.predicted_next_k
                         if prediction
                         else [physics_pace] * 5,
-                        "model_confidence": prediction.model_confidence if prediction else 0.5,
+                        "model_confidence": prediction.model_confidence if prediction else MEDIUM_CONFIDENCE_DEFAULT,
                     }
                 )
                 updates_count += 1
@@ -645,7 +665,7 @@ class SimulationService:
                 updated_drivers[driver_num] = driver.model_copy(
                     update={
                         "predicted_pace": [physics_pace] * 5,
-                        "model_confidence": 0.3,  # Low confidence purely physics
+                        "model_confidence": LOW_CONFIDENCE_PHYSICS_ONLY,
                     }
                 )
                 updates_count += 1
@@ -669,7 +689,7 @@ class SimulationService:
             if lap.lap_duration and 60.0 < lap.lap_duration < 150.0 and not lap.is_pit_out_lap
         ]
         if not valid_times:
-            return 90.0
+            return DEFAULT_BASE_PACE_SECONDS
         valid_times.sort()
         # 25th percentile: represents clean competitive pace
         idx = max(0, len(valid_times) // 4)
@@ -734,7 +754,7 @@ class SimulationService:
                 pit_loss = (
                     self._track_characteristics.actual_pit_loss_mean
                     if self._track_characteristics and self._track_characteristics.pit_stop_count > 0
-                    else 22.0
+                    else DEFAULT_PIT_LOSS_SECONDS
                 )
                 compound = driver.compound or "MEDIUM"
                 cliff_age = None
@@ -849,10 +869,9 @@ class SimulationService:
             current_lap: Current lap number
             avg_lap_time: Expected lap duration in seconds
         """
-        frame_interval = 0.02  # 50 FPS
+        frame_interval = FRAME_INTERVAL_SECONDS
         last_frame = asyncio.get_event_loop().time()
         simulated_time = 0.0
-        current_drivers = self.state.store.get().drivers
 
         while self._running:
             current_time = asyncio.get_event_loop().time()
@@ -864,6 +883,9 @@ class SimulationService:
             if simulated_time >= avg_lap_time:
                 break
 
+            # Read fresh state each frame so background RLS/strategy updates
+            # (cliff_risk, deg_slope, etc.) are not overwritten by stale snapshots.
+            current_drivers = self.state.store.get().drivers
             lap_fraction = simulated_time / avg_lap_time
             new_updates = self._calculate_driver_states(
                 current_drivers, current_lap, lap_fraction, avg_lap_time
@@ -1001,6 +1023,8 @@ class SimulationService:
             return default
 
         t = telemetry_data["telemetry"]
+        if hasattr(t, "empty") and t.empty:
+            return default
         gap_fraction = (gap_to_leader / avg_lap_time) if avg_lap_time > 0 else 0
         driver_lap_fraction = (lap_fraction - gap_fraction) % 1.0
 

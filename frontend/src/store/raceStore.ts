@@ -71,6 +71,12 @@ interface RaceStore {
     simulationSpeed: SimulationSpeed;
     isSimulationRunning: boolean;
 
+    // Live mode
+    isLiveMode: boolean;
+    liveSessionKey: number | null;
+    liveConnectionQuality: 'good' | 'degraded' | 'poor';
+    lastLiveUpdateTime: number | null;
+
     // Sessions list
     availableSessions: Session[];
 
@@ -96,6 +102,8 @@ interface RaceStore {
     selectDriver: (driverNumber: number | null) => void;
     setSimulationSpeed: (speed: SimulationSpeed) => void;
     setSimulationRunning: (running: boolean) => void;
+    setLiveMode: (live: boolean) => void;
+    setLiveSessionKey: (key: number | null) => void;
     setSessions: (sessions: Session[]) => void;
     reset: () => void;
 }
@@ -127,6 +135,10 @@ const initialState = {
     trackConfig: null as TrackConfig | null,
     simulationSpeed: 1 as SimulationSpeed,
     isSimulationRunning: false,
+    isLiveMode: false,
+    liveSessionKey: null as number | null,
+    liveConnectionQuality: 'good' as 'good' | 'degraded' | 'poor',
+    lastLiveUpdateTime: null as number | null,
     availableSessions: [],
     alerts: [] as Alert[],
     recentPits: [] as Array<{
@@ -198,6 +210,20 @@ export const useRaceStore = create<RaceStore>()(
                     }
                 }
 
+                // Track live update timing for connection quality
+                if (get().isLiveMode) {
+                    const now = Date.now();
+                    const lastUpdate = get().lastLiveUpdateTime;
+                    let quality: 'good' | 'degraded' | 'poor' = 'good';
+                    if (lastUpdate) {
+                        const gap = (now - lastUpdate) / 1000;
+                        if (gap > 15) quality = 'poor';
+                        else if (gap > 8) quality = 'degraded';
+                    }
+                    updates.lastLiveUpdateTime = now;
+                    updates.liveConnectionQuality = quality;
+                }
+
                 set(updates);
             },
 
@@ -223,6 +249,10 @@ export const useRaceStore = create<RaceStore>()(
             // Simulation controls
             setSimulationSpeed: (speed) => set({ simulationSpeed: speed }),
             setSimulationRunning: (running) => set({ isSimulationRunning: running }),
+
+            // Live mode controls
+            setLiveMode: (live) => set({ isLiveMode: live, lastLiveUpdateTime: live ? Date.now() : null }),
+            setLiveSessionKey: (key) => set({ liveSessionKey: key }),
 
             // Sessions
             setSessions: (sessions) => set({ availableSessions: sessions }),

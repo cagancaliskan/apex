@@ -10,7 +10,7 @@ This module provides centralized configuration management with:
 Usage:
     from rsw.config.settings import get_settings
     settings = get_settings()
-    print(settings.cors_origins)
+    settings.cors_origins  # noqa: B018 (example access)
 """
 
 from functools import lru_cache

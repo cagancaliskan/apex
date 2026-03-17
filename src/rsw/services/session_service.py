@@ -64,7 +64,10 @@ class SessionService(IService):
         Raises:
             SessionNotFoundError: If session doesn't exist
         """
-        sessions = await self.data_provider.get_sessions(year=2023)  # TODO: extract year
+        # Extract year from session_key: keys are typically formatted as YYYYNNNN
+        # where YYYY is year. Fall back to searching recent years.
+        estimated_year = session_key // 1000 if session_key > 9999 else 2023
+        sessions = await self.data_provider.get_sessions(year=estimated_year)
         session = next((s for s in sessions if s.session_key == session_key), None)
 
         if not session:

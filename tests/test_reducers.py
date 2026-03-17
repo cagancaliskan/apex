@@ -1,6 +1,6 @@
-from src.rsw.state.reducers import apply_pits
-from src.rsw.state.schemas import RaceState, DriverState
-from src.rsw.ingest.base import PitData
+from rsw.state.reducers import apply_pits
+from rsw.state.schemas import RaceState, DriverState
+from rsw.ingest.base import PitData
 from datetime import datetime
 
 

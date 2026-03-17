@@ -212,6 +212,7 @@ const ExplainabilityPanel: FC<ExplainabilityPanelProps> = ({ driverNumber, onClo
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const [secondsAgo, setSecondsAgo] = useState(0);
     const mountedRef = useRef(true);
 
     // Stable fetch function — no dependency on `data`
@@ -235,6 +236,14 @@ const ExplainabilityPanel: FC<ExplainabilityPanelProps> = ({ driverNumber, onClo
         }
     }, [driverNumber]);
 
+    // Tick "seconds ago" counter, reset on each successful fetch
+    useEffect(() => {
+        if (!lastUpdated) return;
+        setSecondsAgo(0);
+        const id = setInterval(() => setSecondsAgo(s => s + 1), 1000);
+        return () => clearInterval(id);
+    }, [lastUpdated]);
+
     // Initial fetch + auto-refresh every 5 seconds
     useEffect(() => {
         mountedRef.current = true;
@@ -242,7 +251,7 @@ const ExplainabilityPanel: FC<ExplainabilityPanelProps> = ({ driverNumber, onClo
 
         const interval = setInterval(() => {
             doFetch(false); // auto-refresh without spinner
-        }, 5000);
+        }, 15000);
 
         return () => {
             mountedRef.current = false;
@@ -292,6 +301,16 @@ const ExplainabilityPanel: FC<ExplainabilityPanelProps> = ({ driverNumber, onClo
                     </div>
                     <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>Driver #{driverNumber}</span>
+                        {data && (() => {
+                            const badge = getRecBadge(data.recommendation);
+                            return (
+                                <>
+                                    <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
+                                    <span style={{ color: badge.color, fontWeight: 700 }}>{badge.label}</span>
+                                    <span style={{ color: badge.color, fontFamily: 'var(--font-mono)' }}>{(data.confidence * 100).toFixed(0)}%</span>
+                                </>
+                            );
+                        })()}
                         {lastUpdated && (
                             <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                                 <span style={{
@@ -301,7 +320,7 @@ const ExplainabilityPanel: FC<ExplainabilityPanelProps> = ({ driverNumber, onClo
                                     display: 'inline-block',
                                 }} />
                                 <span style={{ fontSize: '0.55rem' }}>
-                                    Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    {secondsAgo < 3 ? 'just now' : `${secondsAgo}s ago`}
                                 </span>
                             </span>
                         )}
@@ -343,53 +362,41 @@ const ExplainabilityPanel: FC<ExplainabilityPanelProps> = ({ driverNumber, onClo
 
                 {data && !loading && (
                     <>
-                        {/* Recommendation Badge */}
-                        <XSection label="Current Recommendation">
-                            {(() => {
-                                const badge = getRecBadge(data.recommendation);
-                                return (
-                                    <div style={{
-                                        padding: '8px 12px',
-                                        background: badge.bg,
-                                        borderLeft: `3px solid ${badge.color}`,
-                                        borderRadius: '2px',
-                                    }}>
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
-                                            <span style={{ fontWeight: 700, fontSize: '1rem', color: badge.color, letterSpacing: '0.05em' }}>
-                                                {badge.label}
-                                            </span>
-                                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: badge.color }}>
-                                                {(data.confidence * 100).toFixed(0)}%
-                                            </span>
-                                        </div>
-                                        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
-                                            {data.strategy.reason}
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-                        </XSection>
+                        {/* Strategy reason — brief context without repeating the badge */}
+                        {data.strategy.reason && (
+                            <div style={{ padding: '6px 10px', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '0.65rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                {data.strategy.reason}
+                            </div>
+                        )}
 
                         {/* Top Factors */}
-                        {data.top_factors.length > 0 && (
-                            <XSection label="Top Contributing Factors">
-                                {data.top_factors.map((f, i) => (
+                        <XSection label="Top Contributing Factors">
+                            {data.top_factors.length > 0 ? (
+                                data.top_factors.map((f, i) => (
                                     <FactorBar key={i} factor={f} maxScore={maxFactorScore} />
-                                ))}
-                            </XSection>
-                        )}
-
-                        {/* Sensitivity Analysis */}
-                        {data.sensitivity.length > 0 && (
-                            <XSection label="Sensitivity Analysis">
-                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                                    How much does each parameter affect the recommendation?
+                                ))
+                            ) : (
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '4px 0' }}>
+                                    No significant factors yet — model warming up as tyre data accumulates
                                 </div>
-                                {data.sensitivity.map((s, i) => (
+                            )}
+                        </XSection>
+
+                        {/* Sensitivity Analysis — always visible */}
+                        <XSection label="Sensitivity Analysis">
+                            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                                How much does each parameter affect the recommendation?
+                            </div>
+                            {data.sensitivity.length > 0 ? (
+                                data.sensitivity.map((s, i) => (
                                     <SensitivityBar key={i} point={s} />
-                                ))}
-                            </XSection>
-                        )}
+                                ))
+                            ) : (
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '4px 0' }}>
+                                    Insufficient data — analysis available after a few laps
+                                </div>
+                            )}
+                        </XSection>
 
                         {/* What-If Scenarios */}
                         {data.what_if_scenarios.length > 0 && (

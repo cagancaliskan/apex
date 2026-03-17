@@ -67,6 +67,16 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
                     useRaceStore.getState().setSimulationRunning(false);
                     break;
 
+                case 'live_started':
+                    useRaceStore.getState().setLiveMode(true);
+                    useRaceStore.getState().setSimulationRunning(true);
+                    break;
+
+                case 'live_stopped':
+                    useRaceStore.getState().setLiveMode(false);
+                    useRaceStore.getState().setSimulationRunning(false);
+                    break;
+
                 case 'error':
                     console.error('WebSocket error:', message.data);
                     setError(String(message.data));

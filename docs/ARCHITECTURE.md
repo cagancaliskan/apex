@@ -90,9 +90,18 @@ DriverState:
 
 | Module | Responsibility |
 |--------|----------------|
-| `rls.py` | Recursive Least Squares estimator — online learning per driver |
-| `online_model.py` | Real-time tyre degradation tracking |
+| `rls.py` | Recursive Least Squares estimator — online linear learning per driver |
+| `neural_model.py` | **NEW v2.1** NumPy-only MLP for nonlinear pace prediction and cliff detection |
+| `online_model.py` | Real-time degradation tracking — blends RLS linear + Neural nonlinear predictions |
 | `calibration.py` | Model calibration against telemetry data |
+| `__init__.py` | `ModelManager` — selects between models based on data availability and confidence |
+
+**Neural Pace Prediction (v2.1):**
+- **Architecture:** 11-feature input → 32 → 16 ReLU hidden units → 7 outputs
+- **Inputs:** tyre age, track temp, compound one-hot (5), track type, fuel load
+- **Outputs:** 5 predicted pace deltas (next 5 laps) + `cliff_probability` + `confidence`
+- **Integration:** `DriverDegradationModel` blends RLS and neural predictions via ensemble weight α (higher α = more neural, lower α = more RLS), weighted by data volume
+- **Cliff Detection:** `cliff_probability > 0.5` triggers "CLIFF" warning in the Strategy Panel; `> 0.8` triggers immediate pit recommendation uplift
 
 #### Physics Models (`models/physics/`)
 
@@ -364,7 +373,11 @@ src/rsw/
 │   ├── explain.py              #   Explanations
 │   └── sensitivity.py          #   Sensitivity analysis
 ├── models/                     # ML & physics models
-│   ├── degradation/            #   RLS estimator, calibration
+│   ├── degradation/            #   RLS estimator, neural MLP, calibration
+│   │   ├── rls.py              #     RLS online linear estimator
+│   │   ├── neural_model.py     #     NumPy MLP for nonlinear pace prediction
+│   │   ├── online_model.py     #     RLS + neural ensemble blending
+│   │   └── calibration.py      #     Model calibration
 │   ├── physics/                #   Tyre, fuel, weather, track, traffic models
 │   └── features/               #   Feature engineering
 ├── ingest/                     # Data ingestion

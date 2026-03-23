@@ -10,6 +10,7 @@
 import { useMemo, type FC } from 'react';
 import { Thermometer, Droplets, Wind } from 'lucide-react';
 import styles from './WeatherWidget.module.css';
+import { WEATHER_HEAVY_RAIN_MM, WEATHER_HIGH_HUMIDITY_PCT, WEATHER_MED_HUMIDITY_PCT } from '../config/constants';
 // WeatherWidget uses the global 'card' class from index.css for base card appearance
 
 // =============================================================================
@@ -52,10 +53,10 @@ const WeatherWidget: FC<WeatherWidgetProps> = ({ weather, compact = false }) => 
 
     const conditionLabel = useMemo((): string => {
         if (isRaining) {
-            return rainfall > 2 ? 'Heavy Rain' : 'Light Rain';
+            return rainfall > WEATHER_HEAVY_RAIN_MM ? 'Heavy Rain' : 'Light Rain';
         }
-        if (humidity > 80) return 'Cloudy';
-        if (humidity > 50) return 'Partly Cloudy';
+        if (humidity > WEATHER_HIGH_HUMIDITY_PCT) return 'Cloudy';
+        if (humidity > WEATHER_MED_HUMIDITY_PCT) return 'Partly Cloudy';
         return 'Sunny';
     }, [isRaining, rainfall, humidity]);
 

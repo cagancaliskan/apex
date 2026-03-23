@@ -7,6 +7,8 @@ per-track or per-session.
 
 from dataclasses import dataclass
 
+from rsw.config.constants import DEFAULT_BASE_PACE_SECONDS, TRACK_PRIORS_CONFIDENCE_THRESHOLD
+
 
 @dataclass
 class CompoundPrior:
@@ -81,9 +83,8 @@ def get_warm_start_params(
     )
 
     # If base pace not provided, we'll rely on first observations
-    # Use 90s as a placeholder (will be updated by first laps)
     if base_pace is None:
-        base_pace = 90.0
+        base_pace = DEFAULT_BASE_PACE_SECONDS
 
     deg_slope = prior.deg_per_lap * track_multiplier
 
@@ -100,3 +101,28 @@ def get_expected_cliff_lap(compound: str) -> int:
     """Get expected lap where cliff might occur."""
     prior = COMPOUND_PRIORS.get(compound.upper(), COMPOUND_PRIORS["MEDIUM"])
     return prior.cliff_lap
+
+
+def get_track_aware_warm_start(
+    compound: str,
+    track_priors: "ResolvedPriors | None" = None,
+    base_pace: float | None = None,
+) -> tuple[float, float]:
+    """
+    Get warm start params using track-learned priors when available.
+
+    Falls back to generic compound defaults when priors are absent or
+    low-confidence (< 0.3).
+
+    Args:
+        compound: Tyre compound name
+        track_priors: Resolved track/season priors (may be None)
+        base_pace: Optional known base pace override
+
+    Returns:
+        Tuple of (base_pace, deg_slope)
+    """
+    if track_priors is not None and track_priors.confidence > TRACK_PRIORS_CONFIDENCE_THRESHOLD:
+        bp = base_pace if base_pace is not None else track_priors.base_pace
+        return bp, track_priors.deg_per_lap
+    return get_warm_start_params(compound, base_pace)

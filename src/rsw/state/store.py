@@ -201,6 +201,8 @@ class RaceStateStore:
                     "pit_reason": d.pit_reason,
                     "undercut_threat": d.undercut_threat,
                     "overcut_opportunity": d.overcut_opportunity,
+                    "overtake_probability": d.overtake_probability,
+                    "battle_key_factor": d.battle_key_factor,
                     "sector_1": d.sector_1,
                     "sector_2": d.sector_2,
                     "sector_3": d.sector_3,

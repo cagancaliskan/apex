@@ -43,7 +43,7 @@ This project follows the [Contributor Covenant Code of Conduct](https://www.cont
 ```bash
 # Fork and clone
 git clone https://github.com/cagancaliskan/apex.git
-cd f1-strategy-workbench
+cd apex
 
 # Create virtual environment
 python -m venv .venv
@@ -246,6 +246,9 @@ python run.py --test
 
 # Specific file
 PYTHONPATH=src pytest tests/test_strategy.py -v
+
+# Neural Pace Prediction model tests
+PYTHONPATH=src pytest tests/test_neural_pace.py -v
 
 # With coverage
 python run.py --coverage

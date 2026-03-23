@@ -9,6 +9,13 @@
  */
 
 import { useState, useEffect, type FC } from 'react';
+import {
+    DEFAULT_YEAR,
+    AVAILABLE_YEARS,
+    CHAMPIONSHIP_SIMULATION_COUNTS,
+    API_CHAMPIONSHIP_CALENDAR,
+    API_CHAMPIONSHIP_SIMULATE,
+} from '../config/constants';
 import type {
     RaceCalendarEntry,
     DriverChampionshipStanding,
@@ -28,7 +35,7 @@ type ChampTab = 'wdc' | 'wcc';
 
 const ChampionshipPage: FC = () => {
     // Configuration
-    const [selectedYear, setSelectedYear] = useState(2023);
+    const [selectedYear, setSelectedYear] = useState(DEFAULT_YEAR);
     const [startRound, setStartRound] = useState(1);
     const [simCount, setSimCount] = useState(200);
     const [includeSprints, setIncludeSprints] = useState(true);
@@ -48,7 +55,7 @@ const ChampionshipPage: FC = () => {
     // Fetch calendar on year change
     useEffect(() => {
         setCalendarLoading(true);
-        fetch(`/api/championship/calendar/${selectedYear}`)
+        fetch(API_CHAMPIONSHIP_CALENDAR(selectedYear))
             .then(r => r.json())
             .then(data => {
                 const cal = data.calendar || [];
@@ -66,7 +73,7 @@ const ChampionshipPage: FC = () => {
         setError(null);
         setResult(null);
         try {
-            const response = await fetch('/api/championship/simulate', {
+            const response = await fetch(API_CHAMPIONSHIP_SIMULATE, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -112,7 +119,7 @@ const ChampionshipPage: FC = () => {
                         onChange={e => setSelectedYear(Number(e.target.value))}
                         style={selectStyle}
                     >
-                        {[2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025].map(y => (
+                        {AVAILABLE_YEARS.map(y => (
                             <option key={y} value={y}>{y}</option>
                         ))}
                     </select>
@@ -139,7 +146,7 @@ const ChampionshipPage: FC = () => {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                     <span style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sims</span>
                     <div style={{ display: 'flex', gap: '3px' }}>
-                        {[50, 100, 200, 500].map(n => (
+                        {CHAMPIONSHIP_SIMULATION_COUNTS.map(n => (
                             <button
                                 key={n}
                                 onClick={() => setSimCount(n)}

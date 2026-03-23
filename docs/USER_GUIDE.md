@@ -30,7 +30,7 @@ The **F1 Race Strategy Workbench** is a real-time analytics tool that helps you 
 
 - **Track Live Races** — Real-time positions, gaps, and lap times via OpenF1 API
 - **Predict Championships** — Monte Carlo simulations for WDC and WCC standings
-- **Analyze Tyres** — See degradation curves and cliff warnings
+- **Analyze Tyres** — See degradation curves, cliff warnings, and neural pace predictions
 - **Predict Pit Stops** — Optimal pit windows for each driver
 - **Compare Strategies** — Monte Carlo simulations for what-if scenarios
 - **Understand Decisions** — Explainability engine shows why strategies are recommended
@@ -68,45 +68,48 @@ The application has four main tabs:
 
 | Tab | Icon | Description |
 |-----|------|-------------|
-| **Live** | Activity | Real-time race view (simulation or live tracking) |
+| **Live** | Radio | Real-time race view (simulation or live tracking) |
 | **Replay** | RotateCcw | Historical race replay with FastF1 data |
-| **Backtest** | FlaskConical | Strategy backtesting and what-if analysis |
+| **Backtest** | BarChart2 | Strategy backtesting and what-if analysis |
 | **Championship** | Trophy | Season championship Monte Carlo prediction |
 
 ### Main Layout
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Navigation Bar                    [Sessions] [Settings]│
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  ┌──────────────┐  ┌──────────────────────────────────┐│
-│  │   Leaderboard │  │      Timing Tower               ││
-│  │               │  │                                  ││
-│  │  1. VER  0.0s │  │  LAP 35/57   🟢 GREEN FLAG     ││
-│  │  2. HAM +2.5s │  │                                  ││
-│  │  3. SAI +5.2s │  │  [Driver Details]               ││
-│  │  ...          │  │                                  ││
-│  └──────────────┘  └──────────────────────────────────┘│
-│                                                         │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │           Strategy & Degradation Panel           │  │
-│  │                                                  │  │
-│  │  [Pit Window] [Deg Curve] [Monte Carlo]          │  │
-│  └──────────────────────────────────────────────────┘  │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│ Status Bar: ● [Track] [Session] [Lap] [Weather] [Flags]   [1x] [≡]  │
+├──────────────────────────────────────────────────────────────────────┤
+│ [Live ◉]  [Replay ↺]  [Backtest ▦]  [Championship 🏆]               │
+├──────────────────┬──────────────────────────┬────────────────────────┤
+│  LEADERBOARD     │  TRACK MAP               │  STRATEGY CONSOLE      │
+│  (~25%)          │  (~40%)                  │  (~35%)                │
+│                  │                          │                        │
+│  P  Driver  Gap  │  [Live track with all    │  Recommendation        │
+│  1  VER    0.0s  │   20 driver positions    │  Pit Window            │
+│  2  HAM   +2.5s  │   and DRS zones]         │  Tyre Degradation      │
+│  3  SAI   +5.2s  │                          │  Race Pace             │
+│  ...             ├──────────────────────────┤  Explainability        │
+│                  │  TELEMETRY HUD (56px)    │  Pit Rejoin            │
+│                  │  SPD  G  THR  BRK  DRS   │                        │
+├──────────────────┤  S1   S2   S3            │  (scrollable)          │
+│  RACE CONTROL    │                          │                        │
+│  (message log)   │                          │                        │
+└──────────────────┴──────────────────────────┴────────────────────────┘
 ```
+
+> **Responsive:** Strategy Console hidden at ≤1400px width. Leaderboard hidden at ≤900px.
 
 ### Key Components
 
 | Component | Description |
 |-----------|-------------|
-| **Navigation** | Session selection, settings, help |
-| **Leaderboard** | Live positions with gaps |
-| **Timing Tower** | Lap times, sector times |
-| **Strategy Panel** | Pit recommendations, degradation |
-| **Status Bar** | Current lap, flags, weather |
+| **Status Bar** | Connection status, track name, lap counter, weather, flags, playback speed |
+| **Tab Navigation** | Switches between Live / Replay / Backtest / Championship pages |
+| **Leaderboard** | Live positions, gaps, tyre compounds, tyre age, pit and undercut indicators |
+| **Race Control** | Scrollable log of latest race director messages (safety car, flags, penalties) |
+| **Track Map** | Live track visualization with all 20 driver positions and DRS zones |
+| **Telemetry HUD** | Speed, gear, throttle %, brake %, DRS status, S1/S2/S3 sector deltas |
+| **Strategy Console** | Pit recommendation, pit window, degradation chart, explainability, pit rejoin |
 
 ---
 
@@ -362,6 +365,24 @@ When cliff risk exceeds 70%:
 - 🔴 Red warning (85%+)
 
 **Action:** Consider pitting before cliff hits.
+
+### Neural Pace Prediction
+
+> New in v2.1
+
+The **Neural Pace Model** uses a machine learning model to detect nonlinear degradation patterns that the linear RLS estimator cannot see.
+
+| Display Element | What It Means |
+|-----------------|---------------|
+| **Predicted Pace — Next 5 Laps** | Bar chart showing pace delta each lap (taller = slower) |
+| **Conf %** | Model confidence score — how much historical data backs the prediction |
+| **CLIFF** badge | Appears when cliff probability exceeds 80%; pit immediately |
+
+**How it works:**
+- Input features include tyre age, track temperature, compound type, track characteristics, and fuel load
+- Outputs a 5-lap degradation forecast and a cliff probability (0–100%)
+- Blended with the linear RLS model — more neural weight as lap data accumulates
+- Confidence score above ~60% means the neural model has seen enough laps to be reliable
 
 ---
 

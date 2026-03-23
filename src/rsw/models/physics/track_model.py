@@ -4,6 +4,8 @@ Track Evolution Physics Model.
 Simulates track rubbering in (grip improvement) over the race distance.
 """
 
+from rsw.config.constants import GRID_EVOLUTION_MULTIPLIER, RACE_LEADER_EVOLUTION_FACTOR
+
 
 class TrackModel:
     def __init__(self, evolution_factor: float = 0.015, max_evolution: float = 2.0):
@@ -22,7 +24,7 @@ class TrackModel:
         """
         # Simplify: assume standard race progression
         # Linear improvement up to a cap
-        improvement = total_grid_laps * 0.001  # Small gain per total lap
+        improvement = total_grid_laps * GRID_EVOLUTION_MULTIPLIER
         return min(self.max_evolution, improvement)
 
     def get_lap_evolution(self, race_lap: int) -> float:
@@ -30,5 +32,4 @@ class TrackModel:
         Simple lap-based evolution model.
         Returns time GAIN (s).
         """
-        # Track gets ~0.03s faster per lap of the race leader
-        return min(self.max_evolution, race_lap * 0.03)
+        return min(self.max_evolution, race_lap * RACE_LEADER_EVOLUTION_FACTOR)

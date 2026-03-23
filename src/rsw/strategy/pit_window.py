@@ -10,6 +10,27 @@ Finds the optimal lap range for pit stops based on:
 
 from dataclasses import dataclass
 
+from rsw.config.constants import (
+    CLIFF_AGES,
+    CLIFF_WINDOW_MARGIN,
+    CONFIDENCE_CLIFF_RISK_FACTOR,
+    CRITICAL_CLIFF_THRESHOLD,
+    DEG_ADVANTAGE_MULTIPLIER,
+    FRESH_TYRE_BASE_ADVANTAGE,
+    HIGH_CLIFF_EARLY_PIT_OFFSET,
+    HIGH_CLIFF_RISK_THRESHOLD,
+    MODERATE_CLIFF_EARLY_PIT_OFFSET,
+    MODERATE_CLIFF_RISK_THRESHOLD,
+    OVERCUT_DEG_NORMALIZER,
+    OVERCUT_DEG_THRESHOLD,
+    PIT_WINDOW_CONFIDENCE_WEIGHT,
+    PIT_WINDOW_TIMING_WEIGHT,
+    SC_PIT_CONFIDENCE,
+    UNDERCUT_GAP_BUFFER,
+    UNDERCUT_MIN_GAP,
+)
+from rsw.domain import TyreCompound
+
 
 @dataclass
 class PitWindow:
@@ -20,16 +41,6 @@ class PitWindow:
     ideal_lap: int  # Optimal pit lap
     confidence: float  # 0-1 confidence score
     reason: str  # Explanation for window
-
-
-# Compound cliff ages: laps of tyre life until performance falls off sharply
-_CLIFF_AGES: dict[str, int] = {
-    "SOFT": 15,
-    "MEDIUM": 25,
-    "HARD": 35,
-    "INTERMEDIATE": 20,
-    "WET": 20,
-}
 
 
 @dataclass
@@ -84,35 +95,43 @@ def find_optimal_window(
             reason="Too late to pit - stay out to finish",
         )
 
-    # Compound-specific cliff age drives the pit window
+    # Compound-specific cliff age (in tyre laps, not race laps)
     # Use track-learned cliff age if provided, otherwise fall back to defaults
-    if cliff_age is None:
-        cliff_age = _CLIFF_AGES.get(compound.upper(), 25)
+    # Validate compound via domain enum (accepts string, normalises to upper)
+    try:
+        validated = TyreCompound(compound.upper())
+        compound_key = validated.value
+    except ValueError:
+        compound_key = compound.upper()
 
-    # Window: pit 3 laps before cliff up to 5 laps past cliff
-    min_lap = max(current_lap + 1, cliff_age - 3)
-    max_lap = min(total_laps - min_stint_laps, cliff_age + 5)
+    if cliff_age is None:
+        cliff_age = CLIFF_AGES.get(compound_key, CLIFF_AGES["MEDIUM"])
+
+    # Convert cliff_age (tyre laps) to an absolute race lap number
+    stint_start_lap = current_lap - tyre_age
+    cliff_race_lap = stint_start_lap + cliff_age
+
+    # Window: pit CLIFF_WINDOW_MARGIN laps before cliff up to CLIFF_WINDOW_MARGIN past cliff
+    min_lap = max(current_lap + 1, cliff_race_lap - CLIFF_WINDOW_MARGIN)
+    max_lap = min(total_laps - min_stint_laps, cliff_race_lap + CLIFF_WINDOW_MARGIN)
     max_lap = max(min_lap, max_lap)
 
-    # Ideal: the cliff lap itself, pulled earlier under high risk
-    if cliff_risk > 0.7:
-        # Tyre is degrading fast - pit 3 laps before cliff
-        ideal_lap = max(min_lap, cliff_age - 3)
+    # Ideal: the cliff race lap, pulled earlier under high risk
+    if cliff_risk > HIGH_CLIFF_RISK_THRESHOLD:
+        ideal_lap = max(min_lap, cliff_race_lap - HIGH_CLIFF_EARLY_PIT_OFFSET)
         reason = f"High cliff risk — pit early (L{ideal_lap})"
-    elif cliff_risk > 0.4:
-        # Moderate risk - pit at cliff age
-        ideal_lap = cliff_age
-        reason = f"Moderate degradation — pit at cliff age L{cliff_age}"
+    elif cliff_risk > MODERATE_CLIFF_RISK_THRESHOLD:
+        ideal_lap = max(min_lap, cliff_race_lap - MODERATE_CLIFF_EARLY_PIT_OFFSET)
+        reason = f"Moderate degradation — pit near cliff L{cliff_race_lap}"
     else:
-        # Low risk - target cliff age
-        ideal_lap = cliff_age
-        reason = f"Target pit: L{cliff_age} ({compound} cliff)"
+        ideal_lap = cliff_race_lap
+        reason = f"Target pit: L{cliff_race_lap} ({compound} cliff)"
 
     # Clamp to valid range
     ideal_lap = max(min_lap, min(max_lap, ideal_lap))
 
     # Confidence based on how close we are to cliff risk threshold
-    confidence = 1.0 - min(0.5, cliff_risk * 0.5)
+    confidence = 1.0 - min(CONFIDENCE_CLIFF_RISK_FACTOR, cliff_risk * CONFIDENCE_CLIFF_RISK_FACTOR)
 
     return PitWindow(
         min_lap=max(1, min_lap),
@@ -147,17 +166,17 @@ def detect_undercut_threat(
         return False, 0.0
 
     # Undercut effectiveness window
-    if gap_to_ahead > pit_loss + 3.0:
+    if gap_to_ahead > pit_loss + UNDERCUT_GAP_BUFFER:
         # Too far behind for undercut
         return False, 0.0
 
-    if gap_to_ahead < 1.0:
+    if gap_to_ahead < UNDERCUT_MIN_GAP:
         # Already close enough - normal overtake may work
         return False, 0.5
 
     # Calculate required pace advantage on fresh tyres
     required_delta = pit_loss - gap_to_ahead
-    expected_fresh_advantage = 1.5 + (their_deg - our_deg) * 3
+    expected_fresh_advantage = FRESH_TYRE_BASE_ADVANTAGE + (their_deg - our_deg) * DEG_ADVANTAGE_MULTIPLIER
 
     is_viable = expected_fresh_advantage > required_delta
     confidence = min(1.0, expected_fresh_advantage / max(0.1, required_delta))
@@ -187,8 +206,8 @@ def detect_overcut_opportunity(
     # If we degrade slower, overcut is viable
     deg_advantage = their_deg - our_deg
 
-    is_viable = deg_advantage > 0.02  # We degrade 20ms/lap slower
-    confidence = min(1.0, deg_advantage / 0.05)
+    is_viable = deg_advantage > OVERCUT_DEG_THRESHOLD
+    confidence = min(1.0, deg_advantage / OVERCUT_DEG_NORMALIZER)
 
     return is_viable, confidence
 
@@ -216,7 +235,7 @@ def rank_strategies(
         timing_score = 1.0 - abs(window.ideal_lap - (window.min_lap + window.max_lap) / 2) / max(
             1, window.max_lap - window.min_lap
         )
-        score = window.confidence * 0.6 + timing_score * 0.4
+        score = window.confidence * PIT_WINDOW_CONFIDENCE_WEIGHT + timing_score * PIT_WINDOW_TIMING_WEIGHT
         scored.append((window, score))
 
     return sorted(scored, key=lambda x: -x[1])
@@ -239,10 +258,10 @@ def should_pit_now(
     """
     # Always pit under safety car if in window
     if safety_car and window.min_lap <= current_lap <= window.max_lap:
-        return True, 0.95, "Safety car - free pit stop"
+        return True, SC_PIT_CONFIDENCE, "Safety car - free pit stop"
 
     # Critical cliff risk
-    if cliff_risk > 0.85:
+    if cliff_risk > CRITICAL_CLIFF_THRESHOLD:
         return True, 0.9, "Critical cliff risk - pit immediately"
 
     # Undercut threat

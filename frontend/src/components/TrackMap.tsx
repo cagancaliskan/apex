@@ -15,7 +15,9 @@
 
 import { useRef, useEffect, useMemo, useCallback, useState, type FC, type CSSProperties } from 'react';
 import type { DriverState, TrackConfig, TrackBounds, DRSZone, TrackPoint, TrackStatus } from '../types';
+import DRSZoneOverlay from './DRSZoneOverlay';
 import styles from './TrackMap.module.css';
+import { TRACK_MAP_PADDING, TRACK_MAP_MIN_WIDTH, TRACK_MAP_MIN_HEIGHT } from '../config/constants';
 
 // =============================================================================
 // Types
@@ -61,7 +63,7 @@ function transformCoords(
     bounds: TrackBounds,
     width: number,
     height: number,
-    padding = 20
+    padding = TRACK_MAP_PADDING
 ): TrackPoint {
     const { x_min, x_max, y_min, y_max } = bounds;
     const trackWidth = x_max - x_min;
@@ -202,8 +204,8 @@ const TrackMap: FC<TrackMapProps> = ({
             if (entry) {
                 const { width, height } = entry.contentRect;
                 setDimensions({
-                    width: Math.max(200, width - 16),
-                    height: Math.max(150, height - 60),
+                    width: Math.max(TRACK_MAP_MIN_WIDTH, width - 16),
+                    height: Math.max(TRACK_MAP_MIN_HEIGHT, height - 60),
                 });
             }
         });
@@ -396,11 +398,23 @@ const TrackMap: FC<TrackMapProps> = ({
                     {/* Center racing line */}
                     <path d={trackPath} fill="none" stroke="rgba(100, 100, 100, 0.5)" strokeWidth={1} strokeDasharray="4 4" />
 
-                    {/* DRS Zones */}
+                    {/* DRS Zones — line markers */}
                     {showDRS &&
                         geometry.drs_zones?.map((zone, idx) => (
                             <DRSZoneHighlight key={idx} zone={zone} bounds={bounds!} width={width} height={height} />
                         ))}
+
+                    {/* DRS Zone Overlay — animated path highlighting */}
+                    {showDRS && trackPath && (
+                        <DRSZoneOverlay
+                            zones={geometry.drs_zones?.map((_zone, i) => ({
+                                start: (i * 20) + 10,
+                                end: (i * 20) + 25,
+                            }))}
+                            trackPath={trackPath}
+                            animated={true}
+                        />
+                    )}
 
                     {/* Car markers */}
                     {carPositions.map(({ driver, x, y }) => (

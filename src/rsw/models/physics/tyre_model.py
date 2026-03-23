@@ -10,6 +10,8 @@ Implements a 3-phase degradation curve:
 import math
 from dataclasses import dataclass
 
+from rsw.config.constants import TYRE_CLIFF_SEVERITY_FACTOR, WARMUP_RAMP_FACTOR
+
 
 @dataclass
 class TyreParams:
@@ -53,7 +55,7 @@ class TyreModel:
         # Phase 1: Warmup (Negative penalty = faster)
         if lap_age < self.params.warmup_laps:
             # Simple linear ramp up to peak
-            return 0.5 * (self.params.warmup_laps - lap_age)
+            return WARMUP_RAMP_FACTOR * (self.params.warmup_laps - lap_age)
 
         # Phase 2: Stable Degradation
         stable_laps = lap_age - self.params.warmup_laps
@@ -64,7 +66,7 @@ class TyreModel:
         if lap_age > self.params.cliff_lap:
             cliff_laps = lap_age - self.params.cliff_lap
             # Exponential growth: e^(severity * laps) - 1
-            cliff_penalty = 0.1 * (math.exp(self.params.cliff_severity * cliff_laps) - 1)
+            cliff_penalty = TYRE_CLIFF_SEVERITY_FACTOR * (math.exp(self.params.cliff_severity * cliff_laps) - 1)
 
         # Base offset (Softs are faster than Hards)
         # We model this as a penalty relative to Softs.

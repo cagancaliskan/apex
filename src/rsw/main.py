@@ -41,12 +41,14 @@ from rsw.api.routes.live import init_live_routes
 from rsw.api.routes.live import router as live_router
 from rsw.api.routes.championship import init_championship_routes
 from rsw.api.routes.championship import router as championship_router
+from rsw.api.routes.backtest import router as backtest_router
 from rsw.api.websocket_manager import ConnectionManager
 from rsw.config import load_app_config, load_tracks_config
 from rsw.ingest import OpenF1Client
 from rsw.ingest.weather_client import WeatherClient
 from rsw.logging_config import get_logger
 from rsw.middleware.rate_limit import RateLimitMiddleware
+from rsw.monitoring import MetricsMiddleware, metrics_endpoint
 from rsw.models.degradation import ModelManager
 from rsw.services.live_race_service import LiveRaceService
 from rsw.services.simulation_service import SimulationService, sanitize_for_json
@@ -87,6 +89,7 @@ class AppState:
         self.simulation_service: SimulationService | None = None
         self.live_service: LiveRaceService | None = None
         self.all_driver_telemetry: dict[str, Any] = {}
+        self.session_repo: Any = None  # SessionRepository, initialized when DB is enabled
 
 
 # =============================================================================
@@ -153,6 +156,18 @@ async def lifespan(application: FastAPI):
     init_live_routes(app_state)
     init_championship_routes(app_state)
 
+    # Optionally initialize database and session repository
+    if os.getenv("RSW_DB_ENABLED", "false").lower() == "true":
+        try:
+            from rsw.db.models import get_session, init_db
+            from rsw.repositories.session_repository import SessionRepository
+
+            await init_db()
+            app_state.session_repo = SessionRepository(session_factory=get_session)
+            logger.info("database_initialized")
+        except Exception as e:
+            logger.warning("database_init_failed", error=str(e))
+
     logger.info("application_ready")
 
     yield
@@ -163,6 +178,10 @@ async def lifespan(application: FastAPI):
         await app_state.live_service.stop()
     if app_state.simulation_service:
         await app_state.simulation_service.stop()
+    if app_state.session_repo:
+        from rsw.db.models import close_db
+
+        await close_db()
     logger.info("application_stopped")
 
 
@@ -222,6 +241,9 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(CorrelationIdMiddleware)
 
+# Prometheus metrics middleware
+app.add_middleware(MetricsMiddleware)
+
 # Rate Limiting (disabled in development by default)
 if os.getenv("RSW_RATE_LIMIT_ENABLED", "false").lower() == "true":
     app.add_middleware(RateLimitMiddleware)
@@ -238,6 +260,7 @@ app.include_router(weather_router, prefix="/api", tags=["weather"])
 app.include_router(explain_router, prefix="/api", tags=["explainability"])
 app.include_router(live_router, prefix="/api", tags=["live"])
 app.include_router(championship_router, prefix="/api", tags=["championship"])
+app.include_router(backtest_router, prefix="/api/backtest", tags=["backtest"])
 
 
 # =============================================================================
@@ -261,6 +284,37 @@ async def health() -> dict[str, str]:
     return {
         "status": "ok",
         "timestamp": datetime.now(UTC).isoformat(),
+    }
+
+
+@app.get("/metrics", tags=["monitoring"])
+async def metrics() -> Response:
+    """Prometheus metrics endpoint for observability."""
+    return await metrics_endpoint()
+
+
+@app.get("/api/sessions/history", tags=["sessions"])
+async def session_history(year: int | None = None, limit: int = 20) -> dict[str, Any]:
+    """List persisted sessions from the database."""
+    state = _get_app_state()
+    if state.session_repo is None:
+        raise HTTPException(status_code=501, detail="Database not enabled (set RSW_DB_ENABLED=true)")
+    filters: dict[str, Any] = {"limit": limit}
+    if year is not None:
+        filters["year"] = year
+    sessions = await state.session_repo.get_all(**filters)
+    return {
+        "sessions": [
+            {
+                "session_key": s.session_key,
+                "session_name": s.session_name,
+                "country_name": s.country_name,
+                "circuit_short_name": s.circuit_short_name,
+                "year": s.year,
+                "date_start": s.date_start.isoformat() if s.date_start else None,
+            }
+            for s in sessions
+        ]
     }
 
 

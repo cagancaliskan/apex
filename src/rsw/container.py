@@ -157,13 +157,15 @@ def _register_dependencies(container: Container) -> None:
 
     provider_type = os.getenv("RSW_DATA_PROVIDER", "openf1")
     container.register(
-        IDataProvider,
+        IDataProvider,  # type: ignore[type-abstract]
         cast(Callable[..., IDataProvider], lambda: DataProviderFactory.create(provider_type)),
         singleton=True,
-    )  # type: ignore[type-abstract]
+    )
     container.register(
-        IStateStore, cast(Callable[..., IStateStore], RaceStateStore), singleton=True
-    )  # type: ignore[type-abstract]
+        IStateStore,  # type: ignore[type-abstract]
+        cast(Callable[..., IStateStore], RaceStateStore),
+        singleton=True,
+    )
 
 
 # FastAPI dependency functions

@@ -40,7 +40,7 @@ class DataProviderFactory:
             from rsw.ingest.cached import CachedDataProvider
 
             config = get_config()
-            return CachedDataProvider(config.sessions_dir)
+            return CachedDataProvider(str(config.sessions_dir))
 
         elif provider_type == "mock":
             from rsw.ingest.mock import MockDataProvider

@@ -31,7 +31,7 @@ _fastf1 = None
 _fastf1_cache_enabled = False
 
 
-def _ensure_fastf1():
+def _ensure_fastf1() -> Any:
     """Lazy load and configure FastF1."""
     global _fastf1, _fastf1_cache_enabled
     if _fastf1 is None:
@@ -55,7 +55,7 @@ _executor = ThreadPoolExecutor(max_workers=_FASTF1_WORKERS)
 atexit.register(lambda: _executor.shutdown(wait=False))
 
 
-async def load_session(year: int, round_number: int | str, session_type: str = "R"):
+async def load_session(year: int, round_number: int | str, session_type: str = "R") -> Any:
     """
     Load a FastF1 session asynchronously.
 
@@ -68,7 +68,7 @@ async def load_session(year: int, round_number: int | str, session_type: str = "
         FastF1 Session object with telemetry loaded
     """
 
-    def _load():
+    def _load() -> Any:
         fastf1 = _ensure_fastf1()
         session = fastf1.get_session(year, round_number, session_type)
         session.load(telemetry=True, weather=True)
@@ -82,7 +82,7 @@ async def load_session(year: int, round_number: int | str, session_type: str = "
         raise RuntimeError(f"FastF1 load failed: {e}") from e
 
 
-async def get_track_geometry(session) -> dict[str, Any]:
+async def get_track_geometry(session: Any) -> dict[str, Any]:
     """
     Extract track geometry from session telemetry.
 
@@ -99,7 +99,7 @@ async def get_track_geometry(session) -> dict[str, Any]:
             - rotation: circuit rotation angle
     """
 
-    def _extract():
+    def _extract() -> dict[str, Any]:
         try:
             # Check if laps are available/loaded
             if not hasattr(session, "laps"):
@@ -270,7 +270,7 @@ def _extract_drs_zones(
     return zones
 
 
-async def get_driver_positions(session, frame_index: int = 0) -> dict[str, dict]:
+async def get_driver_positions(session: Any, frame_index: int = 0) -> dict[str, dict]:
     """
     Get driver positions at a specific frame/time.
 
@@ -278,8 +278,8 @@ async def get_driver_positions(session, frame_index: int = 0) -> dict[str, dict]
     For replay, this returns positions at the given frame.
     """
 
-    def _extract():
-        drivers = {}
+    def _extract() -> dict[str, dict]:
+        drivers: dict[str, dict] = {}
 
         for driver in session.drivers:
             try:
@@ -323,14 +323,14 @@ async def get_driver_positions(session, frame_index: int = 0) -> dict[str, dict]
     return await loop.run_in_executor(_executor, _extract)
 
 
-async def get_weather_data(session) -> list[dict]:
+async def get_weather_data(session: Any) -> list[dict]:
     """
     Extract weather data from session.
 
     Returns list of weather snapshots with track_temp, air_temp, humidity, etc.
     """
 
-    def _extract():
+    def _extract() -> list[dict]:
         weather_df = getattr(session, "weather_data", None)
         if weather_df is None or weather_df.empty:
             return []
@@ -360,7 +360,7 @@ async def get_weather_data(session) -> list[dict]:
         else:
             result["rainfall"] = False
 
-        return result.to_dict(orient="records")
+        return result.to_dict(orient="records")  # type: ignore[no-any-return]
 
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(_executor, _extract)
@@ -372,7 +372,7 @@ async def get_session_info(year: int, round_number: int | str) -> dict:
     Faster than load_session when you only need metadata.
     """
 
-    def _get_info():
+    def _get_info() -> dict[str, Any] | None:
         fastf1 = _ensure_fastf1()
         schedule = fastf1.get_event_schedule(year)
 
@@ -393,14 +393,14 @@ async def get_session_info(year: int, round_number: int | str) -> dict:
         }
 
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(_executor, _get_info)
+    return await loop.run_in_executor(_executor, _get_info)  # type: ignore[arg-type]
 
 
 # Cache for loaded sessions to avoid reloading
 _session_cache: dict[str, Any] = {}
 
 
-async def get_or_load_session(year: int, round_number: int | str, session_type: str = "R"):
+async def get_or_load_session(year: int, round_number: int | str, session_type: str = "R") -> Any:
     """Get cached session or load it."""
     cache_key = f"{year}_{round_number}_{session_type}"
 
@@ -412,12 +412,12 @@ async def get_or_load_session(year: int, round_number: int | str, session_type: 
     return _session_cache[cache_key]
 
 
-def clear_session_cache():
+def clear_session_cache() -> None:
     """Clear the session cache to free memory."""
     _session_cache.clear()
 
 
-def extract_race_data(session):
+def extract_race_data(session: Any) -> Any:
     """
     Extract comprehensive race data from a loaded FastF1 session.
 
@@ -465,12 +465,12 @@ def extract_race_data(session):
         logger.warning("driver_extraction_failed", error=str(e))
 
     # 2. Laps - Convert to LapData Pydantic models
-    def _timedelta_to_seconds(val):
+    def _timedelta_to_seconds(val: Any) -> float | None:
         """Safely convert Timedelta to float seconds, or None for NaT."""
         if val is None:
             return None
         if hasattr(val, "total_seconds"):
-            return val.total_seconds()
+            return float(val.total_seconds())
         # Check for NaT (pandas Not-a-Time)
         try:
             if pd.isna(val):

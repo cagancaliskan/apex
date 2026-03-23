@@ -5,9 +5,15 @@ These priors are based on historical F1 data and can be overridden
 per-track or per-session.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from rsw.config.constants import DEFAULT_BASE_PACE_SECONDS, TRACK_PRIORS_CONFIDENCE_THRESHOLD
+
+if TYPE_CHECKING:
+    from rsw.models.degradation.track_priors import ResolvedPriors
 
 
 @dataclass

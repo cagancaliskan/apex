@@ -13,7 +13,7 @@ from rsw.config.constants import (
 
 
 class DirtyAirModel:
-    def __init__(self):
+    def __init__(self) -> None:
         # Configuration for current regulations (e.g. 2026 regs might differ)
         self.dirty_air_threshold = DIRTY_AIR_THRESHOLD_SECONDS
         self.max_penalty_time = DIRTY_AIR_MAX_PENALTY_SECONDS

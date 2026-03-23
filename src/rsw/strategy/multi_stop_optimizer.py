@@ -58,7 +58,7 @@ class StrategyPlan:
     compound_sequence: str = ""
     confidence: float = 0.0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not self.compound_sequence and self.stints:
             self.compound_sequence = "-".join(
                 s.compound[0] for s in self.stints
@@ -158,7 +158,7 @@ class MultiStopOptimizer:
                 race_lap = stint.start_lap + lap_offset
 
                 # Tyre penalty: use learned deg or physics model
-                if use_learned_deg:
+                if use_learned_deg and track_priors is not None:
                     learned_deg = track_priors[compound].deg_per_lap
                     tyre_penalty = learned_deg * lap_offset
                 else:

@@ -157,7 +157,7 @@ class SimulationService:
         from rsw.models.physics.traffic_model import DirtyAirModel
         from rsw.models.physics.tyre_model import TyreModel
 
-        self.physics_engine = {
+        self.physics_engine: dict[str, Any] = {
             "tyre": TyreModel,  # Factory
             "fuel": FuelModel(),
             "track": TrackModel(),
@@ -680,7 +680,7 @@ class SimulationService:
                 )
 
             # Get predictions from Online Model (RLS)
-            model = self.model_manager.models.get(driver.driver_number)
+            model = self.model_manager.models.get(driver.driver_number)  # type: ignore[assignment]
 
             # Physics-based sanity check / Future prediction
             physics_pace = self._calculate_physics_pace(driver, current_lap)
@@ -740,7 +740,7 @@ class SimulationService:
         # 25th percentile: represents clean competitive pace
         idx = max(0, len(valid_times) // 4)
         pace = valid_times[idx]
-        return round(pace, 3)
+        return float(round(pace, 3))
 
     def _calculate_physics_pace(self, driver: DriverState, current_lap: int) -> float:
         """
@@ -764,7 +764,7 @@ class SimulationService:
         # 5. Traffic (Dirty Air)
         traffic_penalty = self.physics_engine["traffic"].get_pace_penalty(driver.gap_to_ahead)
 
-        return base_pace + fuel_penalty + tyre_deg + compound_offset - track_gain + traffic_penalty
+        return base_pace + fuel_penalty + tyre_deg + compound_offset - track_gain + traffic_penalty  # type: ignore[no-any-return]
 
     async def _update_strategy_metrics(self, current_lap: int) -> None:
         """

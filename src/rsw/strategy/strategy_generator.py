@@ -10,6 +10,7 @@ Design: KISS - Simple generation with validation, no complex optimization.
 """
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -79,7 +80,7 @@ def generate_one_stop_strategies(
     Returns:
         List of viable 1-stop strategies
     """
-    strategies = []
+    strategies: list[PitStrategy] = []
     remaining = total_laps - current_lap
 
     # Calculate pit window
@@ -145,7 +146,7 @@ def generate_two_stop_strategies(
     Returns:
         List of viable 2-stop strategies
     """
-    strategies = []
+    strategies: list[Any] = []
     remaining = total_laps - current_lap
 
     # Need at least 3 stints of min_stint laps

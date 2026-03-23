@@ -12,6 +12,7 @@ Instead of random pit stops, rivals will:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from rsw.strategy.team_profiles import get_team_profile, will_react_to_safety_car
 
@@ -121,7 +122,7 @@ class CompetitorAI:
         current_lap: int,
         tyre_age: int,
         tyre_cliff_lap: int,
-        profile,
+        profile: Any,
         total_laps: int,
     ) -> int:
         """Estimate the ideal pit lap based on tyre state and team profile."""

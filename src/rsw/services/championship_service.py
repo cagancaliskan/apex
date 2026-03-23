@@ -242,7 +242,7 @@ class ChampionshipService:
     ) -> list[RaceCalendarEntry]:
         """Fetch season calendar from FastF1."""
 
-        def _load():
+        def _load() -> list[Any]:
             import fastf1
 
             schedule = fastf1.get_event_schedule(year, include_testing=False)
@@ -277,7 +277,7 @@ class ChampionshipService:
         Returns {driver_number: {name, team, team_colour, points, positions: []}}.
         """
 
-        def _load():
+        def _load() -> dict[int, dict[str, Any]]:
             import fastf1
 
             standings: dict[int, dict[str, Any]] = {}
@@ -487,26 +487,26 @@ class ChampionshipService:
             )
             risk_mods.append(calculate_risk_modifier(ctx, race_ctx))
 
-        avg_risk = np.mean(risk_mods) if risk_mods else 1.0
+        avg_risk: float = float(np.mean(risk_mods)) if risk_mods else 1.0
 
         # Adjust SC probability based on championship aggressiveness
         base_sc = 0.2
-        sc_prob = base_sc * float(avg_risk)
+        sc_prob = base_sc * avg_risk
 
         # Deep copy grid and add noise for race-to-race variance
-        race_grid = copy.deepcopy(driver_grid)
-        for drv in race_grid.values():
-            pace = drv.last_lap_time or DEFAULT_PACE
-            drv.last_lap_time = pace + random.gauss(0, 0.3)
+        race_grid: dict[int, DriverState] = copy.deepcopy(driver_grid)
+        for driver in race_grid.values():
+            pace = driver.last_lap_time or DEFAULT_PACE
+            driver.last_lap_time = pace + random.gauss(0, 0.3)
             # Randomise starting grid slightly
-            drv.position = max(
-                1, drv.position + random.randint(-2, 2)
+            driver.position = max(
+                1, driver.position + random.randint(-2, 2)
             )
 
         # Ensure positions are valid (no duplicates)
         sorted_grid = sorted(race_grid.values(), key=lambda d: d.position)
-        for i, drv in enumerate(sorted_grid):
-            drv.position = i + 1
+        for i, driver in enumerate(sorted_grid):
+            driver.position = i + 1
 
         simulator = GridSimulator()
         return simulator.run_simulation(
@@ -702,7 +702,7 @@ class ChampionshipService:
             for i in range(n):
                 sorted_teams = sorted(
                     team_totals.keys(),
-                    key=lambda t, idx=i: team_totals[t][idx],
+                    key=lambda t: team_totals[t][i],
                     reverse=True,
                 )
                 positions.append(sorted_teams.index(team) + 1)

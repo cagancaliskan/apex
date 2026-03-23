@@ -7,7 +7,7 @@ Reduces redundant API calls during replay and development sessions.
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Any
+from typing import Any, cast
 
 from rsw.ingest.base import (
     DataProvider,
@@ -53,7 +53,7 @@ class CachedDataProvider(DataProvider):
         key = self._cache_key("sessions", year=year, country=country, session_name=session_name)
         cached = self._get(key)
         if cached is not None:
-            return cached
+            return cast(list[SessionInfo], cached)
         result = await self._client.get_sessions(year=year, country=country, session_name=session_name)
         self._put(key, result)
         return result
@@ -62,7 +62,7 @@ class CachedDataProvider(DataProvider):
         key = self._cache_key("session", session_key=session_key)
         cached = self._get(key)
         if cached is not None:
-            return cached
+            return cast(SessionInfo, cached)
         result = await self._client.get_session(session_key)
         self._put(key, result)
         return result
@@ -71,7 +71,7 @@ class CachedDataProvider(DataProvider):
         key = self._cache_key("drivers", session_key=session_key)
         cached = self._get(key)
         if cached is not None:
-            return cached
+            return cast(list[DriverInfo], cached)
         result = await self._client.get_drivers(session_key)
         self._put(key, result)
         return result
@@ -82,7 +82,7 @@ class CachedDataProvider(DataProvider):
         key = self._cache_key("laps", session_key=session_key, driver_number=driver_number, since_lap=since_lap)
         cached = self._get(key)
         if cached is not None:
-            return cached
+            return cast(list[LapData], cached)
         result = await self._client.get_laps(session_key, driver_number=driver_number, since_lap=since_lap)
         self._put(key, result)
         return result
@@ -91,7 +91,7 @@ class CachedDataProvider(DataProvider):
         key = self._cache_key("positions", session_key=session_key)
         cached = self._get(key)
         if cached is not None:
-            return cached
+            return cast(list[PositionData], cached)
         result = await self._client.get_positions(session_key)
         self._put(key, result)
         return result
@@ -100,7 +100,7 @@ class CachedDataProvider(DataProvider):
         key = self._cache_key("intervals", session_key=session_key)
         cached = self._get(key)
         if cached is not None:
-            return cached
+            return cast(list[IntervalData], cached)
         result = await self._client.get_intervals(session_key)
         self._put(key, result)
         return result
@@ -109,7 +109,7 @@ class CachedDataProvider(DataProvider):
         key = self._cache_key("stints", session_key=session_key, driver_number=driver_number)
         cached = self._get(key)
         if cached is not None:
-            return cached
+            return cast(list[StintData], cached)
         result = await self._client.get_stints(session_key, driver_number=driver_number)
         self._put(key, result)
         return result
@@ -118,7 +118,7 @@ class CachedDataProvider(DataProvider):
         key = self._cache_key("pits", session_key=session_key)
         cached = self._get(key)
         if cached is not None:
-            return cached
+            return cast(list[PitData], cached)
         result = await self._client.get_pits(session_key)
         self._put(key, result)
         return result
@@ -127,7 +127,7 @@ class CachedDataProvider(DataProvider):
         key = self._cache_key("race_control", session_key=session_key)
         cached = self._get(key)
         if cached is not None:
-            return cached
+            return cast(list[RaceControlMessage], cached)
         result = await self._client.get_race_control(session_key)
         self._put(key, result)
         return result

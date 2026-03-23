@@ -126,7 +126,7 @@ class StrategyService(IStrategyCalculator):
             track_priors=track_priors,
         )
 
-        result = {
+        result: dict[str, Any] = {
             "recommendation": rec.recommendation.value,
             "confidence": rec.confidence,
             "reason": rec.reason,

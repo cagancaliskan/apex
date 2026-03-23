@@ -5,14 +5,21 @@ This module manages RLS models for each driver's current stint,
 providing pace predictions and cliff risk assessment.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from rsw.config.constants import DEFAULT_FORGETTING_FACTOR, TRACK_PRIORS_CONFIDENCE_THRESHOLD
 from rsw.models.physics.fuel_model import FuelModel
 
 from .calibration import get_cliff_risk_threshold, get_warm_start_params
 from .rls import RLSEstimator, create_feature_vector
+
+if TYPE_CHECKING:
+    from rsw.models.degradation.neural_model import NeuralDegradationModel
+    from rsw.models.degradation.track_priors import ResolvedPriors
 
 
 @dataclass

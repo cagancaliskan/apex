@@ -10,7 +10,7 @@ Design: KISS - Simple HTTP client with caching.
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -140,7 +140,7 @@ class WeatherClient:
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(self.BASE_URL, params=params)
+                response = await client.get(self.BASE_URL, params=cast(dict[str, Any], params))
                 response.raise_for_status()
                 data = response.json()
 
@@ -197,7 +197,7 @@ class WeatherClient:
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(self.BASE_URL, params=params)
+                response = await client.get(self.BASE_URL, params=cast(dict[str, Any], params))
                 response.raise_for_status()
                 data = response.json()
 

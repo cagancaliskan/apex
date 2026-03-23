@@ -125,7 +125,7 @@ def get_circuit_sc_probability(
     if is_wet:
         per_lap *= MC_WET_MULTIPLIER
 
-    return min(MC_SC_PER_LAP_CAP, per_lap)
+    return float(min(MC_SC_PER_LAP_CAP, per_lap))
 
 
 def sample_safety_car(

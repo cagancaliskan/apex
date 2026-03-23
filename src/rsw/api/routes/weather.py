@@ -5,6 +5,8 @@ Provides real-time weather data for F1 circuits using OpenMeteo API.
 New in v3.0.1
 """
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 
 from rsw.ingest.weather_client import WeatherClient, CIRCUIT_COORDINATES
@@ -16,7 +18,7 @@ _client = WeatherClient()
 
 
 @router.get("/current/{circuit_key}")
-async def get_current_weather(circuit_key: str):
+async def get_current_weather(circuit_key: str) -> dict[str, Any]:
     """
     Get current weather for a circuit.
 
@@ -55,7 +57,7 @@ async def get_current_weather(circuit_key: str):
 
 
 @router.get("/forecast/{circuit_key}")
-async def get_weather_forecast(circuit_key: str, hours: int = 3):
+async def get_weather_forecast(circuit_key: str, hours: int = 3) -> dict[str, Any]:
     """
     Get weather forecast for a circuit.
 
@@ -101,7 +103,7 @@ async def get_weather_forecast(circuit_key: str, hours: int = 3):
 
 
 @router.get("/circuits")
-async def list_circuits():
+async def list_circuits() -> dict[str, Any]:
     """List all available circuits with coordinates."""
     return {
         "circuits": [

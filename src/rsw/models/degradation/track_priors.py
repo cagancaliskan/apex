@@ -11,6 +11,7 @@ and the consumers (calibration warm-start, pit_window, decision engine).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 from rsw.config.constants import (
     CLIFF_AGES,
@@ -42,7 +43,7 @@ class ResolvedPriors:
 def resolve_compound_priors(
     compound: str,
     track_chars: TrackCharacteristics | None = None,
-    season_learner: object | None = None,
+    season_learner: Any | None = None,
     driver_number: int | None = None,
     year: int = 2024,
 ) -> ResolvedPriors:
@@ -167,7 +168,7 @@ def resolve_cliff_age(
 
 def resolve_all_compounds(
     track_chars: TrackCharacteristics | None = None,
-    season_learner: object | None = None,
+    season_learner: Any | None = None,
     driver_number: int | None = None,
     year: int = 2024,
 ) -> dict[str, ResolvedPriors]:

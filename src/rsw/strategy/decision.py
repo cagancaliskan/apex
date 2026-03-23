@@ -5,7 +5,10 @@ Evaluates current race state and generates pit stop recommendations
 with confidence scores and reasoning.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from rsw.config.constants import (
     CLIFF_RISK_CONFIDENCE_FACTOR,
@@ -32,6 +35,9 @@ from rsw.models.physics.weather_model import (
     determine_condition,
     should_pit_for_weather,
 )
+
+if TYPE_CHECKING:
+    from rsw.strategy.multi_stop_optimizer import MultiStopOptimizer, StrategyComparison
 
 from .pit_window import PitWindow, find_optimal_window, should_pit_now
 

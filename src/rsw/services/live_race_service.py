@@ -39,6 +39,7 @@ from rsw.services.simulation_service import IAppState, IConnectionManager, sanit
 if TYPE_CHECKING:
     from rsw.ingest.openf1_client import OpenF1Client
     from rsw.ingest.weather_client import WeatherClient
+    from rsw.strategy.multi_stop_optimizer import MultiStopOptimizer
 
 logger = get_logger(__name__)
 
@@ -352,7 +353,7 @@ class LiveRaceService:
         # Check if we got new lap data
         has_new_laps = bool(batch.laps and len(batch.laps) > 0)
 
-        if has_new_laps:
+        if has_new_laps and batch.laps is not None:
             new_max_lap = max(lap.lap_number for lap in batch.laps)
             if new_max_lap > self._last_lap:
                 self._last_lap = new_max_lap
@@ -633,7 +634,7 @@ class LiveRaceService:
             return self._session_base_pace
         valid_times.sort()
         idx = max(0, len(valid_times) // 4)
-        return round(valid_times[idx], 3)
+        return float(round(valid_times[idx], 3))
 
     def _create_strategy_service(self) -> Any:
         """Create a StrategyService instance."""

@@ -216,8 +216,8 @@ class TrackLearner:
                 continue
 
             # Calculate average clean lap for this driver
-            clean_laps = [
-                l.get("lap_duration")
+            clean_laps: list[float] = [
+                l.get("lap_duration")  # type: ignore[misc]
                 for l in laps
                 if l.get("lap_duration")
                 and not l.get("is_pit_out_lap")
@@ -333,7 +333,7 @@ class TrackLearner:
 
             if len(stint_laps) >= 5:  # Need at least 5 laps
                 compound_stints.setdefault(compound, []).append(
-                    (stint_laps, lap_end - lap_start)
+                    (list(map(float, stint_laps)), lap_end - lap_start)  # type: ignore[arg-type]
                 )
 
         # Calculate degradation for each compound
@@ -409,8 +409,8 @@ class TrackLearner:
                 continue
 
             # Get clean lap times for this stint
-            stint_laps = [
-                l.get("lap_duration")
+            stint_laps: list[float] = [
+                l.get("lap_duration")  # type: ignore[misc]
                 for l in lap_by_driver[driver]
                 if l.get("lap_duration")
                 and lap_start <= l.get("lap_number", 0) <= lap_end

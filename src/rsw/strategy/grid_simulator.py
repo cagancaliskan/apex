@@ -30,7 +30,7 @@ from rsw.strategy.competitor_ai import CompetitorAI
 
 
 class GridSimulator:
-    def __init__(self):
+    def __init__(self) -> None:
         self.tyre_model_factory = TyreModel
         self.fuel_model = FuelModel()
         self.track_model = TrackModel()

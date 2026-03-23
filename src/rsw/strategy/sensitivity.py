@@ -8,6 +8,7 @@ from driver state inputs, for use in the explainability payload.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from rsw.config.constants import (
     SENSITIVITY_DEG_MULTIPLIER,
@@ -188,7 +189,7 @@ class SensitivityAnalyzer:
             perturbed_val = base_val * (1 + _PERTURBATION)
             if param_name == "cliff_risk":
                 perturbed_val = min(perturbed_val, 1.0)
-            kwargs = dict(
+            kwargs: dict[str, Any] = dict(
                 driver_number=driver_number,
                 current_lap=current_lap,
                 total_laps=total_laps,

@@ -7,7 +7,7 @@ querying live status, and listing active sessions.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -75,7 +75,7 @@ async def start_live(request: LiveStartRequest | None = None) -> dict[str, Any]:
     session_key = request.session_key if request else None
 
     if session_key:
-        result = await live_service.start(session_key)
+        result: dict[str, Any] = cast(dict[str, Any], await live_service.start(session_key))
         if result.get("status") == "error":
             raise HTTPException(404, result.get("detail", "Session not found"))
         return result
@@ -89,7 +89,7 @@ async def start_live(request: LiveStartRequest | None = None) -> dict[str, Any]:
     race_sessions = [s for s in sessions if s["session_type"] == "Race"]
     target = race_sessions[-1] if race_sessions else sessions[-1]
 
-    result = await live_service.start(target["session_key"])
+    result = cast(dict[str, Any], await live_service.start(target["session_key"]))
     if result.get("status") == "error":
         raise HTTPException(404, result.get("detail", "Session not found"))
     return result
@@ -107,7 +107,7 @@ async def stop_live() -> dict[str, str]:
 async def live_status() -> dict[str, Any]:
     """Get current live tracking status."""
     live_service = _get_live_service()
-    return live_service.get_status()
+    return cast(dict[str, Any], live_service.get_status())
 
 
 @router.get("/live/sessions")

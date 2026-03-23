@@ -106,7 +106,7 @@ def _get_app_state() -> AppState:
     """Get the application state from the FastAPI app. Use during request handling."""
     global _fallback_app_state
     try:
-        return app.state.rsw
+        return app.state.rsw  # type: ignore[no-any-return]
     except AttributeError:
         # Lifespan hasn't run (e.g. in tests) — use fallback
         if _fallback_app_state is None:
@@ -118,7 +118,7 @@ def _get_connection_manager() -> ConnectionManager:
     """Get the connection manager from the FastAPI app."""
     global _fallback_connection_manager
     try:
-        return app.state.connection_manager
+        return app.state.connection_manager  # type: ignore[no-any-return]
     except AttributeError:
         if _fallback_connection_manager is None:
             _fallback_connection_manager = ConnectionManager()
@@ -126,7 +126,7 @@ def _get_connection_manager() -> ConnectionManager:
 
 
 @asynccontextmanager
-async def lifespan(application: FastAPI):
+async def lifespan(application: FastAPI) -> Any:
     """
     Application lifecycle manager.
 
@@ -227,7 +227,7 @@ app.add_middleware(
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
     """Adds a unique request ID to every request for log correlation."""
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(self, request: Request, call_next: Any) -> Response:
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4())[:8])
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(request_id=request_id)
@@ -236,7 +236,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = request_id
 
         structlog.contextvars.clear_contextvars()
-        return response
+        return response  # type: ignore[no-any-return]
 
 
 app.add_middleware(CorrelationIdMiddleware)

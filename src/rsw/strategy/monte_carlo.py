@@ -13,6 +13,15 @@ from typing import Any
 
 import numpy as np
 
+from rsw.config.constants import (
+    MC_DEFAULT_CIRCUIT_SC_RATE,
+    MC_SC_PER_LAP_CAP,
+    MC_START_INCIDENT_LAP_HIGH,
+    MC_START_INCIDENT_LAP_MED,
+    MC_START_MULTIPLIER_HIGH,
+    MC_START_MULTIPLIER_MED,
+    MC_WET_MULTIPLIER,
+)
 from rsw.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -97,7 +106,7 @@ def get_circuit_sc_probability(
     Returns per-lap probability suitable for use in sampling.
     """
     # Base rate from circuit history or global average
-    base = CIRCUIT_SC_RATES.get((circuit_key or "").lower(), 0.25)
+    base = CIRCUIT_SC_RATES.get((circuit_key or "").lower(), MC_DEFAULT_CIRCUIT_SC_RATE)
 
     # Convert race-level probability to per-lap probability
     # P(SC on any lap) = 1 - (1 - p_lap)^n → p_lap ≈ 1 - (1-base)^(1/n)
@@ -107,16 +116,16 @@ def get_circuit_sc_probability(
         per_lap = 0.005
 
     # Lap-dependent modifiers
-    if current_lap <= 3:
-        per_lap *= 3.0  # Start incidents
-    elif current_lap <= 5:
-        per_lap *= 1.5
+    if current_lap <= MC_START_INCIDENT_LAP_HIGH:
+        per_lap *= MC_START_MULTIPLIER_HIGH  # Start incidents
+    elif current_lap <= MC_START_INCIDENT_LAP_MED:
+        per_lap *= MC_START_MULTIPLIER_MED
 
     # Wet weather increases SC significantly
     if is_wet:
-        per_lap *= 2.5
+        per_lap *= MC_WET_MULTIPLIER
 
-    return min(0.15, per_lap)  # Cap at 15% per lap
+    return min(MC_SC_PER_LAP_CAP, per_lap)
 
 
 def sample_safety_car(

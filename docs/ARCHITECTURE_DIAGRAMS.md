@@ -60,6 +60,8 @@ graph TB
         WM[WeatherModel]
         TRM[TrackModel]
         RLS[RLS Estimator]
+        NM[Neural Pace MLP]
+        OM[Online Model - RLS+Neural blend]
         SL[SeasonLearner]
     end
 
@@ -110,7 +112,9 @@ graph TB
     FM --> GS
     WM --> GS
     TRM --> GS
-    RLS --> STS
+    RLS --> OM
+    NM --> OM
+    OM --> STS
     SL --> CHS
 
     GS --> MC

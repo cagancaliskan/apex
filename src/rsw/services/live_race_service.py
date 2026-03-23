@@ -97,6 +97,18 @@ class LiveRaceService:
         # Circuit key for weather lookups
         self._circuit_key: str | None = None
 
+        # Track & season learning (adaptive priors)
+        from rsw.models.degradation.track_priors import ResolvedPriors
+        from rsw.models.physics.season_learner import SeasonLearner
+        from rsw.models.physics.track_characteristics import TrackCharacteristics, TrackLearner
+
+        self._track_learner = TrackLearner()
+        self._season_learner = SeasonLearner()
+        self._track_characteristics: TrackCharacteristics | None = None
+        self._resolved_priors: dict[str, ResolvedPriors] = {}
+        self._track_pit_loss: float = DEFAULT_PIT_LOSS_SECONDS
+        self._optimizer: "MultiStopOptimizer | None" = None
+
     # =========================================================================
     # Public API
     # =========================================================================
@@ -147,6 +159,9 @@ class LiveRaceService:
 
         # Derive circuit key for weather lookups
         self._circuit_key = self._session_info.circuit_short_name.lower().replace(" ", "_")
+
+        # Load track-learned priors (adaptive pit loss, cliff ages, deg rates)
+        self._load_track_priors()
 
         # Fetch initial drivers and build initial state
         initial_batch = await self._client.fetch_update_batch(
@@ -237,11 +252,14 @@ class LiveRaceService:
         now = datetime.now(UTC)
         active = []
         for s in sessions:
-            # Include sessions from the last 24 hours that haven't ended long ago
-            if s.date_end and (now - s.date_end).total_seconds() > 86400:
+            # Skip if ended more than 3 days ago
+            if s.date_end and (now - s.date_end).total_seconds() > 3 * 86400:
                 continue
-            # Include sessions that started within the last 24 hours
-            if (now - s.date_start).total_seconds() > 86400:
+            # Skip if starting more than 7 days in the future
+            if s.date_start > now and (s.date_start - now).total_seconds() > 7 * 86400:
+                continue
+            # Skip if started more than 3 days ago with no end date
+            if s.date_start <= now and not s.date_end and (now - s.date_start).total_seconds() > 3 * 86400:
                 continue
             active.append({
                 "session_key": s.session_key,
@@ -379,6 +397,8 @@ class LiveRaceService:
             return
 
         updated_drivers: dict[int, Any] = {}
+        # Preserve degradation predictions so the battle pass can reuse them
+        degradation_predictions: dict[int, Any] = {}
 
         for driver_num, driver in drivers.items():
             if driver.position is None or driver.position == 0:
@@ -390,16 +410,35 @@ class LiveRaceService:
             if model.estimated_base_pace is None:
                 model.estimated_base_pace = self._session_base_pace
 
+            # Enable neural blending for nonlinear cliff prediction
+            if model._neural_model is None:
+                track_temp = race_state.weather.get("air_temp", 30.0) if race_state.weather else 30.0
+                total_laps = race_state.total_laps or 57
+                model.set_session_context(
+                    track_temp=track_temp,
+                    total_laps=total_laps,
+                    session_avg_pace=self._session_base_pace,
+                )
+
             last_lap_time = driver.last_lap_time
+            compound = driver.compound or "MEDIUM"
             if last_lap_time and last_lap_time > 0:
+                # Resolve priors for this driver+compound
+                season_priors = self._season_learner.get_driver_priors(
+                    datetime.now(UTC).year, driver.driver_number, compound,
+                )
+                tp = self._resolved_priors.get(compound)
+
                 self._model_manager.update_driver(
                     driver_number=driver.driver_number,
                     lap_in_stint=driver.lap_in_stint,
                     lap_time=last_lap_time,
                     stint_number=driver.stint_number,
-                    compound=driver.compound or "MEDIUM",
+                    compound=compound,
                     is_valid=True,
                     race_lap=current_lap,
+                    season_priors=season_priors,
+                    track_priors=tp,
                 )
 
             # Get RLS predictions
@@ -416,6 +455,7 @@ class LiveRaceService:
                 if prediction:
                     predicted_pace = prediction.predicted_next_k
                     model_confidence = prediction.model_confidence
+                    degradation_predictions[driver_num] = prediction
                 else:
                     model_confidence = MEDIUM_CONFIDENCE_DEFAULT
             else:
@@ -436,7 +476,9 @@ class LiveRaceService:
                     recommendation = self._strategy_service.get_recommendation(
                         driver=driver,
                         race_state=race_state,
-                        pit_loss=DEFAULT_PIT_LOSS_SECONDS,
+                        pit_loss=self._track_pit_loss,
+                        optimizer=self._optimizer,
+                        track_priors=self._resolved_priors or None,
                     )
                     pit_recommendation = recommendation.get("recommendation")
                     pit_reason = recommendation.get("reason")
@@ -471,6 +513,60 @@ class LiveRaceService:
                     "undercut_threat": undercut_threat,
                     "overcut_opportunity": overcut_opportunity,
                 }
+            )
+
+        # --- Battle probability second pass ---
+        # Runs after all degradation predictions are collected so both
+        # attacker and defender predictions are available.
+        from rsw.features.battle import compute_overtake_probability
+
+        for driver_num, driver in updated_drivers.items():
+            # Prefer stored gap_to_ahead (interval); fall back to gap_to_leader delta
+            effective_gap = driver.gap_to_ahead
+            if effective_gap is None:
+                defender_for_gap = next(
+                    (d for d in updated_drivers.values() if d.position == driver.position - 1),
+                    None,
+                )
+                if (
+                    defender_for_gap is not None
+                    and driver.gap_to_leader is not None
+                    and defender_for_gap.gap_to_leader is not None
+                ):
+                    effective_gap = driver.gap_to_leader - defender_for_gap.gap_to_leader
+
+            if effective_gap is None or effective_gap > 1.5:
+                if driver.overtake_probability is not None:
+                    updated_drivers[driver_num] = driver.model_copy(
+                        update={"overtake_probability": None, "battle_key_factor": None}
+                    )
+                continue
+
+            defender = next(
+                (d for d in updated_drivers.values() if d.position == driver.position - 1),
+                None,
+            )
+            if defender is None:
+                continue
+
+            pred_att = degradation_predictions.get(driver_num)
+            pred_def = degradation_predictions.get(defender.driver_number)
+            pace_att = (pred_att.predicted_next_k[0] if pred_att and pred_att.predicted_next_k else 0.0)
+            pace_def = (pred_def.predicted_next_k[0] if pred_def and pred_def.predicted_next_k else 0.0)
+
+            prob, key_factor = compute_overtake_probability(
+                gap=effective_gap,
+                drs_attacker=driver.drs,
+                pace_next_attacker=pace_att,
+                pace_next_defender=pace_def,
+                cliff_risk_defender=defender.cliff_risk or 0.0,
+                attacker_tyre_age=driver.tyre_age,
+                defender_tyre_age=defender.tyre_age,
+                attacker_compound=driver.compound or "HARD",
+                defender_compound=defender.compound or "HARD",
+            )
+            updated_drivers[driver_num] = driver.model_copy(
+                update={"overtake_probability": prob, "battle_key_factor": key_factor}
             )
 
         # Apply updates to state
@@ -555,3 +651,40 @@ class LiveRaceService:
         from rsw.models.degradation.online_model import ModelManager
 
         return ModelManager()
+
+    def _load_track_priors(self) -> None:
+        """Load track-learned priors and create the multi-stop optimizer."""
+        if not self._circuit_key:
+            return
+
+        try:
+            self._track_characteristics = self._track_learner.load(self._circuit_key)
+
+            if self._track_characteristics:
+                from rsw.models.degradation.track_priors import resolve_all_compounds, resolve_pit_loss
+
+                self._resolved_priors = resolve_all_compounds(
+                    track_chars=self._track_characteristics,
+                    season_learner=self._season_learner,
+                )
+                self._track_pit_loss = resolve_pit_loss(self._track_characteristics)
+
+                logger.info(
+                    "live_track_priors_loaded",
+                    circuit=self._circuit_key,
+                    pit_loss=self._track_pit_loss,
+                    compounds_learned=list(self._track_characteristics.compound_degradation.keys()),
+                )
+
+            # Create multi-stop optimizer with track-specific params
+            from rsw.strategy.multi_stop_optimizer import MultiStopOptimizer
+
+            race_state = self.state.store.get()
+            total_laps = race_state.total_laps or 57
+            self._optimizer = MultiStopOptimizer(
+                pit_loss=self._track_pit_loss,
+                total_laps=total_laps,
+            )
+
+        except Exception as e:
+            logger.warning("live_track_priors_failed", error=str(e))

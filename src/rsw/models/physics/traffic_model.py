@@ -5,12 +5,18 @@ Simulates the aerodynamic disadvantage of following another car closely.
 Loss of downforce reduces cornering speed and increases tyre wear (sliding).
 """
 
+from rsw.config.constants import (
+    DIRTY_AIR_EFFECT_EXPONENT,
+    DIRTY_AIR_MAX_PENALTY_SECONDS,
+    DIRTY_AIR_THRESHOLD_SECONDS,
+)
+
 
 class DirtyAirModel:
     def __init__(self):
         # Configuration for current regulations (e.g. 2026 regs might differ)
-        self.dirty_air_threshold = 3.0  # seconds
-        self.max_penalty_time = 0.5  # seconds lost per lap when very close
+        self.dirty_air_threshold = DIRTY_AIR_THRESHOLD_SECONDS
+        self.max_penalty_time = DIRTY_AIR_MAX_PENALTY_SECONDS
 
     def get_pace_penalty(self, gap_to_ahead: float | None) -> float:
         """
@@ -36,6 +42,6 @@ class DirtyAirModel:
         proximity = 1.0 - (gap_to_ahead / self.dirty_air_threshold)
 
         # Non-linear effect: it gets much worse very close
-        effect = proximity**2
+        effect = proximity**DIRTY_AIR_EFFECT_EXPONENT
 
         return self.max_penalty_time * effect

@@ -18,6 +18,7 @@ import WeatherWidget from '../components/WeatherWidget';
 import TrackMap from '../components/TrackMap';
 import TelemetryChart from '../components/TelemetryChart';
 import type { DriverState, TrackStatus } from '../types';
+import { API_REPLAY_SESSIONS, REPLAY_SPEEDS } from '../config/constants';
 
 // =============================================================================
 // Types
@@ -68,7 +69,7 @@ const ReplayPage: FC = () => {
 
     // Fetch available sessions
     useEffect(() => {
-        fetch('/api/replay/sessions')
+        fetch(API_REPLAY_SESSIONS)
             .then((res) => res.json())
             .then((data) => setSessions(data.sessions || []))
             .catch((err) => console.error('Failed to fetch sessions:', err));
@@ -169,7 +170,7 @@ const ReplayPage: FC = () => {
                             <button onClick={() => controlReplay('stop')} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><Square size={24} /></button>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)', marginLeft: 'var(--space-lg)', flexWrap: 'wrap' }}>
                                 <FastForward size={16} className="text-muted" />
-                                {[0.05, 0.1, 0.25, 0.5, 1, 2, 5].map((s) => (
+                                {REPLAY_SPEEDS.map((s) => (
                                     <button key={s} onClick={() => changeSpeed(s)} style={{ padding: 'var(--space-xs) var(--space-sm)', background: speed === s ? 'var(--status-blue)' : 'transparent', color: speed === s ? 'black' : 'var(--text-primary)', border: speed === s ? 'none' : '1px solid var(--text-muted)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.2s' }}>
                                         {s}x
                                     </button>

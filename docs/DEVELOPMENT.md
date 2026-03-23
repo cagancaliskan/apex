@@ -91,6 +91,9 @@ F1/
 │   │
 │   ├── models/                 # ML models
 │   │   ├── degradation/        # Tyre degradation
+│   │   │   ├── rls.py          #   RLS online linear estimator
+│   │   │   ├── neural_model.py #   NumPy MLP (nonlinear pace prediction)
+│   │   │   └── online_model.py #   RLS + Neural ensemble blending
 │   │   └── features/           # Feature engineering
 │   │
 │   ├── strategy/               # Strategy engine

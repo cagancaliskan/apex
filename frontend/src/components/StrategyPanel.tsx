@@ -12,8 +12,20 @@ import { useMemo, useState, type FC } from 'react';
 import type { DriverState } from '../types';
 import ExplainabilityPanel from './ExplainabilityPanel';
 import PitRejoinVisualizer from './PitRejoinVisualizer';
+import CompetitorPredictions from './CompetitorPredictions';
+import PositionProbabilityChart from './PositionProbabilityChart';
+import StrategyComparison from './StrategyComparison';
 import { useRaceStore } from '../store/raceStore';
 import styles from './StrategyPanel.module.css';
+import {
+    TYRE_COLORS,
+    TYRE_TEXT_COLORS,
+    DEG_HIGH_THRESHOLD,
+    DEG_MED_THRESHOLD,
+    CLIFF_RISK_CRITICAL,
+    CLIFF_RISK_WARNING,
+    DEFAULT_RACE_LAPS,
+} from '../config/constants';
 
 // =============================================================================
 // Types
@@ -55,25 +67,19 @@ function getRecStyle(rec: RecommendationType | undefined): RecommendationStyle {
 
 function getDegColor(slope: number | undefined): string {
     if (!slope) return 'var(--status-green)';
-    if (slope > 0.08) return 'var(--status-red)';
-    if (slope > 0.05) return 'var(--status-amber)';
+    if (slope > DEG_HIGH_THRESHOLD) return 'var(--status-red)';
+    if (slope > DEG_MED_THRESHOLD) return 'var(--status-amber)';
     return 'var(--status-green)';
 }
 
 function getCliffColor(risk: number | undefined): string {
     if (!risk) return 'var(--status-green)';
-    if (risk > 0.8) return 'var(--color-accent)';
-    if (risk > 0.4) return 'var(--status-amber)';
+    if (risk > CLIFF_RISK_CRITICAL) return 'var(--color-accent)';
+    if (risk > CLIFF_RISK_WARNING) return 'var(--status-amber)';
     return 'var(--status-green)';
 }
 
-const TYRE_COLORS: Record<string, string> = {
-    SOFT: '#ff0000', MEDIUM: '#ffd700', HARD: '#e8e8e8',
-    INTERMEDIATE: '#39d353', WET: '#0080ff',
-};
-const TYRE_TEXT: Record<string, string> = {
-    SOFT: '#fff', MEDIUM: '#000', HARD: '#000', INTERMEDIATE: '#000', WET: '#fff',
-};
+const TYRE_TEXT = TYRE_TEXT_COLORS;
 
 // =============================================================================
 // Section component
@@ -148,7 +154,7 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
     const confPct = Math.round((driver.model_confidence || 0) * 100);
 
     // Pit window bar positioning (% of totalLaps)
-    const lapTotal = totalLaps || 60;
+    const lapTotal = totalLaps || DEFAULT_RACE_LAPS;
     const winMin = driver.pit_window_min ?? 0;
     const winMax = driver.pit_window_max ?? null;
     const winIdeal = driver.pit_window_ideal ?? null;
@@ -367,11 +373,8 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                     </div>
                 </Section>
 
-                {/* Rejoin Visualizer — always visible */}
-                {((effectiveLap >= (driver.pit_window_min ?? 0) &&
-                   effectiveLap <= (driver.pit_window_max ?? 0) &&
-                   (driver.pit_window_min ?? 0) > 0) ||
-                  driver.in_pit === true) ? (
+                {/* Rejoin Visualizer — visible whenever pit window data exists */}
+                {(hasPitWindow || driver.in_pit === true) ? (
                     <PitRejoinVisualizer
                         driver={driver}
                         allDrivers={sortedDrivers}
@@ -380,12 +383,25 @@ const StrategyPanel: FC<StrategyPanelProps> = ({ drivers, selectedDriver, compac
                     <div style={{ marginTop: 'var(--space-md)', padding: 'var(--space-sm)', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', minHeight: '72px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '3px' }}>
                         <span style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pit Rejoin Prediction</span>
                         <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            {hasPitWindow
-                                ? `Outside window — opens L${winMin}, ideal L${winIdeal ?? '?'}`
-                                : 'No pit window calculated yet'}
+                            No pit window calculated yet
                         </span>
                     </div>
                 )}
+
+                {/* Competitor Predictions — rival pit windows */}
+                <CompetitorPredictions
+                    drivers={sortedDrivers}
+                    selectedDriverNumber={driver.driver_number}
+                />
+
+                {/* Position Probability — Monte Carlo results */}
+                <PositionProbabilityChart
+                    probabilities={[]}
+                    currentPosition={driver.position ?? undefined}
+                />
+
+                {/* Strategy Comparison — 1-stop vs 2-stop */}
+                <StrategyComparison driver={driver} totalLaps={totalLaps || DEFAULT_RACE_LAPS} />
 
                 {/* Pit History Strip */}
                 {recentPits.length > 0 && (

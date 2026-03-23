@@ -62,6 +62,10 @@ class DriverState(BaseModel):
     undercut_threat: bool = False
     overcut_opportunity: bool = False
 
+    # Battle & Overtake Prediction
+    overtake_probability: float | None = None  # 0.0–1.0; set when gap_to_ahead ≤ 1.5s
+    battle_key_factor: str | None = None       # e.g. "DRS active", "+6 laps fresher"
+
     # Rejoin Prediction (Phase 4)
     predicted_rejoin_position: int = 0
     rejoin_traffic_severity: float = 0.0  # 0-1 score (1 = heavy traffic)

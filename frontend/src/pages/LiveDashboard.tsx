@@ -10,31 +10,23 @@
 
 import { useState, useEffect, useMemo, type FC } from 'react';
 import TrackMap from '../components/TrackMap';
+import BattlePredictor from '../components/BattlePredictor';
 import StrategyPanel from '../components/StrategyPanel';
+import RaceMessages from '../components/RaceMessages';
 import { useRaceStore } from '../store/raceStore';
 import { useAlerts } from '../hooks';
 import type { DriverState } from '../types';
 import styles from './LiveDashboard.module.css';
+import {
+    TYRE_COLORS,
+    TYRE_TEXT_COLORS,
+    PIT_WINDOW_LAP_LOOKAHEAD,
+    PIT_WINDOW_LAP_GAP,
+} from '../config/constants';
 
 // =============================================================================
 // Constants & Helpers
 // =============================================================================
-
-const TYRE_COLORS: Record<string, string> = {
-    SOFT: '#ff0000',
-    MEDIUM: '#ffd700',
-    HARD: '#e8e8e8',
-    INTERMEDIATE: '#39d353',
-    WET: '#0080ff',
-};
-
-const TYRE_TEXT_COLORS: Record<string, string> = {
-    SOFT: '#ffffff',
-    MEDIUM: '#000000',
-    HARD: '#000000',
-    INTERMEDIATE: '#000000',
-    WET: '#ffffff',
-};
 
 function fmtGap(gap: number | undefined | null): string {
     if (gap == null) return '—';
@@ -54,8 +46,8 @@ function getRowUrgencyClass(d: DriverState, currentLap: number, s: typeof styles
     if (d.undercut_threat) return s.lbRowThreat;
     if (
         d.pit_window_min && d.pit_window_min > 0 &&
-        currentLap >= d.pit_window_min - 2 &&
-        currentLap <= (d.pit_window_max ?? (d.pit_window_min + 5))
+        currentLap >= d.pit_window_min + PIT_WINDOW_LAP_LOOKAHEAD &&
+        currentLap <= (d.pit_window_max ?? (d.pit_window_min + PIT_WINDOW_LAP_GAP))
     ) return s.lbRowWindow;
     return '';
 }
@@ -120,18 +112,29 @@ const LiveDashboard: FC = () => {
                         onSelect={selectDriver}
                         currentLap={currentLap}
                     />
-                    <RaceControlPanel messages={raceControlMessages} />
+                    <div style={{ height: '108px', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', flexShrink: 0 }}>
+                        <div style={{ height: '22px', display: 'flex', alignItems: 'center', padding: '0 8px', background: 'var(--bg-tertiary)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Race Control</span>
+                        </div>
+                        <RaceMessages messages={raceControlMessages} />
+                    </div>
                 </div>
 
                 {/* Column 2: Track Map + Telemetry HUD */}
                 <div className={styles.colCenter}>
-                    <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', minHeight: 0 }}>
+                    <div style={{ flex: 1, background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', minHeight: 0, position: 'relative' }}>
                         <TrackMap
                             drivers={sortedDrivers}
                             trackConfig={trackConfig}
                             selectedDriver={selectedDriver}
                             showDRS={true}
                         />
+                        {selectedDriver && (
+                            <BattlePredictor
+                                selectedDriver={selectedDriver}
+                                allDrivers={sortedDrivers}
+                            />
+                        )}
                     </div>
                     <TelemetryHUD driver={selectedDriver} sectorBests={sectorBests} />
                 </div>
@@ -275,38 +278,6 @@ const Leaderboard: FC<LeaderboardProps> = ({ drivers, selectedDriver, onSelect, 
         </div>
     );
 };
-
-// =============================================================================
-// Race Control Panel
-// =============================================================================
-
-interface RaceControlProps {
-    messages: Array<{ message: string; flag?: string | null; lap_number?: number | null }>;
-}
-
-const RaceControlPanel: FC<RaceControlProps> = ({ messages }) => (
-    <div style={{ height: '108px', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', flexShrink: 0 }}>
-        <div style={{ height: '22px', display: 'flex', alignItems: 'center', padding: '0 8px', background: 'var(--bg-tertiary)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Race Control</span>
-        </div>
-        <div style={{ overflow: 'auto', height: 'calc(100% - 22px)', padding: '4px 8px' }}>
-            {messages && messages.length > 0 ? (
-                [...messages].reverse().slice(0, 8).map((msg, i) => (
-                    <div key={i} style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.4, padding: '1px 0', borderBottom: i < 7 ? '1px solid rgba(255,255,255,0.025)' : 'none' }}>
-                        {msg.lap_number != null && (
-                            <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginRight: '6px', fontSize: '0.65rem' }}>
-                                L{msg.lap_number}
-                            </span>
-                        )}
-                        {msg.message}
-                    </div>
-                ))
-            ) : (
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', padding: '4px 0' }}>No messages</div>
-            )}
-        </div>
-    </div>
-);
 
 // =============================================================================
 // Telemetry HUD Strip

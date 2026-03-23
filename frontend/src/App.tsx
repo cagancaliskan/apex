@@ -16,8 +16,18 @@ import ReplayPage from './pages/ReplayPage';
 import BacktestPage from './pages/BacktestPage';
 import ChampionshipPage from './pages/ChampionshipPage';
 import SessionSelector from './components/SessionSelector';
+
 import { useRaceStore } from './store/raceStore';
 import type { RaceState, WebSocketMessage } from './types';
+import {
+    API_SESSIONS,
+    API_LIVE_SESSIONS,
+    WS_PATH,
+    WS_RECONNECT_DELAY_MS,
+    DEFAULT_YEAR,
+    SESSION_TICK_SECONDS,
+    SIMULATION_SPEEDS,
+} from './config/constants';
 
 // =============================================================================
 // Types
@@ -69,6 +79,7 @@ const App: FC = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [simSpeed, setSimSpeed] = useState(1);
     const [liveSessions, setLiveSessions] = useState<Array<{ session_key: number; session_name: string; session_type: string; circuit: string; country: string }>>([]);
+    const [liveSessionsLoading, setLiveSessionsLoading] = useState(false);
     const wsRef = useRef<WebSocket | null>(null);
 
     // Zustand store actions + state
@@ -99,7 +110,7 @@ const App: FC = () => {
 
     const fetchSessions = async () => {
         try {
-            const response = await fetch('/api/sessions?year=2023');
+            const response = await fetch(`${API_SESSIONS}?year=${DEFAULT_YEAR}`);
             const data = await response.json();
             setSessions(data);
         } catch (error) {
@@ -114,7 +125,7 @@ const App: FC = () => {
         setConnectionStatus('connecting');
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        const wsUrl = `${protocol}//${window.location.host}${WS_PATH}`;
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
@@ -155,7 +166,7 @@ const App: FC = () => {
             setSimulationRunning(false);
             setTimeout(() => {
                 if (selectedSession) connectWebSocket();
-            }, 3000);
+            }, WS_RECONNECT_DELAY_MS);
         };
 
         ws.onerror = () => {
@@ -185,9 +196,9 @@ const App: FC = () => {
             wsRef.current.send(JSON.stringify({
                 type: 'start_session',
                 session_key: selectedSession.session_key,
-                year: selectedSession.year || 2023,
+                year: selectedSession.year || DEFAULT_YEAR,
                 round_num: roundNum,
-                interval: 3.0,
+                interval: SESSION_TICK_SECONDS,
             }));
             setIsPolling(true);
         }
@@ -207,15 +218,25 @@ const App: FC = () => {
         }
     };
 
-    const fetchLiveSessions = async () => {
+    const fetchLiveSessions = useCallback(async () => {
+        setLiveSessionsLoading(true);
         try {
-            const response = await fetch('/api/live/sessions');
+            const response = await fetch(API_LIVE_SESSIONS);
             const data = await response.json();
             setLiveSessions(data.sessions || []);
         } catch {
             setLiveSessions([]);
+        } finally {
+            setLiveSessionsLoading(false);
         }
-    };
+    }, []);
+
+    // Auto-fetch live sessions when drawer opens
+    useEffect(() => {
+        if (drawerOpen) {
+            fetchLiveSessions();
+        }
+    }, [drawerOpen, fetchLiveSessions]);
 
     const handleStartLive = (sessionKey?: number) => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -319,7 +340,7 @@ const App: FC = () => {
                         <span className={styles.statusSep}>│</span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                             <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '2px' }}>Speed</span>
-                            {[1, 2, 5, 10, 20].map(s => (
+                            {SIMULATION_SPEEDS.map(s => (
                                 <button
                                     key={s}
                                     onClick={() => handleSpeedChange(s)}
@@ -383,7 +404,7 @@ const App: FC = () => {
             )}
 
             {/* Main Content */}
-            <main className={styles.mainContent}>
+            <main className={styles.mainContent} style={{ gridRow: 4 }}>
                 {currentPage === 'championship' ? (
                     <ChampionshipPage />
                 ) : currentPage === 'replay' ? (
@@ -469,6 +490,10 @@ const App: FC = () => {
                                         <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{ls.country} · {ls.session_type}</div>
                                     </div>
                                 ))
+                            ) : liveSessionsLoading ? (
+                                <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                    Checking for live sessions...
+                                </div>
                             ) : (
                                 <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                                     No active sessions. Click Refresh to check.

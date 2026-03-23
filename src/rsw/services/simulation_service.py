@@ -173,6 +173,11 @@ class SimulationService:
 
         self._season_learner = SeasonLearner()
 
+        # Resolved priors and optimizer (populated after track learning)
+        self._resolved_priors: dict = {}
+        self._track_pit_loss: float = DEFAULT_PIT_LOSS_SECONDS
+        self._optimizer: Any = None
+
     def _create_strategy_service(self) -> Any:
         """Create and return a StrategyService instance."""
         try:
@@ -368,6 +373,29 @@ class SimulationService:
                 # Update season-level driver profiles
                 self._season_learner.update_from_track(year, self._track_characteristics)
                 logger.info("season_profiles_updated", year=year, circuit=circuit_key)
+
+                # Resolve track-learned priors for all compounds
+                from rsw.models.degradation.track_priors import resolve_all_compounds, resolve_pit_loss
+
+                self._resolved_priors = resolve_all_compounds(
+                    track_chars=self._track_characteristics,
+                    season_learner=self._season_learner,
+                )
+                self._track_pit_loss = resolve_pit_loss(self._track_characteristics)
+
+                # Create multi-stop optimizer with track-specific params
+                from rsw.strategy.multi_stop_optimizer import MultiStopOptimizer
+
+                self._optimizer = MultiStopOptimizer(
+                    pit_loss=self._track_pit_loss,
+                    total_laps=total_race_laps,
+                )
+
+                logger.info(
+                    "track_priors_resolved",
+                    pit_loss=round(self._track_pit_loss, 2),
+                    sources={c: p.source for c, p in self._resolved_priors.items()},
+                )
             except Exception as e:
                 logger.warning("track_learning_failed", error=str(e))
                 self._track_characteristics = None
@@ -619,18 +647,36 @@ class SimulationService:
             if model.estimated_base_pace is None:
                 model.estimated_base_pace = self._session_base_pace
 
+            # Enable neural blending for nonlinear cliff prediction
+            if model._neural_model is None:
+                track_temp = race_state.weather.get("track_temp", 30.0) if race_state.weather else 30.0
+                model.set_session_context(
+                    track_temp=track_temp,
+                    total_laps=race_state.total_laps or DEFAULT_TOTAL_LAPS,
+                    session_avg_pace=self._session_base_pace,
+                )
+
             # Get latest lap time if available
             last_lap_time = driver.last_lap_time
+            compound = driver.compound or "MEDIUM"
             if last_lap_time and last_lap_time > 0:
+                # Resolve season/track priors for this driver's compound
+                season_priors = self._season_learner.get_driver_priors(
+                    datetime.now(UTC).year, driver.driver_number, compound,
+                )
+                tp = self._resolved_priors.get(compound)
+
                 # Update model (fuel-corrected: race_lap subtracted inside)
                 self.model_manager.update_driver(
                     driver_number=driver.driver_number,
                     lap_in_stint=driver.lap_in_stint,
                     lap_time=last_lap_time,
                     stint_number=driver.stint_number,
-                    compound=driver.compound or "MEDIUM",
+                    compound=compound,
                     is_valid=True,  # Simplified validation
                     race_lap=current_lap,
+                    season_priors=season_priors,
+                    track_priors=tp,
                 )
 
             # Get predictions from Online Model (RLS)
@@ -763,12 +809,14 @@ class SimulationService:
                     if cd:
                         cliff_age = cd.cliff_lap
 
-                # Get strategy recommendation with real track data
+                # Get strategy recommendation with real track data + optimizer
                 recommendation = self._strategy_service.get_recommendation(
                     driver=driver,
                     race_state=race_state,
                     pit_loss=pit_loss,
                     cliff_age=cliff_age,
+                    optimizer=self._optimizer,
+                    track_priors=self._resolved_priors or None,
                 )
 
                 # Compute fuel laps remaining from physics model
@@ -801,6 +849,57 @@ class SimulationService:
             except Exception as e:
                 logger.debug("strategy_update_error", driver=driver.driver_number, error=str(e))
                 updated_drivers[driver.driver_number] = driver
+
+        # Battle probability pass — uses predicted_pace + cliff_risk already on driver state
+        from rsw.features.battle import compute_overtake_probability
+
+        for driver_num, driver in updated_drivers.items():
+            # Resolve effective gap: use stored interval if available, else compute from
+            # gap_to_leader delta (simulation mode doesn't set gap_to_ahead directly)
+            effective_gap = driver.gap_to_ahead
+            if effective_gap is None:
+                defender_for_gap = next(
+                    (d for d in updated_drivers.values() if d.position == driver.position - 1),
+                    None,
+                )
+                if (
+                    defender_for_gap is not None
+                    and driver.gap_to_leader is not None
+                    and defender_for_gap.gap_to_leader is not None
+                ):
+                    effective_gap = driver.gap_to_leader - defender_for_gap.gap_to_leader
+
+            if effective_gap is None or effective_gap > 1.5:
+                if driver.overtake_probability is not None:
+                    updated_drivers[driver_num] = driver.model_copy(
+                        update={"overtake_probability": None, "battle_key_factor": None}
+                    )
+                continue
+
+            defender = next(
+                (d for d in updated_drivers.values() if d.position == driver.position - 1),
+                None,
+            )
+            if defender is None:
+                continue
+
+            pace_att = driver.predicted_pace[0] if driver.predicted_pace else 0.0
+            pace_def = defender.predicted_pace[0] if defender.predicted_pace else 0.0
+
+            prob, key_factor = compute_overtake_probability(
+                gap=effective_gap,
+                drs_attacker=driver.drs,
+                pace_next_attacker=pace_att,
+                pace_next_defender=pace_def,
+                cliff_risk_defender=defender.cliff_risk or 0.0,
+                attacker_tyre_age=driver.tyre_age,
+                defender_tyre_age=defender.tyre_age,
+                attacker_compound=driver.compound or "HARD",
+                defender_compound=defender.compound or "HARD",
+            )
+            updated_drivers[driver_num] = driver.model_copy(
+                update={"overtake_probability": prob, "battle_key_factor": key_factor}
+            )
 
         # Apply updates to state
         new_state = race_state.model_copy(update={"drivers": updated_drivers})

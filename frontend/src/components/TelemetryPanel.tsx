@@ -11,6 +11,7 @@
 import type { FC } from 'react';
 import type { DriverState } from '../types';
 import styles from './TelemetryPanel.module.css';
+import { DRS_ACTIVE_CODES, DRS_AVAILABLE_CODE } from '../config/constants';
 
 // =============================================================================
 // Types
@@ -31,8 +32,8 @@ interface TelemetryPanelProps {
 // =============================================================================
 
 const DRSIndicator: FC<DRSIndicatorProps> = ({ status, size = 'medium' }) => {
-    const isActive = [10, 12, 14].includes(status);
-    const isAvailable = status === 8;
+    const isActive = DRS_ACTIVE_CODES.includes(status);
+    const isAvailable = status === DRS_AVAILABLE_CODE;
     const dotSize = size === 'small' ? 7 : size === 'large' ? 14 : 10;
     const textSize = size === 'small' ? '0.6rem' : size === 'large' ? '0.8rem' : '0.7rem';
 

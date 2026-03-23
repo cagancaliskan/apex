@@ -9,6 +9,7 @@
 
 import { useMemo, useState, useRef, useCallback, type FC, type MouseEvent } from 'react';
 import styles from './RaceProgressBar.module.css';
+import { LAP_MARKER_INTERVAL } from '../config/constants';
 
 // =============================================================================
 // Types
@@ -87,7 +88,7 @@ interface LapMarkerProps {
 }
 
 const LapMarker: FC<LapMarkerProps> = ({ position, lapNumber, totalLaps }) => {
-    if (lapNumber % 5 !== 0 && lapNumber !== 1 && lapNumber !== totalLaps) return null;
+    if (lapNumber % LAP_MARKER_INTERVAL !== 0 && lapNumber !== 1 && lapNumber !== totalLaps) return null;
     return (
         <div style={{ position: 'absolute', left: `${position}%`, top: 0, bottom: 0, width: 1, backgroundColor: 'rgba(255, 255, 255, 0.15)', zIndex: 0 }}>
             <span style={{ position: 'absolute', top: -16, left: '50%', transform: 'translateX(-50%)', fontSize: '0.6rem', color: 'var(--text-muted)' }}>L{lapNumber}</span>

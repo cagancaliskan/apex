@@ -4,11 +4,13 @@ Fuel Load Physics Model.
 Simulates lap time gain as fuel is burned.
 """
 
+from rsw.config.constants import FUEL_BURN_RATE_KG_PER_LAP, FUEL_TIME_COST_PER_KG, STARTING_FUEL_KG
+
 
 class FuelModel:
-    STARTING_FUEL_KG = 110.0
-    BURN_RATE_KG_PER_LAP = 1.7
-    TIME_COST_PER_KG = 0.035  # seconds per kg
+    STARTING_FUEL_KG = STARTING_FUEL_KG
+    BURN_RATE_KG_PER_LAP = FUEL_BURN_RATE_KG_PER_LAP
+    TIME_COST_PER_KG = FUEL_TIME_COST_PER_KG
 
     def __init__(self, start_fuel: float = STARTING_FUEL_KG):
         self.starting_fuel = start_fuel

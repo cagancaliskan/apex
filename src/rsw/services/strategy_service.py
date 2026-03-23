@@ -93,11 +93,19 @@ class StrategyService(IStrategyCalculator):
         race_state: RaceState,
         pit_loss: float = 22.0,
         cliff_age: int | None = None,
+        optimizer: Any = None,
+        track_priors: dict | None = None,
     ) -> dict:
         """
         Get pit recommendation for a driver.
 
-        Encapsulation: Complex decision logic hidden.
+        Args:
+            driver: Current driver state
+            race_state: Current race state
+            pit_loss: Pit stop time loss (track-learned or default)
+            cliff_age: Track-learned cliff age for current compound
+            optimizer: MultiStopOptimizer instance for strategy comparison
+            track_priors: Resolved track priors dict (compound -> ResolvedPriors)
         """
         from rsw.strategy.decision import evaluate_strategy
 
@@ -114,9 +122,11 @@ class StrategyService(IStrategyCalculator):
             pit_loss=pit_loss,
             safety_car=race_state.safety_car,
             cliff_age=cliff_age,
+            optimizer=optimizer,
+            track_priors=track_priors,
         )
 
-        return {
+        result = {
             "recommendation": rec.recommendation.value,
             "confidence": rec.confidence,
             "reason": rec.reason,
@@ -130,6 +140,20 @@ class StrategyService(IStrategyCalculator):
             if rec.pit_window
             else None,
         }
+
+        # Include multi-stop comparison data if available
+        if rec.multi_stop_comparison is not None:
+            msc = rec.multi_stop_comparison
+            result["multi_stop"] = {
+                "recommended_stops": msc.recommended.n_stops,
+                "recommended_sequence": msc.recommended.compound_sequence,
+                "recommended_time": round(msc.recommended.estimated_race_time, 1),
+                "confidence": round(msc.recommended.confidence, 2),
+                "reason": msc.recommendation_reason,
+                "alternatives": {k: v for k, v in msc.time_deltas.items()},
+            }
+
+        return result
 
     def run_monte_carlo(
         self,

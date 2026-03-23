@@ -3,6 +3,7 @@
  */
 
 import type { TyreCompound } from '../types';
+import { TYRE_COLORS } from '../config/constants';
 
 // =============================================================================
 // Formatting Utilities
@@ -74,57 +75,6 @@ export function getTyreClass(compound: string | null | undefined): string {
  */
 export function getTyreColor(compound: TyreCompound | string | null): string {
     if (!compound) return '#888';
-
-    const colors: Record<string, string> = {
-        SOFT: '#ff2222',
-        MEDIUM: '#ffcc00',
-        HARD: '#ffffff',
-        INTERMEDIATE: '#44dd44',
-        WET: '#4488ff',
-    };
-
-    return colors[compound.toUpperCase()] ?? '#888';
+    return TYRE_COLORS[compound.toUpperCase()] ?? '#888';
 }
 
-// =============================================================================
-// Number Utilities
-// =============================================================================
-
-/**
- * Clamp a value between min and max
- */
-export function clamp(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, value));
-}
-
-/**
- * Linear interpolation
- */
-export function lerp(start: number, end: number, t: number): number {
-    return start + (end - start) * clamp(t, 0, 1);
-}
-
-// =============================================================================
-// Team Colors
-// =============================================================================
-
-export const TEAM_COLORS: Record<string, string> = {
-    'Red Bull Racing': '#3671C6',
-    'Ferrari': '#E8002D',
-    'Mercedes': '#27F4D2',
-    'McLaren': '#FF8000',
-    'Aston Martin': '#229971',
-    'Alpine': '#FF87BC',
-    'Williams': '#64C4FF',
-    'RB': '#6692BC',
-    'Kick Sauber': '#52E252',
-    'Haas F1 Team': '#B6BABD',
-};
-
-/**
- * Get team color by name
- */
-export function getTeamColor(teamName: string | null | undefined): string {
-    if (!teamName) return '#888';
-    return TEAM_COLORS[teamName] ?? '#888';
-}

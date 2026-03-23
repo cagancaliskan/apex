@@ -1,20 +1,29 @@
 /**
  * Backtest Page
- * 
- * Allows users to run strategy backtests on historical races
- * and analyze what-if scenarios.
- * 
- * New in v3.0.1 (Medium priority feature)
+ *
+ * Runs alternative pit strategy simulations against historical races
+ * via POST /api/backtest/run and shows position + time deltas.
  */
 
-import { useState, type FC } from 'react';
+import { useState, useEffect, type FC } from 'react';
+import {
+    API_SESSIONS,
+    API_BACKTEST_RUN,
+    DEFAULT_YEAR,
+    AVAILABLE_YEARS,
+    STRATEGY_OPTIONS,
+} from '../config/constants';
 
 interface BacktestResult {
-    originalPosition: number;
-    alternativePosition: number;
-    positionGain: number;
-    originalStrategy: string;
-    alternativeStrategy: string;
+    original_position: number;
+    alternative_position: number;
+    position_delta: number;
+    time_delta: number;
+    original_strategy: string;
+    alternative_strategy: string;
+    driver_name: string;
+    session_name: string;
+    total_laps: number;
 }
 
 interface SessionOption {
@@ -24,42 +33,67 @@ interface SessionOption {
     circuit: string;
 }
 
-const AVAILABLE_SESSIONS: SessionOption[] = [
-    { year: 2023, round: 1, name: 'Bahrain GP', circuit: 'Bahrain' },
-    { year: 2023, round: 2, name: 'Saudi Arabian GP', circuit: 'Jeddah' },
-    { year: 2023, round: 3, name: 'Australian GP', circuit: 'Melbourne' },
-    { year: 2023, round: 4, name: 'Azerbaijan GP', circuit: 'Baku' },
-    { year: 2023, round: 5, name: 'Miami GP', circuit: 'Miami' },
-];
-
-/**
- * Backtest Page Component
- */
 const BacktestPage: FC = () => {
+    const [selectedYear, setSelectedYear] = useState(DEFAULT_YEAR);
+    const [availableSessions, setAvailableSessions] = useState<SessionOption[]>([]);
     const [selectedSession, setSelectedSession] = useState<SessionOption | null>(null);
     const [selectedDriver, setSelectedDriver] = useState<string>('');
-    const [alternativeStrategy, setAlternativeStrategy] = useState<string>('1-stop');
+    const [alternativeStrategy, setAlternativeStrategy] = useState<string>(STRATEGY_OPTIONS[0]);
     const [isRunning, setIsRunning] = useState(false);
     const [result, setResult] = useState<BacktestResult | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setSelectedSession(null);
+        fetch(`${API_SESSIONS}?year=${selectedYear}`)
+            .then(r => r.json())
+            .then((data: Array<{ year: number; round_number: number; session_name: string; circuit: string }>) => {
+                setAvailableSessions(data.map(s => ({
+                    year: s.year,
+                    round: s.round_number,
+                    name: s.session_name,
+                    circuit: s.circuit,
+                })));
+            })
+            .catch(() => setAvailableSessions([]));
+    }, [selectedYear]);
 
     const handleRunBacktest = async () => {
         if (!selectedSession || !selectedDriver) return;
 
         setIsRunning(true);
+        setResult(null);
+        setError(null);
 
-        // Simulate backtest running
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            const resp = await fetch(API_BACKTEST_RUN, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    year: selectedSession.year,
+                    round: selectedSession.round,
+                    driver_acronym: selectedDriver,
+                    strategy: alternativeStrategy,
+                }),
+            });
 
-        // Simulated result
-        setResult({
-            originalPosition: 5,
-            alternativePosition: 3,
-            positionGain: 2,
-            originalStrategy: '2-stop (S-M-H)',
-            alternativeStrategy: alternativeStrategy,
-        });
+            if (!resp.ok) {
+                const body = await resp.json().catch(() => ({ detail: resp.statusText }));
+                throw new Error(body.detail ?? resp.statusText);
+            }
 
-        setIsRunning(false);
+            const data: BacktestResult = await resp.json();
+            setResult(data);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : String(e));
+        } finally {
+            setIsRunning(false);
+        }
+    };
+
+    const timeDeltaLabel = (delta: number) => {
+        const abs = Math.abs(delta).toFixed(1);
+        return delta < 0 ? `−${abs}s faster` : `+${abs}s slower`;
     };
 
     return (
@@ -86,6 +120,36 @@ const BacktestPage: FC = () => {
                 <div className="card">
                     <h3 className="card-title">Configuration</h3>
 
+                    {/* Year Selection */}
+                    <div style={{ marginBottom: 'var(--space-md)' }}>
+                        <label style={{
+                            display: 'block',
+                            fontSize: '0.75rem',
+                            color: 'var(--text-muted)',
+                            marginBottom: 'var(--space-xs)',
+                            textTransform: 'uppercase'
+                        }}>
+                            Season
+                        </label>
+                        <select
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(Number(e.target.value))}
+                            style={{
+                                width: '100%',
+                                padding: 'var(--space-sm)',
+                                background: 'var(--bg-elevated)',
+                                border: '1px solid var(--border-subtle)',
+                                borderRadius: 'var(--radius-sm)',
+                                color: 'var(--text-primary)',
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            {AVAILABLE_YEARS.map(y => (
+                                <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     {/* Session Selection */}
                     <div style={{ marginBottom: 'var(--space-md)' }}>
                         <label style={{
@@ -101,7 +165,7 @@ const BacktestPage: FC = () => {
                             value={selectedSession ? `${selectedSession.year}-${selectedSession.round}` : ''}
                             onChange={(e) => {
                                 const [year, round] = e.target.value.split('-').map(Number);
-                                const session = AVAILABLE_SESSIONS.find(s => s.year === year && s.round === round);
+                                const session = availableSessions.find(s => s.year === year && s.round === round);
                                 setSelectedSession(session || null);
                             }}
                             style={{
@@ -115,7 +179,7 @@ const BacktestPage: FC = () => {
                             }}
                         >
                             <option value="">Select a race...</option>
-                            {AVAILABLE_SESSIONS.map(s => (
+                            {availableSessions.map(s => (
                                 <option key={`${s.year}-${s.round}`} value={`${s.year}-${s.round}`}>
                                     {s.year} {s.name}
                                 </option>
@@ -171,7 +235,7 @@ const BacktestPage: FC = () => {
                             Alternative Strategy
                         </label>
                         <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-                            {['1-stop', '2-stop', '3-stop'].map(strat => (
+                            {STRATEGY_OPTIONS.map(strat => (
                                 <button
                                     key={strat}
                                     onClick={() => setAlternativeStrategy(strat)}
@@ -219,7 +283,7 @@ const BacktestPage: FC = () => {
                 <div className="card">
                     <h3 className="card-title">Results</h3>
 
-                    {!result && !isRunning && (
+                    {!result && !isRunning && !error && (
                         <div style={{
                             textAlign: 'center',
                             padding: 'var(--space-xl)',
@@ -230,10 +294,7 @@ const BacktestPage: FC = () => {
                     )}
 
                     {isRunning && (
-                        <div style={{
-                            textAlign: 'center',
-                            padding: 'var(--space-xl)'
-                        }}>
+                        <div style={{ textAlign: 'center', padding: 'var(--space-xl)' }}>
                             <div style={{
                                 width: '40px',
                                 height: '40px',
@@ -244,18 +305,36 @@ const BacktestPage: FC = () => {
                                 margin: '0 auto var(--space-md)'
                             }} />
                             <p style={{ color: 'var(--text-muted)' }}>
-                                Running Monte Carlo simulation...
+                                Loading race data and running simulation...
                             </p>
+                        </div>
+                    )}
+
+                    {error && !isRunning && (
+                        <div style={{
+                            padding: 'var(--space-md)',
+                            background: 'rgba(248,81,73,0.08)',
+                            border: '1px solid var(--status-red)',
+                            borderRadius: 'var(--radius-md)',
+                            color: 'var(--status-red)',
+                            fontSize: '0.85rem'
+                        }}>
+                            {error}
                         </div>
                     )}
 
                     {result && !isRunning && (
                         <div>
+                            {/* Session / Driver */}
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 'var(--space-md)' }}>
+                                {result.session_name} · {result.driver_name} · {result.total_laps} laps
+                            </div>
+
                             {/* Position Comparison */}
                             <div style={{
                                 display: 'flex',
                                 justifyContent: 'space-around',
-                                marginBottom: 'var(--space-lg)',
+                                marginBottom: 'var(--space-md)',
                                 padding: 'var(--space-md)',
                                 background: 'var(--bg-elevated)',
                                 borderRadius: 'var(--radius-md)'
@@ -265,7 +344,7 @@ const BacktestPage: FC = () => {
                                         ORIGINAL
                                     </div>
                                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: '2rem', fontWeight: 700 }}>
-                                        P{result.originalPosition}
+                                        P{result.original_position}
                                     </div>
                                 </div>
                                 <div style={{
@@ -284,43 +363,63 @@ const BacktestPage: FC = () => {
                                         fontFamily: 'var(--font-sans)',
                                         fontSize: '2rem',
                                         fontWeight: 700,
-                                        color: result.positionGain > 0 ? 'var(--status-green)' : 'var(--text-primary)'
+                                        color: result.position_delta > 0
+                                            ? 'var(--status-green)'
+                                            : result.position_delta < 0
+                                                ? 'var(--status-red)'
+                                                : 'var(--text-primary)'
                                     }}>
-                                        P{result.alternativePosition}
+                                        P{result.alternative_position}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Position Change */}
-                            {result.positionGain !== 0 && (
+                            {/* Position change badge */}
+                            {result.position_delta !== 0 && (
                                 <div style={{
                                     textAlign: 'center',
-                                    padding: 'var(--space-md)',
-                                    background: result.positionGain > 0 ? 'rgba(76, 217, 100, 0.1)' : 'rgba(255, 68, 68, 0.1)',
-                                    border: `1px solid ${result.positionGain > 0 ? 'var(--status-green)' : 'var(--status-red)'}`,
+                                    padding: 'var(--space-sm)',
+                                    background: result.position_delta > 0
+                                        ? 'rgba(76,217,100,0.1)'
+                                        : 'rgba(255,68,68,0.1)',
+                                    border: `1px solid ${result.position_delta > 0 ? 'var(--status-green)' : 'var(--status-red)'}`,
                                     borderRadius: 'var(--radius-md)',
-                                    marginBottom: 'var(--space-md)'
+                                    marginBottom: 'var(--space-sm)'
                                 }}>
                                     <span style={{
                                         fontFamily: 'var(--font-sans)',
                                         fontSize: '1.2rem',
                                         fontWeight: 700,
-                                        color: result.positionGain > 0 ? 'var(--status-green)' : 'var(--status-red)'
+                                        color: result.position_delta > 0 ? 'var(--status-green)' : 'var(--status-red)'
                                     }}>
-                                        {result.positionGain > 0 ? '▲' : '▼'} {Math.abs(result.positionGain)} positions
+                                        {result.position_delta > 0 ? '▲' : '▼'} {Math.abs(result.position_delta)} position{Math.abs(result.position_delta) !== 1 ? 's' : ''}
                                     </span>
                                 </div>
                             )}
+
+                            {/* Time delta */}
+                            <div style={{
+                                textAlign: 'center',
+                                padding: 'var(--space-sm)',
+                                background: 'var(--bg-elevated)',
+                                borderRadius: 'var(--radius-md)',
+                                marginBottom: 'var(--space-md)',
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: '0.9rem',
+                                color: result.time_delta < 0 ? 'var(--status-green)' : 'var(--text-secondary)'
+                            }}>
+                                {timeDeltaLabel(result.time_delta)}
+                            </div>
 
                             {/* Strategy Details */}
                             <div style={{ fontSize: '0.85rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-xs)' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Original:</span>
-                                    <span>{result.originalStrategy}</span>
+                                    <span>{result.original_strategy}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Alternative:</span>
-                                    <span style={{ color: 'var(--color-accent)' }}>{result.alternativeStrategy}</span>
+                                    <span style={{ color: 'var(--color-accent)' }}>{result.alternative_strategy}</span>
                                 </div>
                             </div>
                         </div>

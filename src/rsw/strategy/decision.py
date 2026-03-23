@@ -6,18 +6,34 @@ with confidence scores and reasoning.
 """
 
 from dataclasses import dataclass
-from enum import Enum
+
+from rsw.config.constants import (
+    CLIFF_RISK_CONFIDENCE_FACTOR,
+    COMPOUND_SELECTION_LONG_LAP_THRESHOLD,
+    COMPOUND_SELECTION_MED_LAP_THRESHOLD,
+    DECISION_PIT_NOW_CONFIDENCE,
+    EXTEND_STINT_REMAINING_LAPS,
+    EXTEND_STINT_TYRE_AGE,
+    QUICK_REC_CONSIDER_PIT_THRESHOLD,
+    QUICK_REC_PIT_NOW_CLIFF_THRESHOLD,
+    QUICK_REC_STAY_OUT_REMAINING_LAPS,
+    SC_PIT_CONFIDENCE,
+    TRAFFIC_CONFIDENCE_THRESHOLD,
+    TRAFFIC_SEVERITY_MULTIPLIER,
+    UNDERCUT_DEG_DELTA,
+    UNDERCUT_GAP_BUFFER,
+    WEATHER_PACE_DELTA_PIT_THRESHOLD,
+)
+from rsw.domain import RecommendationType
+from rsw.models.physics.pit_traffic_model import PitTrafficModel
+from rsw.models.physics.weather_model import (
+    WeatherCondition,
+    calculate_weather_pace_delta,
+    determine_condition,
+    should_pit_for_weather,
+)
 
 from .pit_window import PitWindow, find_optimal_window, should_pit_now
-
-
-class RecommendationType(Enum):
-    """Types of strategy recommendations."""
-
-    PIT_NOW = "PIT_NOW"
-    STAY_OUT = "STAY_OUT"
-    CONSIDER_PIT = "CONSIDER_PIT"
-    EXTEND_STINT = "EXTEND_STINT"
 
 
 @dataclass
@@ -53,6 +69,9 @@ class StrategyRecommendation:
     # Alternative strategies
     alternatives: list[str] | None = None
 
+    # Multi-stop strategy comparison (when optimizer is available)
+    multi_stop_comparison: "StrategyComparison | None" = None
+
 
 def evaluate_strategy(
     driver_number: int,
@@ -73,6 +92,10 @@ def evaluate_strategy(
     cliff_age: int | None = None,
     rain_expected: bool = False,
     rain_laps_away: int | None = None,
+    all_drivers: dict | None = None,
+    optimizer: "MultiStopOptimizer | None" = None,
+    track_priors: dict | None = None,
+    compounds_used: list[str] | None = None,
 ) -> StrategyRecommendation:
     """
     Evaluate strategy and generate recommendation.
@@ -130,12 +153,12 @@ def evaluate_strategy(
     undercut_threat = False
     overcut_opportunity = False
 
-    if gap_to_ahead and gap_to_ahead < pit_loss + 3.0:
-        if ahead_deg > deg_slope + 0.02:
+    if gap_to_ahead and gap_to_ahead < pit_loss + UNDERCUT_GAP_BUFFER:
+        if ahead_deg > deg_slope + UNDERCUT_DEG_DELTA:
             undercut_threat = True
 
     if gap_to_behind and gap_to_behind < pit_loss:
-        if deg_slope < behind_deg - 0.02:
+        if deg_slope < behind_deg - UNDERCUT_DEG_DELTA:
             overcut_opportunity = True
 
     # Re-evaluate with threat info
@@ -150,57 +173,104 @@ def evaluate_strategy(
             pit_loss=pit_loss,
         )
 
-    # --- Weather integration ---
-    # If rain is expected and we're on slicks, recommend early pit for inters
+    # --- Weather integration (via weather_model) ---
     weather_override = False
-    if rain_expected and compound.upper() not in ("INTERMEDIATE", "WET"):
-        if rain_laps_away is not None and rain_laps_away <= 5:
-            # Rain imminent — pit now for intermediates
+    weather_new_compound = compound
+    current_condition = WeatherCondition.DRY
+    forecast_condition = WeatherCondition.DRY
+
+    if rain_expected:
+        # Classify conditions using weather model
+        precipitation = 0.0 if not rain_expected else (1.0 if rain_laps_away and rain_laps_away <= 3 else 0.0)
+        current_condition = determine_condition(
+            precipitation=precipitation,
+            precipitation_probability=80.0 if rain_expected else 0.0,
+        )
+        forecast_condition = WeatherCondition.WET if rain_expected else WeatherCondition.DRY
+
+        # Check pace delta — are we on the wrong tyres?
+        pace_delta = calculate_weather_pace_delta(current_condition, compound.upper())
+        if pace_delta > WEATHER_PACE_DELTA_PIT_THRESHOLD:
             weather_override = True
             should_pit = True
             pit_confidence = 0.90
-            pit_reason = f"Rain expected in ~{rain_laps_away} laps — switch to intermediates"
-        elif rain_laps_away is not None and rain_laps_away <= 10:
-            # Rain approaching — strengthen pit recommendation
-            if not should_pit:
+            weather_new_compound = "INTERMEDIATE"
+            pit_reason = f"Wrong tyres for conditions — {pace_delta:.1f}s/lap penalty"
+
+        # Forecast-based pit decision
+        if not weather_override and rain_laps_away is not None:
+            should_weather_pit, new_cpd, w_conf = should_pit_for_weather(
+                current_compound=compound.upper(),
+                current_condition=current_condition,
+                forecast_condition=forecast_condition,
+                laps_to_change=rain_laps_away,
+                remaining_laps=remaining_laps,
+            )
+            if should_weather_pit:
+                weather_override = True
                 should_pit = True
-                pit_confidence = 0.70
-                pit_reason = f"Rain forecast in ~{rain_laps_away} laps — consider early pit"
+                pit_confidence = w_conf
+                weather_new_compound = new_cpd
+                pit_reason = f"Weather change in ~{rain_laps_away} laps — switch to {new_cpd}"
+
+    # --- Pit traffic estimation ---
+    traffic_severity = 0.0
+    if all_drivers and should_pit:
+        traffic_model = PitTrafficModel(pit_loss=pit_loss)
+        driver_gap = 0.0
+        driver_data = all_drivers.get(driver_number)
+        if driver_data:
+            driver_gap = getattr(driver_data, "gap_to_leader", 0.0) or 0.0
+        traffic_severity = traffic_model.check_rejoin_traffic(
+            exit_lap_time_prediction=driver_gap,
+            current_lap=current_lap,
+            race_state_drivers=all_drivers,
+        )
+        # High traffic reduces pit confidence (prefer staying out in traffic)
+        if traffic_severity > TRAFFIC_CONFIDENCE_THRESHOLD:
+            pit_confidence *= (1.0 - traffic_severity * TRAFFIC_SEVERITY_MULTIPLIER)
 
     # Determine recommendation type
     if safety_car and window.min_lap <= current_lap <= window.max_lap:
         rec_type = RecommendationType.PIT_NOW
-        confidence = 0.95
+        confidence = SC_PIT_CONFIDENCE
         reason = "Safety car - free pit stop opportunity"
     elif weather_override:
         rec_type = RecommendationType.PIT_NOW
         confidence = pit_confidence
         reason = pit_reason
     elif should_pit:
-        if pit_confidence > 0.7:
+        if pit_confidence > DECISION_PIT_NOW_CONFIDENCE:
             rec_type = RecommendationType.PIT_NOW
         else:
             rec_type = RecommendationType.CONSIDER_PIT
         confidence = pit_confidence
         reason = pit_reason
-    elif remaining_laps <= 10 and tyre_age < 15:
+    elif remaining_laps <= EXTEND_STINT_REMAINING_LAPS and tyre_age < EXTEND_STINT_TYRE_AGE:
         rec_type = RecommendationType.EXTEND_STINT
         confidence = 0.8
         reason = f"Only {remaining_laps} laps left - no pit needed"
     else:
         rec_type = RecommendationType.STAY_OUT
-        confidence = 1.0 - cliff_risk * 0.5
+        confidence = 1.0 - cliff_risk * CLIFF_RISK_CONFIDENCE_FACTOR
         reason = window.reason
 
     # Build pit decision if pitting
     pit_decision = None
     if rec_type in (RecommendationType.PIT_NOW, RecommendationType.CONSIDER_PIT):
         # Recommend compound based on conditions
-        if weather_override or (rain_expected and rain_laps_away and rain_laps_away <= 5):
-            new_compound = "INTERMEDIATE"
-        elif remaining_laps > 30:
+        if weather_override:
+            new_compound = weather_new_compound
+        elif optimizer is not None:
+            new_compound = optimizer.get_optimal_compound(
+                remaining_laps=remaining_laps,
+                stint_number=2,  # Next stint
+                compounds_used=compounds_used or [compound],
+                track_priors=track_priors,
+            )
+        elif remaining_laps > COMPOUND_SELECTION_LONG_LAP_THRESHOLD:
             new_compound = "MEDIUM" if compound == "SOFT" else "HARD"
-        elif remaining_laps > 15:
+        elif remaining_laps > COMPOUND_SELECTION_MED_LAP_THRESHOLD:
             new_compound = "MEDIUM"
         else:
             new_compound = "SOFT"
@@ -222,6 +292,20 @@ def evaluate_strategy(
     if rain_expected and not weather_override:
         alternatives.append("Monitor weather — rain may change strategy")
 
+    # Multi-stop comparison (when optimizer is available)
+    multi_stop = None
+    if optimizer is not None:
+        try:
+            multi_stop = optimizer.compare_strategies(
+                current_lap=current_lap,
+                base_pace=current_pace,
+                current_compound=compound,
+                compounds_used=compounds_used or [compound],
+                track_priors=track_priors,
+            )
+        except Exception:
+            pass  # Non-critical — don't break strategy if comparison fails
+
     return StrategyRecommendation(
         driver_number=driver_number,
         recommendation=rec_type,
@@ -232,6 +316,7 @@ def evaluate_strategy(
         undercut_threat=undercut_threat,
         overcut_opportunity=overcut_opportunity,
         alternatives=alternatives,
+        multi_stop_comparison=multi_stop,
     )
 
 
@@ -247,14 +332,14 @@ def get_quick_recommendation(
     Returns:
         Tuple of (recommendation, color)
     """
-    if cliff_risk > 0.8:
+    if cliff_risk > QUICK_REC_PIT_NOW_CLIFF_THRESHOLD:
         return "PIT NOW", "red"
 
-    if remaining_laps <= 8:
+    if remaining_laps <= QUICK_REC_STAY_OUT_REMAINING_LAPS:
         return "STAY OUT", "green"
 
     if in_window:
-        if cliff_risk > 0.5:
+        if cliff_risk > QUICK_REC_CONSIDER_PIT_THRESHOLD:
             return "CONSIDER PIT", "yellow"
         return "IN WINDOW", "cyan"
 

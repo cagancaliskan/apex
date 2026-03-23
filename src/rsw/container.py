@@ -109,14 +109,17 @@ def create_dependencies() -> AppDependencies:
 
     Follows: Dependency Inversion (depend on abstractions)
     """
-    from rsw.ingest import OpenF1Client
+    import os
+
+    from rsw.factories import DataProviderFactory
     from rsw.services.strategy_service import StrategyService
     from rsw.state.store import RaceStateStore
 
     config = get_config()
 
-    # Create implementations
-    data_provider = OpenF1Client()
+    # Create implementations via factory (respects RSW_DATA_PROVIDER env var)
+    provider_type = os.getenv("RSW_DATA_PROVIDER", "openf1")
+    data_provider = DataProviderFactory.create(provider_type)
     state_store = RaceStateStore()
     strategy_calculator = StrategyService(config.strategy)
 
@@ -145,14 +148,18 @@ def get_container() -> Container:
 
 def _register_dependencies(container: Container) -> None:
     """Register all dependencies in the container."""
+    import os
     from collections.abc import Callable
     from typing import cast
 
-    from rsw.ingest import OpenF1Client
+    from rsw.factories import DataProviderFactory
     from rsw.state.store import RaceStateStore
 
+    provider_type = os.getenv("RSW_DATA_PROVIDER", "openf1")
     container.register(
-        IDataProvider, cast(Callable[..., IDataProvider], OpenF1Client), singleton=True
+        IDataProvider,
+        cast(Callable[..., IDataProvider], lambda: DataProviderFactory.create(provider_type)),
+        singleton=True,
     )  # type: ignore[type-abstract]
     container.register(
         IStateStore, cast(Callable[..., IStateStore], RaceStateStore), singleton=True

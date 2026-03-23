@@ -122,7 +122,7 @@ Comprehensive health check with dependency status.
 ```json
 {
   "status": "healthy",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "environment": "production",
   "timestamp": "2024-01-15T14:30:00Z",
   "checks": {
@@ -171,7 +171,7 @@ Application version information.
 **Response:** `200 OK`
 ```json
 {
-  "version": "2.0.1",
+  "version": "2.1.0",
   "environment": "production",
   "python": "3.11"
 }

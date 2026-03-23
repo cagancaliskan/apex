@@ -54,6 +54,8 @@ const mockDriver = (overrides: Partial<DriverState> = {}): DriverState => ({
     predicted_pace: [],
     predicted_rejoin_position: 0,
     rejoin_traffic_severity: 0.0,
+    overtake_probability: null,
+    battle_key_factor: null,
     in_pit: false,
     retired: false,
     stint_number: 1,

@@ -67,6 +67,10 @@ export interface DriverState {
     predicted_rejoin_position: number | null;
     rejoin_traffic_severity: number | null;
 
+    // Battle & Overtake
+    overtake_probability: number | null;
+    battle_key_factor: string | null;
+
     // Status flags
     in_pit: boolean;
     retired: boolean;
@@ -295,13 +299,3 @@ export interface ChampionshipSimulationResult {
     elapsed_seconds: number;
 }
 
-// =============================================================================
-// UI Types
-// =============================================================================
-
-export interface SelectedDriver {
-    driverNumber: number;
-    showTelemetry: boolean;
-}
-
-export type ViewMode = 'live' | 'replay' | 'analysis';

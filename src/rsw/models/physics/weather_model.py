@@ -12,6 +12,18 @@ Design: Pure functions, no side effects.
 from dataclasses import dataclass
 from enum import Enum
 
+from rsw.config.constants import (
+    WEATHER_CONDITION_CHANGE_LAPS,
+    WEATHER_DRYING_PIT_LAPS,
+    WEATHER_PACE_DELTA_PIT_THRESHOLD,
+    WEATHER_RAIN_PREP_LAPS,
+    WEATHER_RAIN_PROBABLE_PCT,
+    WEATHER_SC_MULTIPLIERS,
+    WEATHER_SC_PROBABILITY_CAP,
+    WEATHER_VERY_WET_MM,
+    WEATHER_WET_MM,
+)
+
 
 class WeatherCondition(Enum):
     """Track surface condition."""
@@ -44,7 +56,7 @@ class WeatherState:
     @property
     def rain_likely_soon(self) -> bool:
         """Rain is likely in the next 30 minutes."""
-        return self.rain_probability >= 60
+        return self.rain_probability >= WEATHER_RAIN_PROBABLE_PCT
 
 
 # Compound performance in different conditions
@@ -119,9 +131,9 @@ def determine_condition(
         precipitation_probability: Probability of rain (0-100)
         track_wet: Whether track is currently wet from earlier rain
     """
-    if precipitation >= 5.0:
+    if precipitation >= WEATHER_VERY_WET_MM:
         return WeatherCondition.VERY_WET
-    elif precipitation >= 1.0:
+    elif precipitation >= WEATHER_WET_MM:
         return WeatherCondition.WET
     elif precipitation > 0 or track_wet:
         return WeatherCondition.DAMP
@@ -155,11 +167,11 @@ def should_pit_for_weather(
     current_delta = calculate_weather_pace_delta(current_condition, current_compound)
 
     # If already on wrong tyres, pit now
-    if current_delta > 3.0:
+    if current_delta > WEATHER_PACE_DELTA_PIT_THRESHOLD:
         return True, optimal_current, 0.9
 
     # If conditions changing soon
-    if forecast_condition != current_condition and laps_to_change <= 3:
+    if forecast_condition != current_condition and laps_to_change <= WEATHER_CONDITION_CHANGE_LAPS:
         if optimal_forecast != current_compound:
             # Prepare for condition change
             return True, optimal_forecast, 0.75
@@ -167,13 +179,13 @@ def should_pit_for_weather(
     # Rain coming and on slicks
     if forecast_condition in (WeatherCondition.WET, WeatherCondition.VERY_WET):
         if current_compound in ("SOFT", "MEDIUM", "HARD"):
-            if laps_to_change <= 5:
+            if laps_to_change <= WEATHER_RAIN_PREP_LAPS:
                 return True, "INTERMEDIATE", 0.8
 
     # Drying out - opportunity to switch from wets
     if current_condition == WeatherCondition.DAMP and forecast_condition == WeatherCondition.DRY:
         if current_compound == "INTERMEDIATE":
-            if laps_to_change <= 3:
+            if laps_to_change <= WEATHER_DRYING_PIT_LAPS:
                 return True, "SOFT", 0.7
 
     return False, current_compound, 0.5
@@ -188,14 +200,7 @@ def calculate_sc_probability_adjustment(
 
     Wet conditions increase incident likelihood.
     """
-    multipliers = {
-        WeatherCondition.DRY: 1.0,
-        WeatherCondition.DAMP: 1.5,
-        WeatherCondition.WET: 2.0,
-        WeatherCondition.VERY_WET: 3.0,
-    }
-
-    multiplier = multipliers.get(condition, 1.0)
+    multiplier = WEATHER_SC_MULTIPLIERS.get(condition.value.upper(), 1.0)
     adjusted = base_probability * multiplier
 
-    return min(0.9, adjusted)  # Cap at 90%
+    return min(WEATHER_SC_PROBABILITY_CAP, adjusted)

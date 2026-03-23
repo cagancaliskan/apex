@@ -11,6 +11,15 @@ import copy
 import random
 from typing import Any
 
+from rsw.config.constants import (
+    DEFAULT_BASE_PACE_SECONDS,
+    DEFAULT_SC_BASE_PROBABILITY,
+    GRID_SIM_DEFAULT_CLIFF_LAP,
+    GRID_SIM_GAP_MAX,
+    GRID_SIM_GAP_MIN,
+    GRID_SIM_NORMAL_PIT_LOSS,
+    GRID_SIM_SC_PIT_LOSS,
+)
 from rsw.models.physics.fuel_model import FuelModel
 from rsw.models.physics.track_model import TrackModel
 from rsw.models.physics.traffic_model import DirtyAirModel
@@ -32,7 +41,7 @@ class GridSimulator:
         self,
         initial_state: dict[int, Any],  # Dict of DriverState
         remaining_laps: int,
-        sc_probability: float = 0.2,
+        sc_probability: float = DEFAULT_SC_BASE_PROBABILITY,
     ) -> dict[int, int]:
         """
         Run a full grid simulation to the end of the race.
@@ -46,6 +55,10 @@ class GridSimulator:
         sorted_drivers = sorted(
             sim_drivers.values(), key=lambda d: d.position if d.position else 99
         )
+
+        # Track cumulative time per driver in a separate dict (DriverState is a
+        # Pydantic model and doesn't allow arbitrary attribute assignment).
+        sim_times: dict[int, float] = {d.driver_number: 0.0 for d in sorted_drivers}
 
         # Simulation Loop
         for lap_offset in range(remaining_laps):
@@ -68,7 +81,7 @@ class GridSimulator:
                     compound=driver.compound or "MEDIUM",
                     position=i + 1,
                     gap_to_behind=None,  # Simplified for now
-                    tyre_cliff_lap=25,  # Simplified constant for sim
+                    tyre_cliff_lap=GRID_SIM_DEFAULT_CLIFF_LAP,
                     is_safety_car=is_sc,
                 )
 
@@ -82,32 +95,26 @@ class GridSimulator:
                 # 2. Traffic (Dirty Air)
                 gap_to_ahead = None
                 if i > 0:
-                    # Estimate gap based on time accumulated
-                    # This is valid within a single simulation step
-                    # For simplicity in this step, we use random noise to simulate gap opening/closing
-                    gap_to_ahead = random.uniform(0.5, 5.0)
+                    gap_to_ahead = random.uniform(GRID_SIM_GAP_MIN, GRID_SIM_GAP_MAX)
 
                 traffic_pen = self.dirty_air_model.get_pace_penalty(gap_to_ahead)
 
-                predicted_pace = (getattr(driver, 'last_lap_time', None) or 90.0) + fuel_pen + tyre_pen - track_gain + traffic_pen
+                predicted_pace = (getattr(driver, 'last_lap_time', None) or DEFAULT_BASE_PACE_SECONDS) + fuel_pen + tyre_pen - track_gain + traffic_pen
 
                 # --- C. Pit Stops ---
                 pit_loss = 0.0
                 if decision.should_pit:
-                    pit_loss = 20.0
+                    pit_loss = GRID_SIM_NORMAL_PIT_LOSS
                     if is_sc:
-                        pit_loss = 12.0  # Cheap stop
+                        pit_loss = GRID_SIM_SC_PIT_LOSS
                     driver.tyre_age = 0  # Reset age (in sim state)
                     driver.compound = decision.compound
 
-                # Update driver "virtual" total time
-                # We store a temporary field 'sim_total_time' on the object or in a local dict
-                if not hasattr(driver, "sim_total_time"):
-                    driver.sim_total_time = 0.0
-                driver.sim_total_time += predicted_pace + pit_loss
+                # Update driver cumulative time
+                sim_times[driver.driver_number] += predicted_pace + pit_loss
 
             # 3. Re-Sort Grid (Overtaking)
-            sorted_drivers.sort(key=lambda d: d.sim_total_time)
+            sorted_drivers.sort(key=lambda d: sim_times[d.driver_number])
 
         # Return final positions
         return {d.driver_number: idx + 1 for idx, d in enumerate(sorted_drivers)}

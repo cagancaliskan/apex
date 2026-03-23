@@ -7,6 +7,11 @@
 
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
+import {
+    LIVE_CONNECTION_POOR_THRESHOLD_S,
+    LIVE_CONNECTION_DEGRADED_THRESHOLD_S,
+    ALERT_DEDUP_WINDOW_MS,
+} from '../config/constants';
 import type {
     RaceState,
     DriverState,
@@ -217,8 +222,8 @@ export const useRaceStore = create<RaceStore>()(
                     let quality: 'good' | 'degraded' | 'poor' = 'good';
                     if (lastUpdate) {
                         const gap = (now - lastUpdate) / 1000;
-                        if (gap > 15) quality = 'poor';
-                        else if (gap > 8) quality = 'degraded';
+                        if (gap > LIVE_CONNECTION_POOR_THRESHOLD_S) quality = 'poor';
+                        else if (gap > LIVE_CONNECTION_DEGRADED_THRESHOLD_S) quality = 'degraded';
                     }
                     updates.lastLiveUpdateTime = now;
                     updates.liveConnectionQuality = quality;
@@ -262,7 +267,7 @@ export const useRaceStore = create<RaceStore>()(
                 const now = Date.now();
                 const id = `${type}-${now}`;
                 set(state => {
-                    const recent = state.alerts.find(a => a.type === type && now - a.ts < 30000);
+                    const recent = state.alerts.find(a => a.type === type && now - a.ts < ALERT_DEDUP_WINDOW_MS);
                     if (recent) return {};
                     const newAlert: Alert = { id, type, message, ts: now };
                     return { alerts: [newAlert, ...state.alerts].slice(0, 5) };

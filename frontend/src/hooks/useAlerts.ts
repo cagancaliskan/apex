@@ -10,6 +10,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { useRaceStore } from '../store/raceStore';
+import { ALERT_AUTO_DISMISS_MS, ALERT_NEWNESS_THRESHOLD_MS } from '../config/constants';
 
 export function useAlerts() {
     const addAlert = useRaceStore(s => s.addAlert);
@@ -36,14 +37,14 @@ export function useAlerts() {
         const now = Date.now();
         const stored = useRaceStore.getState().alerts;
         const newAlert = stored[0]; // most recent is first
-        if (newAlert && newAlert.ts > now - 100) {
+        if (newAlert && newAlert.ts > now - ALERT_NEWNESS_THRESHOLD_MS) {
             // Clear any existing timeout for this id (safety)
             const existing = timeoutsRef.current.get(newAlert.id);
             if (existing) clearTimeout(existing);
             const t = setTimeout(() => {
                 useRaceStore.getState().dismissAlert(newAlert.id);
                 timeoutsRef.current.delete(newAlert.id);
-            }, 10000);
+            }, ALERT_AUTO_DISMISS_MS);
             timeoutsRef.current.set(newAlert.id, t);
         }
     }
@@ -60,13 +61,9 @@ export function useAlerts() {
         prevRef.current = { sc: safetycar, red: redFlag, vsc, flags };
     }, [redFlag, safetycar, vsc, flags, addAlert]);
 
-    // PIT_NOW / undercut alerts
+    // Undercut threat alerts (PIT_NOW removed — shown in StrategyPanel instead)
     useEffect(() => {
         sortedDrivers.forEach(d => {
-            if (d.pit_recommendation === 'PIT_NOW') {
-                addAlert('PIT_NOW', `${d.name_acronym} — PIT NOW (cliff: ${Math.round((d.cliff_risk || 0) * 100)}%)`);
-                scheduleAutoDismiss();
-            }
             if (d.undercut_threat) {
                 addAlert('THREAT', `${d.name_acronym} — UNDERCUT THREAT from ${(d.position ?? 0) > 1 ? `P${(d.position ?? 0) - 1}` : 'behind'}`);
                 scheduleAutoDismiss();

@@ -68,6 +68,7 @@ known-first-party = ["rsw"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+pythonpath = ["src"]
 testpaths = ["tests"]
 filterwarnings = [
     "ignore::DeprecationWarning",

@@ -11,6 +11,15 @@ import { useMemo, type FC, type CSSProperties } from 'react';
 import type { DriverState } from '../types';
 import { formatLapTime, formatGap, getTyreLabel, getTyreClass } from '../utils';
 import styles from './DriverTable.module.css';
+import {
+    DEG_MED_THRESHOLD,
+    DEG_HIGH_THRESHOLD,
+    DEG_COLOR_THRESHOLDS,
+    CLIFF_RISK_WARNING,
+    CLIFF_RISK_CRITICAL,
+    DRS_ACTIVE_CODES,
+    DRS_AVAILABLE_CODE,
+} from '../config/constants';
 
 // =============================================================================
 // Types
@@ -57,9 +66,9 @@ function formatDegSlope(slope: number | undefined): DegradationDisplay {
     const text = `${(slope * 1000).toFixed(0)}ms`;
     let color = 'var(--status-green)';
 
-    if (slope > 0.05) color = 'var(--status-amber)';
-    if (slope > 0.08) color = 'var(--color-orange)';
-    if (slope > 0.10) color = 'var(--status-red)';
+    if (slope > DEG_MED_THRESHOLD) color = 'var(--status-amber)';
+    if (slope > DEG_HIGH_THRESHOLD) color = 'var(--color-orange)';
+    if (slope > DEG_COLOR_THRESHOLDS[2]) color = 'var(--status-red)';
 
     return { text, color };
 }
@@ -76,8 +85,8 @@ function formatCliffRisk(risk: number | undefined): CliffRiskDisplay | null {
     const width = Math.min(100, Math.round(risk * 100));
     let color = 'var(--status-green)';
 
-    if (risk > 0.5) color = 'var(--status-amber)';
-    if (risk > 0.8) color = 'var(--status-red)';
+    if (risk > CLIFF_RISK_WARNING) color = 'var(--status-amber)';
+    if (risk > CLIFF_RISK_CRITICAL) color = 'var(--status-red)';
 
     return { width, color };
 }
@@ -89,8 +98,8 @@ function formatCliffRisk(risk: number | undefined): CliffRiskDisplay | null {
  * @returns CSS class name for DRS indicator
  */
 function getDrsState(drs: number): 'active' | 'available' | 'off' {
-    if ([10, 12, 14].includes(drs)) return 'active';
-    if (drs === 8) return 'available';
+    if (DRS_ACTIVE_CODES.includes(drs)) return 'active';
+    if (drs === DRS_AVAILABLE_CODE) return 'available';
     return 'off';
 }
 
